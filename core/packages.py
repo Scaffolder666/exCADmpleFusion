@@ -128,6 +128,9 @@ class ExamplePackage:
                 result["preview_data_uri"] = "data:image/png;base64," + base64.b64encode(path.read_bytes()).decode("ascii")
         for step in self.data["steps"]:
             meta = {k: v for k, v in step.items() if k not in ("geometry", "media")}
+            # UI can indicate whether a real per-step 3D snapshot exists,
+            # distinct from the package's static final-model preview.
+            meta["has_geometry"] = bool(step.get("geometry", {}).get("meshes"))
             media = {}
             for kind in ("video", "audio"):
                 resource = step.get("media", {}).get(kind)
