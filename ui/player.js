@@ -56,20 +56,51 @@ function renderRail() {
   if (!state.example) return;
   state.example.steps.forEach((item, i) => {
     const button = document.createElement("button");
+    button.type = "button";
     button.className = "step-card" + (i === state.index ? " active" : "");
     button.setAttribute("aria-current", i === state.index ? "step" : "false");
+    button.setAttribute("aria-label", "Step " + (i + 1) + ": " + item.title);
     const num = document.createElement("span");
     num.className = "num";
-    num.textContent = "STEP " + String(i + 1).padStart(2, "0");
+    num.textContent = String(i + 1).padStart(2, "0");
+    const labels = document.createElement("span");
+    labels.className = "step-labels";
     const label = document.createElement("span");
     label.className = "label";
     label.textContent = item.title;
-    button.append(num, label);
+    labels.appendChild(label);
+    if (item.goal) {
+      const sub = document.createElement("span");
+      sub.className = "step-goal";
+      sub.textContent = item.goal;
+      labels.appendChild(sub);
+    }
+    const indicator = document.createElement("span");
+    indicator.className = "step-indicator";
+    indicator.textContent = i === state.index ? "VIEWING" : "›";
+    button.append(num, labels, indicator);
     button.addEventListener("click", () => selectStep(i));
     rail.appendChild(button);
   });
   const active = rail.children[state.index];
   if (active) active.scrollIntoView({block:"nearest", inline:"nearest"});
+}
+function classifyReasoning(current) {
+  const note = current.reasoning || {};
+  const raw = (note.text || "").trim();
+  const source = String(note.source || "").toLowerCase();
+  const demo = source === "mockup" || source === "demo" || /^(demo reasoning|mock reasoning|illustrative)/i.test(raw);
+  if (!raw) return {label:"No recorded rationale", text:"No design reasoning is attached to this step yet.",
+    explainer:"Model geometry alone does not reveal the author's original reasoning.", mock:false};
+  if (demo) return {label:"Illustrative only", text:raw, mock:true,
+    explainer:"Mockup text — not verified as a statement from the original designer."};
+  if (source === "spoken" || source === "voice" || source === "transcript")
+    return {label:"Voice / transcript", text:raw, mock:false, explainer:""};
+  if (source === "meeting") return {label:"Meeting note", text:raw, mock:false, explainer:""};
+  if (source === "email") return {label:"Email", text:raw, mock:false, explainer:""};
+  if (source === "author" || source === "written") return {label:"Author note", text:raw, mock:false, explainer:""};
+  return {label:"Source unspecified", text:raw, mock:false,
+    explainer:"This explanation has no verified source label in the imported example."};
 }
 function renderDetails() {
   const current = step();
