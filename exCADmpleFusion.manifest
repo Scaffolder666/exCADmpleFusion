@@ -6,7 +6,7 @@
   "description": {
     "": "Explore a shared design process while creating your own design in Fusion."
   },
-  "version": "0.4.0",
+  "version": "0.5.0",
   "runOnStartup": false,
   "supportedOS": "windows|mac",
   "editEnabled": true
