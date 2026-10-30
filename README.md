@@ -65,6 +65,61 @@ Video shows how the original designer interacted with Fusion. The app does not m
 
 **Important:** Reasoning should represent the author’s stated intent, not an unverified AI inference. The package format intentionally assumes the data is prepared upstream; converting recordings into a package is outside this prototype’s research contribution.
 
+## Step-to-Geometry Linking (Fusion prototype)
+
+This version can **associate an exCADmple design step with geometry in the
+currently open Fusion document**. It is especially useful when reviewing a
+real source model (such as Caster Wheel) whose complete per-step mesh history
+has not yet been exported.
+
+1. Open your **source .f3d document** in Fusion.
+2. Run exCADmple and import the corresponding example package.
+3. Select a step in the exCADmple sidebar.
+4. In Fusion's canvas or Browser, select exactly **one BRep body, face, or
+   occurrence**. Make sure Fusion is in its normal **Select** mode, not a
+   currently executing Sketch/Extrude command.
+5. In the sidebar, expand **Linked CAD geometry** and click **Link selected**.
+6. Click another step, then return: the linked body/component now receives a
+   temporary, translucent blue overlay. A face link currently highlights its
+   **parent body** (not only the face).
+7. Click **Locate in Fusion** to perform precise native selection of the linked
+   object, including an individual face. Click **Unlink** to remove its link.
+
+This functionality uses Fusion's `UserInterface.activeSelections`,
+`entityToken`, `Design.findEntityByToken`, and
+`CustomGraphicsGroup.addBRepBody`. The overlay never changes body appearance,
+opacity, parameter values, or the native feature timeline. **Locate** does
+replace the current Fusion selection *when you explicitly click it*, not on
+every timeline step.
+
+**Prototype limitations:**
+
+- Bindings are **in-memory and lost when you stop/restart the add-in or import
+  a different example**. They are not written to the F3D file, shared example
+  package, or GitHub. A save/reopen cycle may require rebinding.
+- Tokens resolve within the same design, not arbitrary other copies of the
+  model. When Fusion reports multiple matches for an entity (e.g., after a
+  face splits), the add-in asks you to rebind rather than guessing.
+- Occurrence highlights currently include BRep bodies in that occurrence,
+  not mesh bodies or recursively all nested child occurrences.
+- Face links use a parent-body overlay; exact face selection is through
+  **Locate**. Assembly proxy transforms require a desktop test.
+- Users must manually identify correspondence between source geometry and
+  placeholder design steps. This does **not** reconstruct the author’s original
+  modeling process or rationale from the F3D.
+- The original file's geometry may be changed independently by the user;
+  the stored link can become stale after topology changes. Geometry links in
+  this prototype are for authoring/example inspection, not a final stable
+  cross-file reference format.
+
+**Caster Wheel smoke test:** load the original Caster Wheel F3D and its
+preview-based `.excadmple` package. Bind one actual wheel body to a step.
+Switch steps, verify the blue spatial highlight and that **Locate** selects
+the wheel body. Confirm **Play** changes only the reference step; the native
+Fusion history marker does not move. Save and reopen, and confirm no orphaned
+Custom Graphics remain. Do not treat preview-based placeholders as extracted
+timeline features.
+
 ## Architecture
 
 ```text
