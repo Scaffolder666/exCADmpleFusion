@@ -65,7 +65,11 @@
             <button id="locateGeometry" class="geometry-btn" type="button" disabled>Locate in Fusion</button>
             <button id="removeGeometry" class="geometry-btn minimal" type="button" disabled>Unlink</button>
           </div>
-          <small>Prototype authoring · links are session-only and scoped to this Fusion design.</small>
+          <label class="focus-toggle">
+            <input type="checkbox" id="focusMode" checked>
+            <span><strong>Focus on linked geometry</strong><small>Dim unrelated bodies to 24% opacity while viewing this step</small></span>
+          </label>
+          <small>Focus restores original display opacity on step changes, save and exit. Avoid using other appearance-changing add-ins simultaneously.</small>
         </div>
       </details>
 
