@@ -2,7 +2,7 @@
 "use strict";
 
 const $ = (id) => document.getElementById(id);
-const state = { example: null, index: 0, elapsed: 0, playing: false, startedAt: 0, raf: 0, cueIndex: -1 };
+const state = { example: null, index: 0, elapsed: 0, playing: false, startedAt: 0, raf: 0, cueIndex: -1, links: {} };
 const video = $("video"), audio = $("audio");
 
 function bridge(action, payload = {}) {
@@ -102,6 +102,28 @@ function classifyReasoning(current) {
   return {label:"Source unspecified", text:raw, mock:false,
     explainer:"This explanation has no verified source label in the imported example."};
 }
+function renderGeometryLink() {
+  const current = step();
+  if (!current) return;
+  const link = state.links[current.id];
+  const status = $("linkStatus");
+  if (!link) {
+    status.textContent = "Not linked";
+    status.className = "geometry-link__status";
+  } else if (!link.available) {
+    status.textContent = "Linked in another design · " + link.label;
+    status.className = "geometry-link__status unavailable";
+  } else {
+    status.textContent = link.kind + " · " + link.label;
+    status.className = "geometry-link__status linked";
+  }
+  $("locateGeometry").disabled = !(link && link.available);
+  $("removeGeometry").disabled = !link;
+  $("geometryStatus").textContent = current.has_geometry ? "3D step available" :
+    (link?.available ? "Linked source geometry" :
+     (state.example?.preview_data_uri ? "Final preview only" : "No step geometry"));
+  $("geometryStatus").classList.toggle("none", !current.has_geometry && !link?.available);
+}
 function renderDetails() {
   const current = step();
   if (!current) return;
@@ -118,9 +140,7 @@ function renderDetails() {
   $("reasonSource").classList.toggle("mock", rationale.mock);
   $("sourceExplainer").textContent = rationale.explainer;
   const hasStepGeometry = !!current.has_geometry;
-  $("geometryStatus").textContent = hasStepGeometry ? "3D step available" :
-    (state.example?.preview_data_uri ? "Final preview only" : "No step geometry");
-  $("geometryStatus").classList.toggle("none", !hasStepGeometry);
+  renderGeometryLink();
   $("showReference").disabled = !hasStepGeometry;
   $("showReference").title = hasStepGeometry ? "Toggle this step's read-only 3D reference" :
     "This step does not contain a verified 3D snapshot";
@@ -231,6 +251,7 @@ function tick() {
 function loadExample(data) {
   pause();
   state.example = data;
+  state.links = {};
   state.index = 0;
   state.elapsed = 0;
   state.cueIndex = -1;
@@ -250,7 +271,10 @@ window.fusionJavaScriptHandler = {
     try {
       const payload = JSON.parse(raw);
       if (action === "example") loadExample(payload);
-      else if (action === "step") {
+      else if (action === "links") {
+        state.links = payload.by_step || {};
+        renderGeometryLink();
+      } else if (action === "step") {
         if (payload.index !== state.index && state.example) selectStep(payload.index);
       } else if (action === "status") setStatus(payload.message, payload.error);
       return "OK";
@@ -260,6 +284,9 @@ window.fusionJavaScriptHandler = {
     }
   }
 };
+$("bindGeometry").addEventListener("click", () => bridge("link_selected"));
+$("locateGeometry").addEventListener("click", () => bridge("locate_linked"));
+$("removeGeometry").addEventListener("click", () => bridge("unlink_step"));
 $("import").addEventListener("click", () => { pause(); bridge("open_package"); });
 $("demo").addEventListener("click", () => { pause(); bridge("load_demo"); });
 $("play").addEventListener("click", () => state.playing ? pause() : play());
