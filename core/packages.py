@@ -10,6 +10,7 @@ import math
 import shutil
 import tempfile
 import zipfile
+from .animation import validate_animation, AnimationError
 from pathlib import Path, PurePosixPath
 
 MAX_ARCHIVE_BYTES = 80 * 1024 * 1024
@@ -84,6 +85,13 @@ def _validate(data):
             raise PackageError("At most 50 meshes per step")
         for mesh in meshes:
             _validate_mesh(mesh)
+        if step.get("animation") is not None:
+            try:
+                validate_animation(step["animation"])
+            except AnimationError as exc:
+                raise PackageError(str(exc)) from exc
+            for mesh in step["animation"].get("context_meshes", []):
+                _validate_mesh(mesh)
         for kind in ("audio", "video"):
             asset = step.get("media", {}).get(kind)
             if asset is not None:
@@ -127,10 +135,11 @@ class ExamplePackage:
                     raise PackageError("Preview PNG too large")
                 result["preview_data_uri"] = "data:image/png;base64," + base64.b64encode(path.read_bytes()).decode("ascii")
         for step in self.data["steps"]:
-            meta = {k: v for k, v in step.items() if k not in ("geometry", "media")}
+            meta = {k: v for k, v in step.items() if k not in ("geometry", "media", "animation")}
             # UI can indicate whether a real per-step 3D snapshot exists,
             # distinct from the package's static final-model preview.
             meta["has_geometry"] = bool(step.get("geometry", {}).get("meshes"))
+            meta["animation_available"] = bool(step.get("animation"))
             media = {}
             for kind in ("video", "audio"):
                 resource = step.get("media", {}).get(kind)
