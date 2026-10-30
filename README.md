@@ -181,6 +181,71 @@ Pure-Python tests in `tests/test_focus.py` verify opacity restoration
 and failure handling without Fusion; native viewport rendering and
 document lifecycle still require a Fusion desktop smoke test.
 
+## v0.5 — In-canvas animated Extrude (experimental)
+
+The reference player now accepts a **precomputed, non-destructive 3D Extrude
+animation** on an example step. Select the first Phone Stand step and press
+**Play**, or drag the step's progress slider. A read-only Custom Graphics
+mesh grows from the sketch footprint to the full extrusion in the Fusion
+canvas, while the playback panel continues to show operation details and
+reasoning. **Pause** freezes the current reference shape; completing the
+step restores the finished reference mesh.
+
+The `animation` field is independent of the user's native CAD history:
+
+```json
+{
+  "animation": {
+    "type": "extrude",
+    "profile": [[0,0,0],[10,0,0],[10,8,0],[0,8,0]],
+    "direction_cm": [0,0,0.7],
+    "cap_triangles": [[0,1,2],[0,2,3]],
+    "context_meshes": []
+  }
+}
+```
+
+All distances are **centimeters**, Fusion's internal unit. The profile
+is ordered around its perimeter; cap triangles index into profile vertices.
+The animation constructs a triangular prism of the chosen partial length.
+The demo is deliberately a simple convex quadrilateral.
+
+**Technical boundaries:** this is a visual extrusion preview, **not an
+animated modification of a native Fusion ExtrudeFeature**. It does not yet
+support Join/Cut Boolean updates, multiple profile loops/holes, taper, arcs,
+Revolve, Fillet, or robust surface-to-feature provenance. Users cannot infer
+that an animation corresponds to real source geometry unless its package
+was generated from the actual source's feature/profile metadata. Timeline
+events are throttled to approximately seven Custom Graphics redraw requests
+per second, not video-grade frame rate. Fusion desktop performance remains
+untested. Frame drawing uses local Fusion API events; all native geometry,
+native parameter values and the native history marker remain unchanged.
+
+The Caster Wheel package from our earlier mockup contains **no extracted
+feature animation**, so playback there still shows the existing preview
+and step metadata. To animate an actual Caster Wheel operation accurately,
+the next importer must inspect its Fusion feature history and extract the
+corresponding original profile, feature parameters and before/after context.
+For curved/circular profiles or Boolean operations it needs a more general
+meshing strategy than this first polygonal extrusion implementation.
+
+### Relation to History in Motion
+
+Veuskens et al. (SCF 2023), [History in Motion](https://doi.org/10.1145/3623263.3623358),
+describe: feature filtering by selected faces/edges; progressive parameter
+updates for Extrude/Revolve/Fillet/Patterns; custom fades for operations
+without parameters; and an animation renderer isolated from the source
+CAD model. Their proof of concept used **two Fusion instances connected
+over WebSockets** because the native Fusion UI did not offer the additional
+interactive 3D viewport they needed.
+
+This MVP reuses the **animation principle**, not their source implementation:
+it renders transient meshes in the same Fusion canvas, from validated data,
+instead of changing native feature parameters in a second Fusion copy. It
+therefore provides a safe minimal path for playback while leaving the
+harder feature-dependency extraction and robust operation reproduction to
+subsequent work.
+
 ## Architecture
 
 ```text
