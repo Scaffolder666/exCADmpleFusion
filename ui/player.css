@@ -131,3 +131,9 @@ footer { padding:13px 14px 16px; background:var(--panel); border-top:1px solid v
   .step-card { padding:7px 8px; }
   .clock { font-size:9px; }
 }
+
+.focus-toggle { display:flex; align-items:flex-start; gap:9px; padding:10px 0 6px; cursor:pointer; color:var(--ink); }
+.focus-toggle input { accent-color:var(--blue); width:15px; height:15px; margin:2px 0 0; flex:none; }
+.focus-toggle span { display:flex; flex-direction:column; gap:2px; }
+.focus-toggle strong { font-size:11px; font-weight:700; }
+.focus-toggle small { font-size:10px; color:var(--muted); }
