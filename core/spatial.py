@@ -1,12 +1,15 @@
-"""Fusion-only spatial linking and non-destructive geometry highlighting.
+"""Spatial step links and reversible native Fusion Focus Mode.
 
-Geometry remains the original user's geometry. We only attach a transient
-overlay for the active step. Never write to bodies, components, or timeline.
+The blue Custom Graphics overlay is transient. Focus additionally snapshots
+native body opacity before dimming background geometry and restores it on
+step changes, save, document deactivation, or add-in stop.
+Never changes CAD geometry or the feature timeline.
 """
 import adsk.core
 import adsk.fusion
 
 from .geometry_links import GeometryLinks
+from .focus import OpacityFocus, FocusError
 
 
 def _design(app):
@@ -64,6 +67,76 @@ def _entity_for_display(entity):
     return [], ""
 
 
+def _native_body(body):
+    native = getattr(body, "nativeObject", None)
+    return native if native is not None else body
+
+
+def _body_token(body):
+    native = _native_body(body)
+    try:
+        return str(native.entityToken)
+    except Exception:
+        return None
+
+
+def _model_bodies(design):
+    """Enumerate each *native* body once, even for repeated occurrences."""
+    components = design.allComponents
+    seen = set()
+    for i in range(components.count):
+        comp = components.item(i)
+        for attr in ("bRepBodies", "meshBodies"):
+            bodies = getattr(comp, attr, None)
+            if not bodies:
+                continue
+            for index in range(bodies.count):
+                body = _native_body(bodies.item(index))
+                token = _body_token(body)
+                if not token or token in seen:
+                    continue
+                seen.add(token)
+                yield token, body
+
+
+def _protected_tokens(entity):
+    """Return the native source body set that must retain its original opacity.
+
+    Shared source components can be instantiated multiple times: dimming a
+    source body also dims every instance. Protect all those instances rather
+    than unintentionally fading the chosen occurrence itself.
+    """
+    target = adsk.fusion.BRepBody.cast(entity)
+    if target:
+        token = _body_token(target)
+        return {token} if token else set()
+    face = adsk.fusion.BRepFace.cast(entity)
+    if face:
+        token = _body_token(face.body)
+        return {token} if token else set()
+    occurrence = adsk.fusion.Occurrence.cast(entity)
+    if not occurrence:
+        return set()
+    protected = set()
+    queue = [occurrence]
+    while queue:
+        current = queue.pop()
+        bodies = current.bRepBodies
+        for i in range(bodies.count):
+            token = _body_token(bodies.item(i))
+            if token:
+                protected.add(token)
+        meshes = current.meshBodies
+        for i in range(meshes.count):
+            token = _body_token(meshes.item(i))
+            if token:
+                protected.add(token)
+        children = current.childOccurrences
+        for i in range(children.count):
+            queue.append(children.item(i))
+    return protected
+
+
 class SpatialLinkController:
     def __init__(self, app, ui):
         self.app = app
@@ -71,12 +144,30 @@ class SpatialLinkController:
         self.links = GeometryLinks()
         self.group = None
         self.last_step_id = None
+        self.focus_enabled = True
+        self.focus = OpacityFocus(self._resolve_body_token, self.document_key)
+
+    def _resolve_body_token(self, token):
+        design = _design(self.app)
+        if not design:
+            return None
+        try:
+            for candidate in design.findEntityByToken(token) or []:
+                native = _native_body(candidate)
+                if _body_token(native) == token:
+                    return native
+        except Exception:
+            pass
+        return None
 
     def document_key(self):
         design = _design(self.app)
         return _document_key(self.app, design)
 
     def clear_overlay(self):
+        # Restore user-owned appearance before discarding a focus session.
+        # Do not silently swallow a failed restore.
+        self.focus.restore()
         try:
             if self.group and self.group.isValid:
                 self.group.deleteMe()
@@ -173,10 +264,24 @@ class SpatialLinkController:
                 group.deleteMe()
                 return False, "Fusion could not draw the geometry overlay"
             self.group = group
+            focus_count = 0
+            focus_warning = ""
+            if self.focus_enabled:
+                try:
+                    protected = _protected_tokens(entity)
+                    focus_count = self.focus.apply(
+                        self.document_key(), _model_bodies(design), protected, dim_opacity=0.24
+                    )
+                except FocusError as error:
+                    focus_warning = str(error)
             self.app.activeViewport.refresh()
+            suffix = ("; {} background bodies dimmed".format(focus_count)
+                      if focus_count else "")
+            if focus_warning:
+                suffix += "; Focus unavailable: " + focus_warning
             if scope == "parent body":
-                return True, "Linked face: parent body highlighted. Use Locate to select the exact face."
-            return True, "Linked " + scope + " highlighted in Fusion"
+                return True, "Linked face: parent body highlighted" + suffix + ". Use Locate to select the exact face."
+            return True, "Linked " + scope + " highlighted in Fusion" + suffix
         except Exception:
             try:
                 group.deleteMe()
@@ -184,6 +289,13 @@ class SpatialLinkController:
                 pass
             self.group = None
             raise
+
+    def set_focus_enabled(self, enabled):
+        self.focus_enabled = bool(enabled)
+        if self.last_step_id is not None:
+            return self.highlight(self.last_step_id)
+        self.clear_overlay()
+        return True, "Focus Mode " + ("enabled" if enabled else "disabled")
 
     def locate(self, step_id):
         entity, message = self.resolve(step_id)
