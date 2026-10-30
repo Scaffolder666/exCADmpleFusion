@@ -9,6 +9,7 @@ class ReferenceRenderer:
         self.group = None
         self.visible = True
         self.last_step = None
+        self.last_offset = None
 
     def clear(self):
         try:
@@ -37,6 +38,7 @@ class ReferenceRenderer:
             return False
         meshes = step.get("geometry", {}).get("meshes", [])
         self.last_step = step
+        self.last_offset = offset
         if not self.visible or not meshes:
             return True
         offset = offset or [15.0, 0.0, 0.0]
@@ -72,4 +74,8 @@ class ReferenceRenderer:
         self.visible = bool(visible)
         if self.group and self.group.isValid:
             self.group.isVisible = self.visible
+        elif self.visible and self.last_step:
+            # A step may have been selected while the reference was hidden.
+            self.render(self.last_step, self.last_offset)
+            return
         self._refresh()
