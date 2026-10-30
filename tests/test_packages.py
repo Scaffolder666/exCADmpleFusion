@@ -57,6 +57,21 @@ class PackageTests(unittest.TestCase):
         pkg.close()
         self.assertFalse(extracted.exists())
 
+    def test_zip_with_final_preview_and_source_model(self):
+        self.demo["preview"] = "previews/final.png"
+        self.demo["source_model"] = "source/original.f3d"
+        path = self.root / "with-model.excadmple"
+        png = b"\\x89PNG\\r\\n\\x1a\\n" + b"placeholder"
+        with zipfile.ZipFile(path, "w") as z:
+            z.writestr("manifest.json", json.dumps(self.demo))
+            z.writestr("previews/final.png", png)
+            z.writestr("source/original.f3d", b"original CAD bytes")
+        pkg = open_package(path)
+        player = pkg.player_data()
+        self.assertTrue(player["preview_data_uri"].startswith("data:image/png;base64,"))
+        self.assertTrue(player["source_model_included"])
+        pkg.close()
+
     def test_zip_traversal_rejected(self):
         path = self.root / "unsafe.excadmple"
         with zipfile.ZipFile(path, "w") as z:
