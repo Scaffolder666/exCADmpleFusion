@@ -17,6 +17,7 @@ import adsk.fusion
 
 from core.packages import open_package, PackageError
 from core.renderer import ReferenceRenderer
+from core.spatial import SpatialLinkController
 
 PALETTE_ID = "excadmple.fusion.player"
 COMMAND_ID = "excadmple.fusion.open"
@@ -24,6 +25,7 @@ _app = None
 _ui = None
 _palette = None
 _renderer = None
+_spatial = None
 _package = None
 _step_index = 0
 _handlers = []
@@ -41,6 +43,11 @@ def _status(message, is_error=False):
     _post("status", {"message": message, "error": is_error})
 
 
+def _post_links():
+    if _package and _spatial:
+        _post("links", {"by_step": _spatial.display_links(_package.data["steps"])})
+
+
 def _set_step(index, announce=False):
     global _step_index
     if not _package:
@@ -50,6 +57,15 @@ def _set_step(index, announce=False):
     _step_index = index
     step = _package.step(index)
     success = _renderer.render(step, _package.data.get("reference_offset_cm"))
+    if _spatial:
+        linked = _spatial.links.get(step["id"], _spatial.document_key())
+        if linked:
+            highlighted, message = _spatial.highlight(step["id"])
+            if not highlighted:
+                _status(message, True)
+        else:
+            _spatial.clear_overlay()
+        _post_links()
     if not success:
         _status("Open or create a Fusion Design to see the reference geometry.", True)
     elif announce:
@@ -69,6 +85,8 @@ def _load(filename):
         new_package.close()
         raise
     _renderer.clear()
+    if _spatial:
+        _spatial.reset_example()
     old = _package
     _package = new_package
     if old:
@@ -94,12 +112,32 @@ class PaletteHandler(adsk.core.HTMLEventHandler):
                 if _package:
                     _post("example", _package.player_data())
                     _post("step", {"index": _step_index})
+                    _post_links()
             elif command == "load_demo":
                 _load(str(ROOT / "examples" / "phone_stand.json"))
             elif command == "open_package":
                 _open_dialog()
             elif command == "set_step":
                 _set_step(int(body["index"]))
+            elif command == "link_selected":
+                if not _package or not _spatial:
+                    raise ValueError("Load an example before linking geometry")
+                step = _package.step(_step_index)
+                link = _spatial.bind_selected(step["id"])
+                _, message = _spatial.highlight(step["id"])
+                _post_links()
+                _status("Linked " + link["label"] + " to this step. " + message)
+            elif command == "locate_linked":
+                if not _package or not _spatial:
+                    raise ValueError("No active example")
+                ok, message = _spatial.locate(_package.step(_step_index)["id"])
+                _status(message, not ok)
+            elif command == "unlink_step":
+                if not _package or not _spatial:
+                    raise ValueError("No active example")
+                _spatial.unbind(_package.step(_step_index)["id"])
+                _post_links()
+                _status("Step link removed; source CAD geometry unchanged.")
             elif command == "set_visible":
                 visible = body.get("visible", True)
                 _renderer.set_visible(visible)
@@ -135,6 +173,8 @@ class BeforeSave(adsk.core.DocumentEventHandler):
         _saving_document = True
         if _renderer:
             _renderer.clear()
+        if _spatial:
+            _spatial.clear_overlay()
 
 
 class AfterSave(adsk.core.DocumentEventHandler):
@@ -159,11 +199,12 @@ def _log_error():
 
 
 def run(_context):
-    global _app, _ui, _palette, _renderer, _command_def, _command_control
+    global _app, _ui, _palette, _renderer, _spatial, _command_def, _command_control
     try:
         _app = adsk.core.Application.get()
         _ui = _app.userInterface
         _renderer = ReferenceRenderer(_app)
+        _spatial = SpatialLinkController(_app, _ui)
 
         _palette = _ui.palettes.itemById(PALETTE_ID)
         if not _palette:
@@ -213,6 +254,8 @@ def stop(_context):
     try:
         if _renderer:
             _renderer.clear()
+        if _spatial:
+            _spatial.clear_overlay()
         if _app:
             for event_name, handler_type in (("documentSaving", BeforeSave), ("documentSaved", AfterSave)):
                 for handler in _handlers:
