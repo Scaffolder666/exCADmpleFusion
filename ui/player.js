@@ -284,6 +284,9 @@ window.fusionJavaScriptHandler = {
     }
   }
 };
+$("focusMode").addEventListener("change", (event) => {
+  bridge("set_focus", {enabled: !!event.target.checked});
+});
 $("bindGeometry").addEventListener("click", () => bridge("link_selected"));
 $("locateGeometry").addEventListener("click", () => bridge("locate_linked"));
 $("removeGeometry").addEventListener("click", () => bridge("unlink_step"));
