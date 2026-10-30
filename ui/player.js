@@ -2,7 +2,7 @@
 "use strict";
 
 const $ = (id) => document.getElementById(id);
-const state = { example: null, index: 0, elapsed: 0, playing: false, startedAt: 0, raf: 0, cueIndex: -1, links: {} };
+const state = { example: null, index: 0, elapsed: 0, playing: false, startedAt: 0, raf: 0, cueIndex: -1, links: {}, lastAnimationFrame: -Infinity, animationInFlight: false };
 const video = $("video"), audio = $("audio");
 
 function bridge(action, payload = {}) {
@@ -119,10 +119,11 @@ function renderGeometryLink() {
   }
   $("locateGeometry").disabled = !(link && link.available);
   $("removeGeometry").disabled = !link;
-  $("geometryStatus").textContent = current.has_geometry ? "3D step available" :
+  $("geometryStatus").textContent = current.animation_available ? "3D animation available" :
+    (current.has_geometry ? "3D step available" :
     (link?.available ? "Linked source geometry" :
-     (state.example?.preview_data_uri ? "Final preview only" : "No step geometry"));
-  $("geometryStatus").classList.toggle("none", !current.has_geometry && !link?.available);
+     (state.example?.preview_data_uri ? "Final preview only" : "No step geometry")));
+  $("geometryStatus").classList.toggle("none", !current.has_geometry && !link?.available && !current.animation_available);
 }
 function renderDetails() {
   const current = step();
@@ -166,12 +167,16 @@ function renderDetails() {
   if (preview) $("previewImage").src = preview;
   else $("previewImage").removeAttribute("src");
   $("noVideo").hidden = !!media.video || !!preview;
-  $("mediaEvidence").textContent = [media.video && "Video", media.audio && "Audio"]
-    .filter(Boolean).join(" + ") || "Step metadata";
+  $("mediaEvidence").textContent = [
+    current.animation_available && "3D Extrude animation",
+    media.video && "Video", media.audio && "Audio"
+  ].filter(Boolean).join(" + ") || "Step metadata";
   if (!media.video && !preview) {
-    $("noVideo").querySelector("strong").textContent = hasStepGeometry ?
+    $("noVideo").querySelector("strong").textContent = current.animation_available ?
+      "3D Extrude animation in Fusion" : hasStepGeometry ?
       "3D reference in Fusion" : "No recorded visuals for this step";
-    $("noVideo").querySelector("span").textContent = hasStepGeometry ?
+    $("noVideo").querySelector("span").textContent = current.animation_available ?
+      "Press Play or scrub to animate the reference geometry." : hasStepGeometry ?
       "Inspect the read-only step model in the CAD canvas." :
       "Import step snapshots or video to visualize the original operation.";
   }
@@ -192,6 +197,17 @@ function renderTime() {
     $("cueText").textContent = active >= 0 ? cues[active].label : (step()?.operation?.instruction || "Inspect the author's actions.");
   }
 }
+function sendAnimationFrame(force = false) {
+  const current = step();
+  if (!current?.animation_available) return;
+  const now = performance.now();
+  if (state.animationInFlight || (!force && now - state.lastAnimationFrame < 145)) return;
+  state.lastAnimationFrame = now;
+  state.animationInFlight = true;
+  const id = current.id;
+  bridge("animation_frame", {step_id: id, progress: Math.max(0, Math.min(1, state.elapsed / duration()))})
+    .finally(() => { state.animationInFlight = false; });
+}
 function pause() {
   state.playing = false;
   cancelAnimationFrame(state.raf);
@@ -205,9 +221,10 @@ function selectStep(index, keepPlaying = false) {
   state.index = index;
   state.elapsed = 0;
   state.cueIndex = -1;
+  state.lastAnimationFrame = -Infinity;
   renderDetails();
-  bridge("set_step", {index});
-  if (keepPlaying) play();
+  const next = bridge("set_step", {index});
+  if (keepPlaying) next.then(() => { if (state.index === index) play(); });
 }
 function seek(ms) {
   state.elapsed = Math.max(0, Math.min(duration(), ms));
@@ -218,6 +235,7 @@ function seek(ms) {
     }
   }
   renderTime();
+  sendAnimationFrame(true);
 }
 function play() {
   if (!step()) return;
@@ -227,6 +245,7 @@ function play() {
   $("play").innerHTML = "Ⅱ <span>Pause</span>";
   $("play").setAttribute("aria-label", "Pause");
   playMedia();
+  sendAnimationFrame(true);
   tick();
 }
 function tick() {
@@ -238,7 +257,13 @@ function tick() {
   state.elapsed = mediaReady ? master.currentTime * 1000 : performance.now() - state.startedAt;
   if (state.elapsed >= duration() - 30) {
     if (state.index < state.example.steps.length - 1) selectStep(state.index + 1, true);
-    else { state.elapsed = duration(); renderTime(); pause(); }
+    else {
+      state.elapsed = duration();
+      renderTime();
+      pause();
+      if (step()?.animation_available)
+        bridge("animation_end", {step_id: step().id});
+    }
     return;
   }
   if (video.getAttribute("src") && audio.getAttribute("src") && mediaReady &&
@@ -246,6 +271,7 @@ function tick() {
     audio.currentTime = video.currentTime;
   }
   renderTime();
+  sendAnimationFrame();
   state.raf = requestAnimationFrame(tick);
 }
 function loadExample(data) {
