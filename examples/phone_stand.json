@@ -144,7 +144,8 @@
         ]
       },
       "reasoning": {
-        "text": "Demo reasoning: I start with the base so I can judge stability before choosing the support angle. This is an illustrative explanation, not an actual recording."
+        "text": "Demo reasoning: I start with the base so I can judge stability before choosing the support angle. This is an illustrative explanation, not an actual recording.",
+        "source": "mockup"
       },
       "cues": [
         {
@@ -398,7 +399,8 @@
         ]
       },
       "reasoning": {
-        "text": "Demo reasoning: A slightly inclined panel can make the screen easier to view. I would check its relationship to the base before committing to the angle."
+        "text": "Demo reasoning: A slightly inclined panel can make the screen easier to view. I would check its relationship to the base before committing to the angle.",
+        "source": "mockup"
       },
       "cues": [
         {
@@ -758,7 +760,8 @@
         ]
       },
       "reasoning": {
-        "text": "Demo reasoning: The lip resists sliding, but its size also affects access to the bottom of the phone. A different device could need a different lip."
+        "text": "Demo reasoning: The lip resists sliding, but its size also affects access to the bottom of the phone. A different device could need a different lip.",
+        "source": "mockup"
       },
       "cues": [
         {
