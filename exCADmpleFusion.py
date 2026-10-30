@@ -53,7 +53,10 @@ def _set_step(index, announce=False):
     if not success:
         _status("Open or create a Fusion Design to see the reference geometry.", True)
     elif announce:
-        _status("Reference step displayed in the Fusion canvas.")
+        if step.get("geometry", {}).get("meshes"):
+            _status("Reference geometry displayed beside your design.")
+        else:
+            _status("No per-step 3D snapshots in this example; the source CAD model and final preview are available.")
     _post("step", {"index": index})
 
 
