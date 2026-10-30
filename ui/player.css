@@ -93,6 +93,28 @@ h2 { margin:6px 0 3px; font-size:16px; line-height:1.25; font-weight:750; letter
 blockquote { margin:0; border-left:3px solid var(--blue); background:#f3f6fa; padding:11px 12px; border-radius:0 6px 6px 0; color:var(--ink); font-size:12px; line-height:1.6; }
 .source-explainer { margin:6px 0 0; color:var(--quiet); font-size:10px; }
 .source-explainer:empty { display:none; }
+
+/* Link authoring stays in a collapsed FuzzyCAD-style inline inspector.
+   Normal viewing does not require any Follow / Skip / Accept action. */
+.geometry-link { border:1px solid var(--line); border-radius:7px; margin:10px 0 12px; background:#fff; }
+.geometry-link__summary { display:flex; align-items:center; gap:8px; padding:9px 10px; cursor:pointer; list-style:none; }
+.geometry-link__summary::-webkit-details-marker { display:none; }
+.geometry-link__heading { font-size:11px; font-weight:750; white-space:nowrap; }
+.geometry-link__status { flex:1; min-width:0; text-align:right; color:var(--muted); font-size:10px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+.geometry-link__status.linked { color:#426c9a; font-weight:700; }
+.geometry-link__status.unavailable { color:#a56b36; }
+.geometry-link__chevron { color:var(--quiet); font-size:16px; transition:transform .15s; }
+.geometry-link[open] .geometry-link__chevron { transform:rotate(180deg); }
+.geometry-link__body { padding:0 10px 10px; border-top:1px solid var(--line); }
+.geometry-link__body p { color:var(--muted); font-size:10.5px; margin:9px 0; line-height:1.5; }
+.geometry-link__buttons { display:flex; flex-wrap:wrap; gap:5px; }
+.geometry-btn { padding:6px 8px; border:1px solid #d3d8df; border-radius:5px; color:#465568; background:#fff; font-size:10.5px; font-weight:650; }
+.geometry-btn:hover:not(:disabled) { background:var(--panel); }
+.geometry-btn.primary { background:var(--ink); color:white; border-color:var(--ink); }
+.geometry-btn.primary:hover:not(:disabled) { background:#3c5266; }
+.geometry-btn.minimal { border-color:transparent; color:var(--muted); }
+.geometry-link__body small { color:var(--quiet); display:block; font-size:9.5px; margin-top:8px; }
+
 footer { padding:13px 14px 16px; background:var(--panel); border-top:1px solid var(--line); }
 .reference-toggle { display:flex; gap:8px; align-items:center; font-size:11px; font-weight:650; cursor:pointer; }
 .reference-toggle input { accent-color:var(--blue); margin:0; width:15px; height:15px; }
