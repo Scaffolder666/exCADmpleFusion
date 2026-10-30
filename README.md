@@ -120,6 +120,67 @@ Fusion history marker does not move. Save and reopen, and confirm no orphaned
 Custom Graphics remain. Do not treat preview-based placeholders as extracted
 timeline features.
 
+## Focus Mode: dim the rest of the assembly
+
+The **Linked CAD geometry** inspector now includes **Focus on linked
+geometry**, enabled by default for manually linked source geometry.
+
+When you switch to a step with a valid bound body/face/component, exCADmple:
+1. restores previously modified opacities;
+2. leaves the selected body, its parent body (for face links), or selected
+   component's bodies at their existing opacity;
+3. dims unrelated, writable native BRep and mesh bodies to **24% opacity**;
+4. draws a temporary, low-opacity blue highlight on the linked BRep geometry.
+
+Uncheck Focus on linked geometry to restore all original opacity values and
+continue with the temporary blue highlight alone.
+
+### Display safety
+
+Following FuzzyCAD's opacity-owner model, exCADmple reads and records every
+body's original numeric opacity *before* applying dimming, does not override
+already-more-transparent bodies, restores on step changes, on package
+replacement, on add-in shutdown, on document deactivation, and **before
+Fusion saves**. If restoration fails during `documentSaving`, the handler
+requests cancellation of that save rather than silently serializing the
+wrong appearance.
+
+Native opacity overrides temporarily affect Fusion's *document display
+properties*. They are not an independent post-processing layer. An OS crash,
+unexpected Fusion termination, failed add-in unloading, conflicting add-in,
+or API error may still require manual opacity restoration. **Test on a copy
+of the model** until desktop behavior is verified.
+
+The implementation protects the *native source body* of a selected component,
+including every occurrence that shares that source geometry. This is safer
+than dimming the selected instance accidentally, but means repeated copies
+of the same component can also remain opaque. This version does not
+independently fade separate instances of the same source component. Nested
+occurrence children are excluded from dimming when the parent assembly is
+the focus.
+
+Some appearance overrides, active-component visibility settings, and linked
+external geometry can make the actual perceived opacity differ from 24%
+(see [Fusion BRepBody.opacity](https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/fusion_BRepBody_opacity.htm)).
+Dimming is bounded to at most 250 background native bodies per session.
+
+### Test a real assembly
+
+1. Make a **copy** of Caster Wheel F3D.
+2. Select one native BRep wheel body, link it to a step, leave Focus checked.
+3. Verify the selected wheel remains visually clear; surrounding fork/mount
+   bodies become translucent.
+4. Change steps and confirm original opacities return, then focus transfers.
+5. Uncheck Focus and verify all background opacity values restore exactly.
+6. Re-enable Focus, save the copy, close and reopen it. Confirm original
+   appearance is preserved and no residual ghost highlights remain.
+7. If other Fusion add-ins modify appearance (including FuzzyCAD), deactivate
+   those tools during this test to avoid competing opacity owners.
+
+Pure-Python tests in `tests/test_focus.py` verify opacity restoration
+and failure handling without Fusion; native viewport rendering and
+document lifecycle still require a Fusion desktop smoke test.
+
 ## Architecture
 
 ```text
