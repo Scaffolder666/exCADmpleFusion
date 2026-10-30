@@ -79,7 +79,18 @@ class OpacityFocus:
                     continue
                 # Record the original value before writing it to Fusion.
                 self._originals[token] = original
-                body.opacity = dim_opacity
+                try:
+                    body.opacity = dim_opacity
+                except Exception:
+                    # Fusion can reject opacity changes for external or locked
+                    # bodies without altering the display. If unchanged, do
+                    # not retain a false ownership claim that cannot restore.
+                    try:
+                        if abs(float(body.opacity) - original) < 1e-8:
+                            self._originals.pop(token, None)
+                    except Exception:
+                        pass
+                    raise
         except Exception:
             self.restore()
             raise
