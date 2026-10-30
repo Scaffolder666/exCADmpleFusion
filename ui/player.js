@@ -99,7 +99,11 @@ function renderDetails() {
   if (media.audio) audio.src = media.audio;
   video.muted = !!media.audio;
   video.hidden = !media.video;
-  $("noVideo").hidden = !!media.video;
+  const preview = !media.video && state.example?.preview_data_uri;
+  $("finalPreview").hidden = !preview;
+  if (preview) $("previewImage").src = preview;
+  else $("previewImage").removeAttribute("src");
+  $("noVideo").hidden = !!media.video || !!preview;
   $("prev").disabled = state.index === 0;
   $("next").disabled = state.index >= state.example.steps.length - 1;
   renderRail();
