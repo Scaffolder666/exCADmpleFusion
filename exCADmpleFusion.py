@@ -119,6 +119,18 @@ class PaletteHandler(adsk.core.HTMLEventHandler):
                 _open_dialog()
             elif command == "set_step":
                 _set_step(int(body["index"]))
+            elif command == "animation_frame":
+                if _package:
+                    step = _package.step(_step_index)
+                    # Ignore stale asynchronous HTML frames after a step switch.
+                    if step["id"] == body.get("step_id") and step.get("animation"):
+                        value = body.get("progress")
+                        if isinstance(value, bool) or not isinstance(value, (float, int)) or not 0 <= value <= 1:
+                            raise ValueError("Animation progress must be in [0,1]")
+                        _renderer.render_animation(step, _package.data.get("reference_offset_cm"), value)
+            elif command == "animation_end":
+                if _package and _package.step(_step_index)["id"] == body.get("step_id"):
+                    _renderer.finish_animation()
             elif command == "link_selected":
                 if not _package or not _spatial:
                     raise ValueError("Load an example before linking geometry")
