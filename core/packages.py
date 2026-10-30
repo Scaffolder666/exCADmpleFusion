@@ -5,6 +5,7 @@ A .json manifest can reference media alongside it; a .excadmple file is a ZIP
 containing manifest.json and optional relative assets.
 """
 import json
+import base64
 import math
 import shutil
 import tempfile
@@ -57,6 +58,9 @@ def _validate(data):
         raise PackageError("Expected exCADmple format version 1")
     if not isinstance(data.get("title"), str) or not data["title"].strip():
         raise PackageError("Package title is required")
+    for field in ("preview", "source_model"):
+        if data.get(field):
+            _relative_path(data[field])
     steps = data.get("steps")
     if not isinstance(steps, list) or not 1 <= len(steps) <= MAX_STEPS:
         raise PackageError("Package must contain 1–150 steps")
@@ -108,7 +112,20 @@ class ExamplePackage:
 
     def player_data(self):
         """Minimal metadata for HTML. Geometry stays Python-side."""
-        result = {"title": self.data["title"], "description": self.data.get("description", ""), "steps": []}
+        result = {
+            "title": self.data["title"],
+            "description": self.data.get("description", ""),
+            "preview_data_uri": None,
+            "source_model_included": bool(self.data.get("source_model")),
+            "steps": []
+        }
+        preview = self.data.get("preview")
+        if preview:
+            path = (self.asset_root / str(_relative_path(preview))).resolve()
+            if path.is_relative_to(self.asset_root) and path.is_file() and path.suffix.lower() == ".png":
+                if path.stat().st_size > 2 * 1024 * 1024:
+                    raise PackageError("Preview PNG too large")
+                result["preview_data_uri"] = "data:image/png;base64," + base64.b64encode(path.read_bytes()).decode("ascii")
         for step in self.data["steps"]:
             meta = {k: v for k, v in step.items() if k not in ("geometry", "media")}
             media = {}
@@ -156,6 +173,11 @@ def open_package(filename):
             manifest = _validate(json.loads(archive.read("manifest.json").decode("utf-8")))
             temp = tempfile.mkdtemp(prefix="excadmple-")
             needed = set()
+            if manifest.get("preview"):
+                needed.add(str(_relative_path(manifest["preview"])))
+            # The F3D remains in the ZIP and is not imported into the active design.
+            if manifest.get("source_model") and manifest["source_model"] not in archive.namelist():
+                raise PackageError("Missing source model in package")
             for step in manifest["steps"]:
                 for kind in ("audio", "video"):
                     relative = step.get("media", {}).get(kind)
