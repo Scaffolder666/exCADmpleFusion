@@ -1,0 +1,825 @@
+{
+  "format": "excadmple",
+  "version": 1,
+  "title": "Phone Stand — Design Example",
+  "description": "Illustrative three-step design: the first Extrude can now animate in the Fusion viewport. Text is mock reasoning, not a source recording.",
+  "reference_offset_cm": [
+    14,
+    0,
+    0
+  ],
+  "steps": [
+    {
+      "id": "base",
+      "title": "Establish a stable base",
+      "goal": "Set a footprint that can support the phone on a desk.",
+      "duration_ms": 9000,
+      "geometry": {
+        "meshes": [
+          {
+            "vertices": [
+              [
+                0,
+                0,
+                0
+              ],
+              [
+                10,
+                0,
+                0
+              ],
+              [
+                10,
+                8,
+                0
+              ],
+              [
+                0,
+                8,
+                0
+              ],
+              [
+                0,
+                0,
+                0.7
+              ],
+              [
+                10,
+                0,
+                0.7
+              ],
+              [
+                10,
+                8,
+                0.7
+              ],
+              [
+                0,
+                8,
+                0.7
+              ]
+            ],
+            "triangles": [
+              [
+                0,
+                2,
+                1
+              ],
+              [
+                0,
+                3,
+                2
+              ],
+              [
+                4,
+                5,
+                6
+              ],
+              [
+                4,
+                6,
+                7
+              ],
+              [
+                0,
+                1,
+                5
+              ],
+              [
+                0,
+                5,
+                4
+              ],
+              [
+                1,
+                2,
+                6
+              ],
+              [
+                1,
+                6,
+                5
+              ],
+              [
+                2,
+                3,
+                7
+              ],
+              [
+                2,
+                7,
+                6
+              ],
+              [
+                3,
+                0,
+                4
+              ],
+              [
+                3,
+                4,
+                7
+              ]
+            ]
+          }
+        ]
+      },
+      "media": {},
+      "operation": {
+        "tool": "Sketch → Extrude",
+        "instruction": "Sketch a rectangular profile on the XY plane and extrude the base.",
+        "parameters": [
+          {
+            "name": "Width",
+            "value": "100 mm"
+          },
+          {
+            "name": "Depth",
+            "value": "80 mm"
+          },
+          {
+            "name": "Thickness",
+            "value": "7 mm"
+          }
+        ]
+      },
+      "reasoning": {
+        "text": "Demo reasoning: I start with the base so I can judge stability before choosing the support angle. This is an illustrative explanation, not an actual recording.",
+        "source": "mockup"
+      },
+      "cues": [
+        {
+          "at_ms": 0,
+          "label": "Sketch the base footprint."
+        },
+        {
+          "at_ms": 3400,
+          "label": "Extrude the rectangular base."
+        },
+        {
+          "at_ms": 7100,
+          "label": "Inspect the supported area."
+        }
+      ],
+      "animation": {
+        "type": "extrude",
+        "profile": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            10,
+            0,
+            0
+          ],
+          [
+            10,
+            8,
+            0
+          ],
+          [
+            0,
+            8,
+            0
+          ]
+        ],
+        "direction_cm": [
+          0,
+          0,
+          0.7
+        ],
+        "cap_triangles": [
+          [
+            0,
+            1,
+            2
+          ],
+          [
+            0,
+            2,
+            3
+          ]
+        ],
+        "context_meshes": []
+      }
+    },
+    {
+      "id": "back",
+      "title": "Choose the viewing angle",
+      "goal": "Introduce an angled support for the phone.",
+      "duration_ms": 12000,
+      "geometry": {
+        "meshes": [
+          {
+            "vertices": [
+              [
+                0,
+                0,
+                0
+              ],
+              [
+                10,
+                0,
+                0
+              ],
+              [
+                10,
+                8,
+                0
+              ],
+              [
+                0,
+                8,
+                0
+              ],
+              [
+                0,
+                0,
+                0.7
+              ],
+              [
+                10,
+                0,
+                0.7
+              ],
+              [
+                10,
+                8,
+                0.7
+              ],
+              [
+                0,
+                8,
+                0.7
+              ]
+            ],
+            "triangles": [
+              [
+                0,
+                2,
+                1
+              ],
+              [
+                0,
+                3,
+                2
+              ],
+              [
+                4,
+                5,
+                6
+              ],
+              [
+                4,
+                6,
+                7
+              ],
+              [
+                0,
+                1,
+                5
+              ],
+              [
+                0,
+                5,
+                4
+              ],
+              [
+                1,
+                2,
+                6
+              ],
+              [
+                1,
+                6,
+                5
+              ],
+              [
+                2,
+                3,
+                7
+              ],
+              [
+                2,
+                7,
+                6
+              ],
+              [
+                3,
+                0,
+                4
+              ],
+              [
+                3,
+                4,
+                7
+              ]
+            ]
+          },
+          {
+            "vertices": [
+              [
+                0.7,
+                5,
+                0.7
+              ],
+              [
+                9.3,
+                5,
+                0.7
+              ],
+              [
+                9.3,
+                5.8,
+                0.7
+              ],
+              [
+                0.7,
+                5.8,
+                0.7
+              ],
+              [
+                0.7,
+                6.6,
+                8
+              ],
+              [
+                9.3,
+                6.6,
+                8
+              ],
+              [
+                9.3,
+                7.3,
+                8
+              ],
+              [
+                0.7,
+                7.3,
+                8
+              ]
+            ],
+            "triangles": [
+              [
+                0,
+                2,
+                1
+              ],
+              [
+                0,
+                3,
+                2
+              ],
+              [
+                4,
+                5,
+                6
+              ],
+              [
+                4,
+                6,
+                7
+              ],
+              [
+                0,
+                1,
+                5
+              ],
+              [
+                0,
+                5,
+                4
+              ],
+              [
+                1,
+                2,
+                6
+              ],
+              [
+                1,
+                6,
+                5
+              ],
+              [
+                2,
+                3,
+                7
+              ],
+              [
+                2,
+                7,
+                6
+              ],
+              [
+                3,
+                0,
+                4
+              ],
+              [
+                3,
+                4,
+                7
+              ]
+            ]
+          }
+        ]
+      },
+      "media": {},
+      "operation": {
+        "tool": "Sketch → Extrude",
+        "instruction": "Create a slanted back panel and join it to the base.",
+        "parameters": [
+          {
+            "name": "Panel height",
+            "value": "73 mm"
+          },
+          {
+            "name": "Lean",
+            "value": "toward rear"
+          }
+        ]
+      },
+      "reasoning": {
+        "text": "Demo reasoning: A slightly inclined panel can make the screen easier to view. I would check its relationship to the base before committing to the angle.",
+        "source": "mockup"
+      },
+      "cues": [
+        {
+          "at_ms": 0,
+          "label": "Sketch the support profile."
+        },
+        {
+          "at_ms": 4200,
+          "label": "Select the Extrude tool."
+        },
+        {
+          "at_ms": 8000,
+          "label": "Preview the angled panel and inspect the result."
+        }
+      ]
+    },
+    {
+      "id": "lip",
+      "title": "Keep the phone from sliding",
+      "goal": "Add a small stop at the front edge of the stand.",
+      "duration_ms": 9500,
+      "geometry": {
+        "meshes": [
+          {
+            "vertices": [
+              [
+                0,
+                0,
+                0
+              ],
+              [
+                10,
+                0,
+                0
+              ],
+              [
+                10,
+                8,
+                0
+              ],
+              [
+                0,
+                8,
+                0
+              ],
+              [
+                0,
+                0,
+                0.7
+              ],
+              [
+                10,
+                0,
+                0.7
+              ],
+              [
+                10,
+                8,
+                0.7
+              ],
+              [
+                0,
+                8,
+                0.7
+              ]
+            ],
+            "triangles": [
+              [
+                0,
+                2,
+                1
+              ],
+              [
+                0,
+                3,
+                2
+              ],
+              [
+                4,
+                5,
+                6
+              ],
+              [
+                4,
+                6,
+                7
+              ],
+              [
+                0,
+                1,
+                5
+              ],
+              [
+                0,
+                5,
+                4
+              ],
+              [
+                1,
+                2,
+                6
+              ],
+              [
+                1,
+                6,
+                5
+              ],
+              [
+                2,
+                3,
+                7
+              ],
+              [
+                2,
+                7,
+                6
+              ],
+              [
+                3,
+                0,
+                4
+              ],
+              [
+                3,
+                4,
+                7
+              ]
+            ]
+          },
+          {
+            "vertices": [
+              [
+                0.7,
+                5,
+                0.7
+              ],
+              [
+                9.3,
+                5,
+                0.7
+              ],
+              [
+                9.3,
+                5.8,
+                0.7
+              ],
+              [
+                0.7,
+                5.8,
+                0.7
+              ],
+              [
+                0.7,
+                6.6,
+                8
+              ],
+              [
+                9.3,
+                6.6,
+                8
+              ],
+              [
+                9.3,
+                7.3,
+                8
+              ],
+              [
+                0.7,
+                7.3,
+                8
+              ]
+            ],
+            "triangles": [
+              [
+                0,
+                2,
+                1
+              ],
+              [
+                0,
+                3,
+                2
+              ],
+              [
+                4,
+                5,
+                6
+              ],
+              [
+                4,
+                6,
+                7
+              ],
+              [
+                0,
+                1,
+                5
+              ],
+              [
+                0,
+                5,
+                4
+              ],
+              [
+                1,
+                2,
+                6
+              ],
+              [
+                1,
+                6,
+                5
+              ],
+              [
+                2,
+                3,
+                7
+              ],
+              [
+                2,
+                7,
+                6
+              ],
+              [
+                3,
+                0,
+                4
+              ],
+              [
+                3,
+                4,
+                7
+              ]
+            ]
+          },
+          {
+            "vertices": [
+              [
+                0.5,
+                0.6,
+                0.7
+              ],
+              [
+                9.5,
+                0.6,
+                0.7
+              ],
+              [
+                9.5,
+                1.45,
+                0.7
+              ],
+              [
+                0.5,
+                1.45,
+                0.7
+              ],
+              [
+                0.5,
+                0.6,
+                1.8
+              ],
+              [
+                9.5,
+                0.6,
+                1.8
+              ],
+              [
+                9.5,
+                1.45,
+                1.8
+              ],
+              [
+                0.5,
+                1.45,
+                1.8
+              ]
+            ],
+            "triangles": [
+              [
+                0,
+                2,
+                1
+              ],
+              [
+                0,
+                3,
+                2
+              ],
+              [
+                4,
+                5,
+                6
+              ],
+              [
+                4,
+                6,
+                7
+              ],
+              [
+                0,
+                1,
+                5
+              ],
+              [
+                0,
+                5,
+                4
+              ],
+              [
+                1,
+                2,
+                6
+              ],
+              [
+                1,
+                6,
+                5
+              ],
+              [
+                2,
+                3,
+                7
+              ],
+              [
+                2,
+                7,
+                6
+              ],
+              [
+                3,
+                0,
+                4
+              ],
+              [
+                3,
+                4,
+                7
+              ]
+            ]
+          }
+        ]
+      },
+      "media": {},
+      "operation": {
+        "tool": "Extrude",
+        "instruction": "Add a front lip while leaving room to access the device.",
+        "parameters": [
+          {
+            "name": "Lip height",
+            "value": "11 mm"
+          },
+          {
+            "name": "Lip width",
+            "value": "90 mm"
+          }
+        ]
+      },
+      "reasoning": {
+        "text": "Demo reasoning: The lip resists sliding, but its size also affects access to the bottom of the phone. A different device could need a different lip.",
+        "source": "mockup"
+      },
+      "cues": [
+        {
+          "at_ms": 0,
+          "label": "Select the front profile."
+        },
+        {
+          "at_ms": 3200,
+          "label": "Extrude the lip."
+        },
+        {
+          "at_ms": 6600,
+          "label": "Check clearance at the bottom edge."
+        }
+      ]
+    }
+  ]
+}
