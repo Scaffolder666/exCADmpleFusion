@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>exCADmple</title>
+  <link rel="stylesheet" href="player.css">
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div class="brand"><span class="symbol">e</span><div><strong>exCADmple</strong><small>DESIGN PROCESS PLAYER</small></div></div>
+      <button id="import" class="action-outline" title="Open a .json or .excadmple package">Import example</button>
+    </header>
+
+    <section class="intro">
+      <div class="eyebrow">SHARED DESIGN EXAMPLE</div>
+      <h1 id="exampleTitle">Loading example…</h1>
+      <p id="exampleDescription">A design example you can explore while creating your own model.</p>
+      <div class="example-meta"><span class="dot"></span><span id="exampleSteps">–</span><span class="meta-separator">·</span><span>Reference, not instructions</span></div>
+    </section>
+
+    <section class="timeline-panel" aria-label="Design example steps">
+      <div class="section-heading"><span>Design process</span><span id="stepCount">0 / 0</span></div>
+      <div id="stepRail" class="step-rail"></div>
+      <div class="controls">
+        <button id="prev" class="icon-button" aria-label="Previous step" title="Previous step">◀◀</button>
+        <button id="play" class="play-button" aria-label="Play">▶ <span>Play</span></button>
+        <button id="next" class="icon-button" aria-label="Next step" title="Next step">▶▶</button>
+        <span class="clock" id="clock">00:00 / 00:00</span>
+      </div>
+      <input id="scrub" class="seek" type="range" min="0" max="1000" value="0" aria-label="Scrub within step">
+    </section>
+
+    <section class="step-detail">
+      <div class="eyebrow" id="stepEyebrow">STEP 01</div>
+      <h2 id="stepTitle">–</h2>
+      <p id="stepGoal" class="goal"></p>
+
+      <div class="demonstration" id="demonstration">
+        <video id="video" playsinline preload="metadata" hidden></video>
+        <div id="noVideo" class="no-video">
+          <div class="illustration"><div class="wirecube">▱</div><span class="corner-marker">3D</span></div>
+          <strong>Live reference in Fusion canvas</strong>
+          <span>The original step's geometry is shown beside your design.</span>
+          <span class="hint">Optional operation video appears here when included.</span>
+        </div>
+      </div>
+      <audio id="audio" preload="metadata"></audio>
+      <div class="cue"><div class="cue-dot"></div><div><small>OPERATIONS</small><p id="cueText">Select a step to inspect the operation.</p></div></div>
+
+      <div class="section-heading detail-heading">CAD operation</div>
+      <div class="operation-box">
+        <div class="tool-row"><span id="toolName" class="tool-tag">—</span><span id="toolInstruction"></span></div>
+        <div id="parameters" class="parameters"></div>
+      </div>
+      <div class="section-heading detail-heading">Design reasoning</div>
+      <blockquote id="reasoning">The author's reasoning appears here.</blockquote>
+    </section>
+
+    <footer>
+      <label class="reference-toggle"><input type="checkbox" id="showReference" checked><span>Show reference geometry in canvas</span></label>
+      <p>You can follow the example, borrow a single decision, or explore your own approach. Your Fusion feature timeline remains independent.</p>
+      <button id="demo" class="text-button">Reload sample example</button>
+      <div class="status" id="status" role="status" aria-live="polite"></div>
+    </footer>
+  </main>
+  <script src="player.js"></script>
+</body>
+</html>
