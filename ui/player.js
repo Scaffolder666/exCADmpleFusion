@@ -112,7 +112,18 @@ function renderDetails() {
   $("stepGoal").textContent = current.goal || "";
   $("toolName").textContent = current.operation?.tool || "CAD";
   $("toolInstruction").textContent = current.operation?.instruction || "";
-  $("reasoning").textContent = current.reasoning?.text || "No recorded design reasoning for this step.";
+  const rationale = classifyReasoning(current);
+  $("reasoning").textContent = rationale.text;
+  $("reasonSource").textContent = rationale.label;
+  $("reasonSource").classList.toggle("mock", rationale.mock);
+  $("sourceExplainer").textContent = rationale.explainer;
+  const hasStepGeometry = !!current.has_geometry;
+  $("geometryStatus").textContent = hasStepGeometry ? "3D step available" :
+    (state.example?.preview_data_uri ? "Final preview only" : "No step geometry");
+  $("geometryStatus").classList.toggle("none", !hasStepGeometry);
+  $("showReference").disabled = !hasStepGeometry;
+  $("showReference").title = hasStepGeometry ? "Toggle this step's read-only 3D reference" :
+    "This step does not contain a verified 3D snapshot";
   const parameters = $("parameters");
   parameters.replaceChildren();
   (current.operation?.parameters || []).forEach((item) => {
@@ -135,6 +146,15 @@ function renderDetails() {
   if (preview) $("previewImage").src = preview;
   else $("previewImage").removeAttribute("src");
   $("noVideo").hidden = !!media.video || !!preview;
+  $("mediaEvidence").textContent = [media.video && "Video", media.audio && "Audio"]
+    .filter(Boolean).join(" + ") || "Step metadata";
+  if (!media.video && !preview) {
+    $("noVideo").querySelector("strong").textContent = hasStepGeometry ?
+      "3D reference in Fusion" : "No recorded visuals for this step";
+    $("noVideo").querySelector("span").textContent = hasStepGeometry ?
+      "Inspect the read-only step model in the CAD canvas." :
+      "Import step snapshots or video to visualize the original operation.";
+  }
   $("prev").disabled = state.index === 0;
   $("next").disabled = state.index >= state.example.steps.length - 1;
   renderRail();
@@ -216,8 +236,14 @@ function loadExample(data) {
   state.cueIndex = -1;
   $("exampleTitle").textContent = data.title;
   $("exampleDescription").textContent = data.description || "Explore someone else's design decisions.";
+  const containsSnapshots = data.steps.some((item) => item.has_geometry);
+  $("exampleType").textContent = containsSnapshots ? "3D steps" :
+    (data.preview_data_uri ? "Preview-based example" : "Metadata only");
+  $("packageStatus").textContent = data.source_model_included ? "Source F3D in package" : "";
   renderDetails();
-  setStatus("Example loaded. The reference appears in the Fusion canvas.");
+  setStatus(data.steps[0]?.has_geometry ?
+    "Example loaded — read-only step geometry is available in Fusion." :
+    "Example loaded — this step has no verified 3D intermediate state.");
 }
 window.fusionJavaScriptHandler = {
   handle(action, raw) {
