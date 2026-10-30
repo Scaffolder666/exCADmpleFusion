@@ -138,6 +138,14 @@ class PaletteHandler(adsk.core.HTMLEventHandler):
                 _spatial.unbind(_package.step(_step_index)["id"])
                 _post_links()
                 _status("Step link removed; source CAD geometry unchanged.")
+            elif command == "set_focus":
+                if not _spatial:
+                    raise ValueError("Geometry focus is not ready")
+                enabled = body.get("enabled", True)
+                if not isinstance(enabled, bool):
+                    raise ValueError("Focus setting must be boolean")
+                ok, message = _spatial.set_focus_enabled(enabled)
+                _status(message, not ok)
             elif command == "set_visible":
                 visible = body.get("visible", True)
                 _renderer.set_visible(visible)
@@ -168,13 +176,35 @@ class ShowCommandExecute(adsk.core.CommandEventHandler):
 
 class BeforeSave(adsk.core.DocumentEventHandler):
     def notify(self, args):
-        # Explicitly keep transient reference graphics out of saved CAD files.
         global _saving_document
-        _saving_document = True
-        if _renderer:
-            _renderer.clear()
-        if _spatial:
-            _spatial.clear_overlay()
+        try:
+            # Restore the exact user-authored opacities before Fusion serializes.
+            if _spatial:
+                _spatial.clear_overlay()
+            if _renderer:
+                _renderer.clear()
+            _saving_document = True
+        except Exception as error:
+            _saving_document = False
+            # A failed restoration must never be saved silently.
+            try:
+                args.isSaveCanceled = True
+            except Exception:
+                pass
+            _status("Save canceled: could not restore original appearance. " + str(error), True)
+            _log_error()
+
+
+class BeforeDeactivate(adsk.core.DocumentEventHandler):
+    def notify(self, args):
+        try:
+            if _spatial:
+                _spatial.clear_overlay()
+            if _renderer:
+                _renderer.clear()
+        except Exception as error:
+            _status("Focus could not be cleared before changing documents: " + str(error), True)
+            _log_error()
 
 
 class AfterSave(adsk.core.DocumentEventHandler):
@@ -237,9 +267,11 @@ def run(_context):
 
         before = BeforeSave()
         after = AfterSave()
+        deactivating = BeforeDeactivate()
         _app.documentSaving.add(before)
         _app.documentSaved.add(after)
-        _handlers.extend((before, after))
+        _app.documentDeactivating.add(deactivating)
+        _handlers.extend((before, after, deactivating))
 
         # A deterministic, clearly labeled illustrative example.
         _load(str(ROOT / "examples" / "phone_stand.json"))
@@ -257,7 +289,7 @@ def stop(_context):
         if _spatial:
             _spatial.clear_overlay()
         if _app:
-            for event_name, handler_type in (("documentSaving", BeforeSave), ("documentSaved", AfterSave)):
+            for event_name, handler_type in (("documentSaving", BeforeSave), ("documentSaved", AfterSave), ("documentDeactivating", BeforeDeactivate)):
                 for handler in _handlers:
                     if isinstance(handler, handler_type):
                         try:
