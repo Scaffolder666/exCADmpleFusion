@@ -27,6 +27,8 @@ class PackageTests(unittest.TestCase):
         self.assertEqual(len(pkg.data["steps"]), 3)
         self.assertEqual([len(s["geometry"]["meshes"]) for s in pkg.data["steps"]], [1, 2, 3])
         self.assertNotIn("geometry", pkg.player_data()["steps"][0])
+        self.assertTrue(pkg.player_data()["steps"][0]["has_geometry"])
+        self.assertEqual(pkg.player_data()["steps"][0]["reasoning"]["source"], "mockup")
         pkg.close()
 
     def test_duplicate_ids_rejected(self):
