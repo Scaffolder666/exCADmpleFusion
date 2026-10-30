@@ -5,7 +5,12 @@ Only Custom Graphics are changed; no native feature history is replayed.
 """
 import json
 import traceback
+import sys
 from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 import adsk.core
 import adsk.fusion
@@ -13,7 +18,6 @@ import adsk.fusion
 from core.packages import open_package, PackageError
 from core.renderer import ReferenceRenderer
 
-ROOT = Path(__file__).resolve().parent
 PALETTE_ID = "excadmple.fusion.player"
 COMMAND_ID = "excadmple.fusion.open"
 _app = None
@@ -206,6 +210,14 @@ def stop(_context):
     try:
         if _renderer:
             _renderer.clear()
+        if _app:
+            for event_name, handler_type in (("documentSaving", BeforeSave), ("documentSaved", AfterSave)):
+                for handler in _handlers:
+                    if isinstance(handler, handler_type):
+                        try:
+                            getattr(_app, event_name).remove(handler)
+                        except Exception:
+                            pass
         if _package:
             _package.close()
             _package = None
