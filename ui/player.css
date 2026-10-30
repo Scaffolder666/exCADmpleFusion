@@ -42,7 +42,10 @@ h2 { font-size:18px; font-weight:600; margin:5px 0 7px; line-height:1.25; letter
 .goal { color:var(--muted); font-size:12px; margin:0 0 17px; }
 .demonstration { border:1px solid var(--border); border-radius:10px; overflow:hidden; background:#111315; min-height:166px; }
 .demonstration video { width:100%; max-height:280px; display:block; background:#111315; object-fit:contain; }
-.demonstration video[hidden], .no-video[hidden] { display:none; }
+.demonstration video[hidden], .no-video[hidden], .final-preview[hidden] { display:none; }
+.final-preview { margin:0; background:#292b2c; padding:15px; text-align:center; }
+.final-preview img { display:block; max-width:100%; max-height:240px; object-fit:contain; margin:auto; image-rendering:auto; }
+.final-preview figcaption { margin-top:8px; font-size:9px; color:var(--quiet); letter-spacing:1px; }
 .no-video { min-height:165px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px; color:var(--muted); text-align:center; padding:15px; }
 .no-video strong { font-size:12px; color:#d7d5d0; font-weight:550; }
 .no-video span { font-size:11px; }
