@@ -12,6 +12,7 @@ This repository is the first **technical prototype**, not a completed study syst
 - Browse steps, play automatically, pause, scrub inside a step, jump backward and forward.
 - Display CAD tool, parameters, timed action cues, and the author's recorded explanation (as text).
 - Play optional step-level operation videos and/or separate audio, if supplied.
+- Display a genuine final-model preview bundled in a package when its true intermediate geometry snapshots are not yet available, with an explicit label distinguishing the final preview from per-step geometry.
 - Show each step's **read-only reference geometry** in Fusion using Custom Graphics. The example's timeline is independent of the user's native feature history.
 - Continue working on your own sketches, bodies and features in the same Fusion document; switching example steps does **not** move Fusion's global history marker.
 - Temporarily remove reference graphics before saving the document, and recreate them after saving.
@@ -57,6 +58,8 @@ phone-stand.excadmple  (ZIP)
 └── video/
     └── step-2.mp4
 ```
+
+For a real-model mockup, the package may include `source/Caster_Wheel.f3d` and `previews/final.png`. Open the original F3D manually in Fusion and import the exCADmple package from the player. If the package has no per-step meshes, the player shows the final preview and step information but **does not claim to reconstruct the original feature sequence**. Extract the actual step states with Fusion's native API in a later development stage.
 
 Video shows how the original designer interacted with Fusion. The app does not move the actual Fusion mouse or click its native toolbar. The canvas mesh reflects the **step's reference geometry**, not every transient mouse movement during the original operation. Media files are played from their local file URI; verify your Fusion WebView allows playback of the specific codec and container on your OS.
 
