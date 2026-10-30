@@ -52,6 +52,23 @@
       <h2 id="stepTitle">—</h2>
       <p id="stepGoal" class="goal"></p>
 
+      <details class="geometry-link" id="geometryLink">
+        <summary class="geometry-link__summary">
+          <span class="geometry-link__heading">Linked CAD geometry</span>
+          <span id="linkStatus" class="geometry-link__status">Not linked</span>
+          <span class="geometry-link__chevron" aria-hidden="true">⌄</span>
+        </summary>
+        <div class="geometry-link__body">
+          <p>To link this step to the actual source CAD geometry, select one body, face, or component in Fusion first.</p>
+          <div class="geometry-link__buttons">
+            <button id="bindGeometry" class="geometry-btn primary" type="button">Link selected</button>
+            <button id="locateGeometry" class="geometry-btn" type="button" disabled>Locate in Fusion</button>
+            <button id="removeGeometry" class="geometry-btn minimal" type="button" disabled>Unlink</button>
+          </div>
+          <small>Prototype authoring · links are session-only and scoped to this Fusion design.</small>
+        </div>
+      </details>
+
       <div class="demonstration" id="demonstration">
         <video id="video" playsinline preload="metadata" hidden></video>
         <figure id="finalPreview" class="final-preview" hidden>
