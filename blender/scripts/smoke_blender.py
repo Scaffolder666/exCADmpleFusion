@@ -51,6 +51,10 @@ plugin.update_focus(scene)
 assert lip.display_type=="TEXTURED"
 assert base.display_type=="WIRE"
 assert original.display_type=="TEXTURED"
+# Pack generated WAV audio in the scene so the .blend artifact is portable.
+bpy.ops.file.pack_all()
+packed=sum(1 for sound in bpy.data.sounds if sound.packed_file is not None)
+assert packed>=3,("Expected three packed narration WAV files",packed)
 destination=Path("/tmp/excadmple_blender_smoke.blend")
 bpy.ops.wm.save_as_mainfile(filepath=str(destination))
 assert destination.exists() and destination.stat().st_size>10000
