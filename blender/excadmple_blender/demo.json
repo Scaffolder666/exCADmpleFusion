@@ -1,0 +1,159 @@
+{
+  "format": "excadmple-blender-v1",
+  "geometry_preset": "phone_stand_v1",
+  "title": "Phone Stand — Illustrated Design Process",
+  "description": "Synthetic example; no real designer recording or CAD construction history.",
+  "fps": 24,
+  "steps": [
+    {
+      "id": "base",
+      "title": "Establish the footprint",
+      "tool": "EXTRUDE",
+      "start": 1,
+      "end": 120,
+      "reasoning": "I choose a wide base first so I can evaluate stability before fixing the viewing angle.",
+      "captions": [
+        {
+          "at": 0,
+          "text": "First, I define a broad footprint for stability."
+        },
+        {
+          "at": 50,
+          "text": "Now I extrude it, keeping the plate relatively thin."
+        },
+        {
+          "at": 93,
+          "text": "This dimension is a design choice, not a requirement."
+        }
+      ],
+      "pointer": [
+        {
+          "at": 0,
+          "x": 0.12,
+          "y": 0.7
+        },
+        {
+          "at": 20,
+          "x": 0.21,
+          "y": 0.64
+        },
+        {
+          "at": 44,
+          "x": 0.36,
+          "y": 0.44
+        },
+        {
+          "at": 78,
+          "x": 0.5,
+          "y": 0.3
+        },
+        {
+          "at": 119,
+          "x": 0.6,
+          "y": 0.22
+        }
+      ],
+      "audio": "audio/base.wav"
+    },
+    {
+      "id": "support",
+      "title": "Choose a viewing angle",
+      "tool": "ROTATE / EXTRUDE",
+      "start": 121,
+      "end": 240,
+      "reasoning": "The back panel is angled for viewing, but I can change its inclination if the phone or context changes.",
+      "captions": [
+        {
+          "at": 0,
+          "text": "I introduce a back panel to carry the phone."
+        },
+        {
+          "at": 40,
+          "text": "I tilt it instead of assuming the first angle is final."
+        },
+        {
+          "at": 85,
+          "text": "The angle depends on how the stand will be used."
+        }
+      ],
+      "pointer": [
+        {
+          "at": 0,
+          "x": 0.16,
+          "y": 0.32
+        },
+        {
+          "at": 34,
+          "x": 0.33,
+          "y": 0.37
+        },
+        {
+          "at": 63,
+          "x": 0.55,
+          "y": 0.49
+        },
+        {
+          "at": 90,
+          "x": 0.66,
+          "y": 0.31
+        },
+        {
+          "at": 119,
+          "x": 0.73,
+          "y": 0.23
+        }
+      ],
+      "audio": "audio/support.wav"
+    },
+    {
+      "id": "lip",
+      "title": "Prevent the phone from sliding",
+      "tool": "EXTRUDE",
+      "start": 241,
+      "end": 360,
+      "reasoning": "I add a shallow lip to prevent slipping while leaving room to reach the bottom of the device.",
+      "captions": [
+        {
+          "at": 0,
+          "text": "A small lip holds the device near the lower edge."
+        },
+        {
+          "at": 48,
+          "text": "I extrude only enough to resist sliding."
+        },
+        {
+          "at": 89,
+          "text": "The phone size might call for a different lip."
+        }
+      ],
+      "pointer": [
+        {
+          "at": 0,
+          "x": 0.18,
+          "y": 0.69
+        },
+        {
+          "at": 27,
+          "x": 0.36,
+          "y": 0.66
+        },
+        {
+          "at": 61,
+          "x": 0.57,
+          "y": 0.53
+        },
+        {
+          "at": 88,
+          "x": 0.62,
+          "y": 0.39
+        },
+        {
+          "at": 119,
+          "x": 0.48,
+          "y": 0.3
+        }
+      ],
+      "audio": "audio/lip.wav"
+    }
+  ]
+}
