@@ -1,0 +1,49 @@
+name: Blender playback spike — real bpy smoke test
+
+on:
+  push:
+    branches:
+      - feat/blender-reasoning-player-spike
+    paths:
+      - "blender/**"
+      - ".github/workflows/blender-spike.yml"
+  workflow_dispatch:
+
+jobs:
+  blender-smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Validate pure playback data
+        run: |
+          python -m compileall -q blender/excadmple_blender blender/tests blender/scripts
+          python -m unittest discover -s blender/tests -v
+      - name: Generate explicitly synthetic narration
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y espeak
+          mkdir -p blender/excadmple_blender/audio
+          espeak -v en-us -s 218 -w blender/excadmple_blender/audio/base.wav "First I define a broad base. A wider footprint improves stability before I set a viewing angle."
+          espeak -v en-us -s 218 -w blender/excadmple_blender/audio/support.wav "Next I make the back support and test the viewing angle. I can change it for another device."
+          espeak -v en-us -s 218 -w blender/excadmple_blender/audio/lip.wav "Finally I add a small lip so the phone stays in place. The size depends on the phone."
+      - name: Download official Blender 4.5.15 LTS
+        run: |
+          curl --fail --location --retry 3 --connect-timeout 25 \
+            https://download.blender.org/release/Blender4.5/blender-4.5.15-linux-x64.tar.xz \
+            --output /tmp/blender.tar.xz
+          tar -xf /tmp/blender.tar.xz -C /tmp
+          /tmp/blender-4.5.15-linux-x64/blender --version | head -4
+      - name: Execute actual Blender Python API tests
+        run: |
+          /tmp/blender-4.5.15-linux-x64/blender --background --factory-startup \
+            --python blender/scripts/smoke_blender.py
+          test -s /tmp/excadmple_blender_smoke.blend
+      - uses: actions/upload-artifact@v4
+        with:
+          name: excadmple-blender-smoke-scene
+          path: /tmp/excadmple_blender_smoke.blend
+          retention-days: 7
