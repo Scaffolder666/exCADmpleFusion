@@ -1,7 +1,7 @@
 bl_info = {
     "name": "exCADmple — Design Reasoning Player (Prototype)",
     "author": "exCADmple research prototype",
-    "version": (0, 2, 0), "blender": (4, 1, 0),
+    "version": (0, 3, 0), "blender": (4, 1, 0),
     "location": "3D View > Sidebar > exCADmple",
     "description": "Explore design animations, recorded cursor paths, synchronized transcripts and audio",
     "category": "3D View",
