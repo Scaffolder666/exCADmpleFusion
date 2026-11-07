@@ -48,10 +48,16 @@ jobs:
           /tmp/blender-4.5.15-linux-x64/blender --background --factory-startup \
             --python blender/scripts/smoke_him_catalog.py
           test -s /tmp/excadmple_blender_him_catalog.blend
+      - name: Package installable Blender add-on including synthetic narration
+        run: |
+          cd blender
+          zip -qr /tmp/excadmple_blender_him_addon.zip excadmple_blender -x '*/__pycache__/*'
+          unzip -l /tmp/excadmple_blender_him_addon.zip | grep 'excadmple_blender/him_ops.py'
       - uses: actions/upload-artifact@v4
         with:
           name: excadmple-blender-smoke-scene
           path: |
             /tmp/excadmple_blender_smoke.blend
             /tmp/excadmple_blender_him_catalog.blend
+            /tmp/excadmple_blender_him_addon.zip
           retention-days: 7
