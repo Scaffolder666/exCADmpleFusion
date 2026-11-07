@@ -34,6 +34,55 @@ a reenactment layer. They do not literally move Blender's system cursor,
 click the Toolbar, or execute the original creator's input events.
 The data is illustrative; it is not grounded in a real CAD session.
 
+## Single-viewport HiM-style player (v0.5)
+
+**Exactly one 3D Viewport. No split views, separate tutorial windows, or a
+second Scene.** The pre-authored Phone Stand reference and the learner's own
+model share that 3D space and one camera. The reference objects live in the
+dedicated `exCADmple | Recorded example (read-only)` collection and have
+`hide_select=True` so they cannot be accidentally selected or edited.
+
+**Installation and workflow**
+
+1. Enable the exCADmple add-on in Blender 4.5, open a 3D Viewport and press
+   **N** to find the small exCADmple launcher in the Blender Sidebar.
+2. Click **Open Phone Stand Example**. The HiM-inspired player should then
+   appear directly **over the right edge of the same 3D Viewport**. If the
+   modal input handler could not start automatically, click **Show HiM-style
+   Player** in the small launcher.
+3. Close the Blender **N Sidebar** to give the single modeling viewport more
+   room. The floating player includes previous/next, Play/Pause, a
+   within-step progress scrub bar, a short vertical **design-step timeline**,
+   a compact *Why This Decision?* area, synchronized subtitle and speed.
+4. Click within the player to control the recorded example; clicks outside
+   it are passed through to **normal Blender modeling operations**.
+   Create or edit your own geometry anywhere in the remaining viewport.
+5. Use the **X** on the player overlay to close it. Reopen through the N
+   Sidebar. The animation library's 20-operation gallery remains internal
+   and is never shown as the learner's workflow.
+
+**Implementation:** `overlay_geometry.py` contains a pure, testable
+right-edge panel layout and hit detection; `viewport_panel.py` handles
+rounded GPU cards and compact typography; `EXCADMPLE_OT_viewport_panel`
+is a modal operator that consumes mouse events *only within* the control
+rectangle. All other events (including normal keyboard input) are passed
+through to Blender. The existing ghost cursor renderer is retained.
+
+**Known boundaries**
+
+- Blender **headless CI tests** verify Python syntax, player data, screen
+  layout/hit testing, operation animation and user/reference isolation.
+  Actual GPU overlay visibility, mouse click handling, modal focus and the
+  final appearance **must be verified on Blender desktop GUI**.
+- Playback still advances the global Blender **Scene frame**. Speed buttons
+  update the Scene frame rate; this also affects any animated user objects.
+  Static user-authored geometry remains unchanged. An independent
+  reference clock would be required if the learner animates their own model
+  during example playback.
+- The synthetic cursor is a visual reconstruction; it does not generate
+  real Blender mouse events or click actual native tool buttons.
+- This prototype loads a curated preset example, not arbitrary CAD files.
+
 ## Preset-model user workflow (v0.4 UI)
 
 The **only user-facing case at this stage** is the curated **Phone Stand
