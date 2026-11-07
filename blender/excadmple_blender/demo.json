@@ -456,7 +456,8 @@
           "event": "move"
         }
       ],
-      "audio": "audio/base_round.wav"
+      "audio": "audio/base_round.wav",
+      "focus_step": "base"
     },
     {
       "id": "cable",
@@ -553,7 +554,8 @@
           "event": "move"
         }
       ],
-      "audio": "audio/cable.wav"
+      "audio": "audio/cable.wav",
+      "focus_step": "lip"
     },
     {
       "id": "ribs",
@@ -844,7 +846,8 @@
           "event": "move"
         }
       ],
-      "audio": "audio/back_window.wav"
+      "audio": "audio/back_window.wav",
+      "focus_step": "support"
     },
     {
       "id": "fit",
