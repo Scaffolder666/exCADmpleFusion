@@ -23,6 +23,35 @@ class PlaybackTests(unittest.TestCase):
         self.assertAlmostEqual(x,.165)
         self.assertAlmostEqual(y,.67)
 
+    def test_world_ghost_pointer_follows_preset_geometry(self):
+        step=self.data["steps"][0]
+        self.assertEqual(m.pointer_world_at_frame(step,step["start"]),
+                         tuple(step["pointer_world"][0]["xyz"]))
+        midway=m.pointer_world_at_frame(step,step["start"]+32)
+        a=step["pointer_world"][1]["xyz"]
+        b=step["pointer_world"][2]["xyz"]
+        self.assertAlmostEqual(midway[0],(a[0]+b[0])/2)
+        self.assertAlmostEqual(midway[1],(a[1]+b[1])/2)
+        self.assertEqual(m.pointer_world_at_frame(step,step["end"]),
+                         tuple(step["pointer_world"][-1]["xyz"]))
+        self.assertEqual(step["pointer_world"][2]["event"],"click")
+        self.assertEqual(step["pointer_world"][3]["event"],"drag")
+
+    def test_ghost_world_pointer_is_optional_and_validated(self):
+        from copy import deepcopy
+        example=deepcopy(self.data)
+        example["steps"][0].pop("pointer_world")
+        m.validate_example(example)
+        self.assertIsNone(m.pointer_world_at_frame(example["steps"][0],70))
+        bad=deepcopy(self.data)
+        bad["steps"][0]["pointer_world"][0]["xyz"][0]=float("nan")
+        with self.assertRaises(m.ExampleError):
+            m.validate_example(bad)
+        bad=deepcopy(self.data)
+        bad["steps"][0]["pointer_world"][2]["event"]="mouse_takeover"
+        with self.assertRaises(m.ExampleError):
+            m.validate_example(bad)
+
     def test_captions_and_progress(self):
         first=self.data["steps"][0]
         self.assertIn("footprint",m.caption_at_frame(first,1))
