@@ -26,18 +26,42 @@ base=col.objects.get("exCADmple | 01 Base extrude")
 back=col.objects.get("exCADmple | 02 Angled back support")
 lip=col.objects.get("exCADmple | 03 Front lip extrude")
 assert base and back and lip
+# HiM-inspired Extrude: vertex positions change, not the object's scale.
+base_key=base.data.shape_keys.key_blocks["Extrude"]
+lip_key=lip.data.shape_keys.key_blocks["Extrude"]
+base_sketch=col.objects.get("exCADmple | 01 Base extrude — sketch")
+base_gizmo=col.objects.get("exCADmple | 01 Base extrude — manipulator")
+lip_sketch=col.objects.get("exCADmple | 03 Front lip extrude — sketch")
+lip_gizmo=col.objects.get("exCADmple | 03 Front lip extrude — manipulator")
+assert all((base_sketch,base_gizmo,lip_sketch,lip_gizmo))
+assert len(col.objects)==7,len(col.objects)
 scene.frame_set(1)
-start=base.scale.z
-scene.frame_set(119)
-assert base.scale.z>start*5,(start,base.scale.z)
+start=base_key.value
+assert abs(start)<.01,start
+scene.frame_set(20)
+assert base_sketch.data.bevel_factor_end>.5
+assert base_key.value<.02
+scene.frame_set(82)
+assert base_key.value>.05,base_key.value
+assert tuple(base.scale)==(1.,1.,1.),tuple(base.scale)
+scene.frame_set(120)
+assert base_key.value>.99,base_key.value
+depsgraph=bpy.context.evaluated_depsgraph_get()
+eval_base=base.evaluated_get(depsgraph)
+evaluated_mesh=eval_base.to_mesh()
+assert max(v.co.z for v in evaluated_mesh.vertices)>.25
+eval_base.to_mesh_clear()
 scene.frame_set(121)
 start=back.scale.z
 scene.frame_set(200)
 assert back.scale.z>start*5,(start,back.scale.z)
 scene.frame_set(241)
-start=lip.scale.z
+assert lip_key.value<.02,lip_key.value
+scene.frame_set(300)
+assert lip_key.value>.05,lip_key.value
 scene.frame_set(360)
-assert lip.scale.z>start*5,(start,lip.scale.z)
+assert lip_key.value>.99,lip_key.value
+assert tuple(lip.scale)==(1.,1.,1.)
 assert (tuple(original.location),len(original.data.vertices))==snapshot
 assert original.display_type=="TEXTURED"
 assert scene.frame_end==360
@@ -51,6 +75,8 @@ plugin.update_focus(scene)
 assert lip.display_type=="TEXTURED"
 assert base.display_type=="WIRE"
 assert original.display_type=="TEXTURED"
+assert lip_sketch.hide_get() is False
+assert base_sketch.hide_get() is True
 # Pack generated WAV audio in the scene so the .blend artifact is portable.
 bpy.ops.file.pack_all()
 packed=sum(1 for sound in bpy.data.sounds if sound.packed_file is not None)
