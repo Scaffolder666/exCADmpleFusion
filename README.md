@@ -1,83 +1,88 @@
 # exCADmple
 
-**Supporting Design Reasoning Reuse Through Shared CAD Models**
+**通过共享 CAD 模型支持设计推理的复用（Supporting Design Reasoning Reuse Through Shared CAD Models）**
 
-exCADmple is an HCI research prototype exploring how people can **learn from other designers' modeling processes and decisions while working on their own 3D designs**.
+exCADmple 是一个人机交互（HCI）研究原型，探索设计师如何在**进行自己的三维设计时，参考他人的建模过程、操作和设计决策**。
 
-A finished CAD model shows *what* was made. A conventional tutorial often explains *how* to reproduce it. exCADmple aims to make the **design reasoning behind modeling decisions** available as an explorable reference *inside the design workspace*.
+一个完成的 CAD 模型告诉我们「**做出了什么**」，传统教程通常侧重「**怎样复现**」。exCADmple 希望进一步呈现「**为什么这样设计**」：将其他设计师的 Design Reasoning 与三维建模过程联系起来，让用户能够直接在自己的 CAD 工作环境中探索和借鉴。
 
-## Research idea
+## 研究目标与使用流程
 
-The intended workflow is **design-centered, not tutorial-centered**:
+系统围绕**用户自己的设计过程**组织，而不是要求用户线性地完成某个教程：
 
-1. **Work on your own design** in a normal CAD/3D modeling viewport.
-2. **Open a curated Design Example** relevant to your current problem. Its reference model appears alongside your own work in the same modeling environment.
-3. **Explore its design process**: a step-by-step evolving 3D model, CAD functions and parameters, a *visual-only* ghost pointer indicating selections/drags, synchronized narration/transcript, and explanations of *why* decisions were made.
-4. **Keep designing**. Learn a technique, borrow or reconsider a design decision, or develop your own alternative without leaving the modeling workspace.
-5. **Consult another example** as your design progresses, and revisit earlier examples when useful.
+1. **继续自己的设计**：用户在正常的 CAD／三维建模视口里创建和修改模型。
+2. **打开一个 Design Example（设计案例）**：将预先准备的参考模型加载到同一个建模空间，放在用户模型旁边。
+3. **探索案例的设计过程**：观察几何如何逐步变化、使用了哪些 CAD 功能与参数、虚拟指示点如何表示选择和拖动，并同步听取设计师对决策的解释。
+4. **回到自己的设计**：用户可以借鉴某个操作、调整一项设计决策，或选择与案例不同的方案，无须退出建模环境。
+5. **再参考其他案例**：随着设计问题的变化，加载新的 Example，必要时重新访问之前看过的案例。
 
-The **user's own design is the continuous activity**. Examples are reusable references, not assignments to copy exactly. In the intended system, several examples can be loaded or revisited, with one active reference playing at a time.
+**用户自己的模型始终是主线；Design Examples 是可以在设计过程中反复查阅的参考资料，而不是必须照着完成的作业。**
 
-### Three kinds of knowledge
+### 三个学习层次
 
-| Layer | What the learner can investigate |
+| 层次 | 用户能够了解什么 |
 |---|---|
-| **Why — Design reasoning** | Motivations, constraints, trade-offs, alternatives and the rationale behind a design decision |
-| **What — CAD functions** | Which modeling tools/features and parameters were used |
-| **How — Modeling interactions** | How geometry changed, where selections happened and how operations such as Extrude were manipulated |
+| **Why — Design Reasoning（为什么）** | 设计目的、约束、权衡、替代方案，以及做出决策的原因 |
+| **What — CAD Functions（用了什么）** | 用到了哪些建模功能、操作和参数 |
+| **How — Modeling Interactions（怎么操作）** | 几何如何变化、选中了什么、如何拖动以及怎样执行 Extrude 等操作 |
 
-Each curated example ties these layers to the **same sequence of modeling steps**.
+这三个层次都与**同一个 Design Example 的建模步骤**同步关联。
 
-## Interaction concept
+## 核心交互设想
 
-- **One 3D viewport**, not split screens or a separate tutorial application.
-- **Reference geometry and learner-authored geometry side by side** in the same 3D workspace. The reference is visually distinct and protected from accidental selection.
-- An **in-viewport, HiM-inspired step player**: step cards, play/pause, seeking, operation information, speed and short reasoning explanations.
-- A **passive ghost-pointer dot** and short trail/click pulse illustrate the example designer's interactions. It **does not control the user's actual mouse**.
-- **Synchronized example media** (audio, captions and reasoning) while the user remains free to continue modeling.
-- In the longer-term design, an **Example Library / switcher** supports moving among multiple reference models and returning to an earlier example without resetting the user's own design.
+- **单个 3D Viewport**：不拆分为 Rhino 式多视口，也不另开独立教程窗口。
+- **参考模型与用户模型共存**：两者位于同一个三维工作空间，参考几何单独管理并避免被误选中。
+- **视口内的 HiM 风格播放器**：包含步骤卡片、播放／暂停、跳转、进度控制、操作信息和简短的设计推理说明。
+- **Ghost Pointer（虚拟操作指示点）**：以点、短轨迹和点击反馈展示案例中的操作；**不会移动或接管用户真实的鼠标**。
+- **同步内容**：参考模型的几何变化、操作提示、语音、字幕和 Reasoning 随案例播放呈现，用户仍可进行自己的设计。
+- **多案例探索（计划中）**：用户可切换不同的 Design Examples，返回之前的案例，并保留自己模型的状态。
 
-## Current proof of concept
+## 当前 Proof of Concept
 
-The most developed experimental branch is a **Blender 4.5 prototype with a pre-authored, nine-step Phone Stand example**. It demonstrates cumulative geometry evolution, scripted ghost-pointer cues, step-level reasoning, captions and synthetic spoken narration.
+目前最完整的技术原型是基于 **Blender 4.5** 的预设 **Phone Stand（手机支架）九步骤案例**。它演示了累积式几何变化、预设 Ghost Pointer、步骤级设计理由、字幕以及合成语音。
 
-| # | Phone Stand step | Design consideration |
+| 步骤 | 建模过程 | 对应的设计考虑 |
 |---|---|---|
-| 1 | Establish the footprint — Sketch / Extrude | Stability and base size |
-| 2 | Choose the viewing angle — form / rotate support | Viewing ergonomics |
-| 3 | Add a retaining lip — Sketch / Extrude | Prevent slipping |
-| 4 | Round base edges — Bevel | Handling comfort vs. contact area |
-| 5 | Cut a charging-cable passage — Boolean | Cable access vs. retention |
-| 6 | Add two support ribs — modeled braces | Stiffness vs. material |
-| 7 | Pattern four anti-slip pads | Friction without a bigger footprint |
-| 8 | Open a back-panel window — Boolean | Weight/material vs. stiffness |
-| 9 | Check phone fit with a temporary proxy | Clearance, angle and usability |
+| 1. Establish the Footprint | Sketch / Extrude 底座 | 稳定性与底座面积 |
+| 2. Choose a Viewing Angle | 建立并倾斜支撑背板 | 观看角度与使用情境 |
+| 3. Add a Retaining Lip | Sketch / Extrude 前挡板 | 防止手机滑落 |
+| 4. Round Base Edges | Bevel / Fillet | 接触舒适性与有效支撑面积 |
+| 5. Charging Cable Passage | Boolean Cut | 充电线通道与手机固定 |
+| 6. Reinforce Back Support | 添加一对支撑肋 | 结构刚度与材料用量 |
+| 7. Add Anti-Slip Pads | 四个防滑垫 | 摩擦力与底座大小 |
+| 8. Lighten Back Support | Boolean Cut 背板开孔 | 减重与结构强度 |
+| 9. Check Phone Fit | 临时手机模型进行装配检查 | 尺寸、倾角与间隙 |
 
-The example is **pre-scripted, not a recording of a real designer's CAD session**. The narration is synthesized, and some geometry transitions illustrate an operation rather than replaying a native command. The project does **not** claim to infer authentic design intent from a finished model.
+**重要说明：** 这是**人工编排的合成示例**，不是某位设计师真实 CAD 会话的录制。语音为合成旁白，部分动画是操作的可视化重演，而非真实的原生 CAD 命令回放。系统目前也**不能**从完成的模型自动推断真实设计意图。
 
-### Two permanent development branches
+## 两个固定开发分支
 
-The project is maintained directly on **two long-lived branches**. New features and fixes are committed to the appropriate branch rather than opening stacked feature branches.
+目前只维护两个长期开发分支。今后的功能和修复会**直接提交到对应分支**，不再层层创建功能分支。
 
-| Branch | Implementation | Current state |
+| 分支 | 内容 | 当前状态 |
 |---|---|---|
-| **[`blender`](https://github.com/Scaffolder666/exCADmpleFusion/tree/blender)** | [Blender setup and implementation](https://github.com/Scaffolder666/exCADmpleFusion/blob/blender/blender/README.md) | Single 3D viewport, in-viewport HiM-inspired controls, passive ghost dot, and nine-step Phone Stand with synthetic narration; headless Blender tests pass, desktop GPU/UI remains to be tested |
-| **[`fusion`](https://github.com/Scaffolder666/exCADmpleFusion/tree/fusion)** | [Autodesk Fusion prototype](https://github.com/Scaffolder666/exCADmpleFusion/blob/fusion/README.md) | Earlier read-only reference player integrated in the user's native Fusion CAD workspace |
+| **[`blender`](https://github.com/Scaffolder666/exCADmpleFusion/tree/blender)** | [Blender 安装及技术说明](https://github.com/Scaffolder666/exCADmpleFusion/blob/blender/blender/README.md) | 单视口播放器、Ghost Pointer、九步 Phone Stand 和合成旁白；Blender 无界面自动化测试通过，桌面 GPU/UI 交互仍待验证 |
+| **[`fusion`](https://github.com/Scaffolder666/exCADmpleFusion/tree/fusion)** | [Autodesk Fusion 原型与安装说明](https://github.com/Scaffolder666/exCADmpleFusion/blob/fusion/README.md) | 较早的 Fusion 技术原型，在原生 Fusion 建模空间中展示只读参考模型 |
 
-The default `main` branch is the **project overview**. It does not yet contain the runnable prototypes. To inspect or install an implementation, select its branch.
+默认的 `main` 分支用于展示**项目概况**，目前**不包含可运行的完整插件**。下载与试用时，请切换到相应的开发分支。
 
-**Not yet implemented in the Blender prototype:** switching among multiple distinct Design Examples, independently persisting each example's playback position, and a playback clock independent of Blender's Scene timeline. These are important next steps for the research interaction, **not existing features**.
+### 尚未完成的重要功能
 
-**Out of scope for the current POC:** automatically reconstructing arbitrary CAD histories, converting video into tutorials, or building a general catalog of CAD commands. A small number of intentionally authored examples is sufficient to investigate the interaction.
+Blender 原型目前只有**一个**预设 Phone Stand 案例，还不能在多个独立的 Design Examples 之间切换，也不能为每个案例单独保存播放进度。案例播放暂时共用 Blender 的 Scene 时间轴和 FPS；这些都是后续需要解决的问题，**不是当前已经实现的能力**。
 
-## Try the prototypes
+当前阶段暂不处理任意 CAD 文件的历史自动还原、视频自动转换为教程、或面向用户的完整 CAD 命令目录。先用少量经过编排的案例研究 Design Reasoning Reuse。
 
-For the nine-step Phone Stand demo, check out the [`blender` branch](https://github.com/Scaffolder666/exCADmpleFusion/tree/blender) and follow [its installation guide](https://github.com/Scaffolder666/exCADmpleFusion/blob/blender/blender/README.md). Use the [`fusion` branch](https://github.com/Scaffolder666/exCADmpleFusion/tree/fusion) for the Autodesk Fusion add-in and its separate setup instructions.
+## 如何试用
 
-## Inspiration
+- [Blender 分支](https://github.com/Scaffolder666/exCADmpleFusion/tree/blender)：参照 [Blender 安装与测试说明](https://github.com/Scaffolder666/exCADmpleFusion/blob/blender/blender/README.md)。
+- [Fusion 分支](https://github.com/Scaffolder666/exCADmpleFusion/tree/fusion)：参照 [Fusion 原型说明](https://github.com/Scaffolder666/exCADmpleFusion/blob/fusion/README.md)。
 
-The modeling-history animations and vertical playback interface are inspired by *History in Motion (HiM)* ([ACM DOI: 10.1145/3623263.3623358](https://doi.org/10.1145/3623263.3623358)). exCADmple investigates a different design opportunity: **using the modeling process and expressed design reasoning of several examples to support a learner's ongoing design work**, rather than only inspecting a modeling history.
+## 研究启发
+
+三维建模历史动画和纵向步骤播放界面受到 *History in Motion（HiM）* 的启发（[ACM DOI: 10.1145/3623263.3623358](https://doi.org/10.1145/3623263.3623358)）。
+
+exCADmple 关注的不是单纯检查一个 CAD 模型的历史，而是：**当用户正在设计自己的产品时，如何通过探索多个案例的建模过程及设计师表达的推理，支持设计知识与 Design Reasoning 的复用。**
 
 ---
 
-**Research prototype — actively evolving.** The goal at this stage is to explore design-reasoning reuse through curated examples, not to deliver a production-ready CAD tutorial platform.
+**研究原型，持续开发中。** 当前目标是用预先制作的案例验证交互方式，而不是提供可直接用于生产的 CAD 教程平台。
