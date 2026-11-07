@@ -33,6 +33,68 @@ a reenactment layer. They do not literally move Blender's system cursor,
 click the Toolbar, or execute the original creator's input events.
 The data is illustrative; it is not grounded in a real CAD session.
 
+## HiM-inspired 20-operation animation gallery (experimental)
+
+A second demo, **HiM: 20 Feature Animations**, is now available from the
+Blender exCADmple sidebar. This gives a single playback example with twenty
+typed operations, each with a distinct step interval, demonstration geometry,
+synchronized pointer trajectory, tool label, subtitle, and **synthetic**
+rationale. It is not a reproduction of a genuine author's history.
+
+To try it: enable the add-on, press **N** inside Blender's 3D Viewport,
+open **exCADmple**, click **HiM: 20 Feature Animations**, then click any of
+the two-column step buttons or press Space to play and scrub the timeline.
+Only that step's reference objects are shown; the user's geometry remains
+untouched. The example JSON is `excadmple_blender/him_showcase.json`.
+
+### How each animation works
+
+| Feature animation | Blender visual mechanism | Fidelity |
+|---|---|---|
+| Extrude | Explicit 2D profile, sketch tracing, moving extrusion top-face + gizmo | Parametric visual reenactment |
+| Revolve | Screw Modifier, increasing angular sweep | Parameter-based geometry |
+| Fillet | Bevel Modifier, increasing width, multiple segments | Approximate geometry parameter |
+| Chamfer | Bevel Modifier, increasing width, one segment | Approximate geometry parameter |
+| Circular Pattern | Position instances around the circle and grow into view | Animated occurrence placement |
+| Rectangular Pattern | Position instances on a regular grid | Animated occurrence placement |
+| Mirror | Reveal mirrored copy across a symmetry plane | Explanatory transition |
+| Copy | Reveal and move a duplicate | Explanatory transition |
+| Move | Position interpolation | Transform animation |
+| Scale | Scale interpolation | Transform animation |
+| Combine | Bring two overlapping solids together | **Visual metaphor, not Boolean union** |
+| Split | Separate two resulting half-bodies | **Visual metaphor, not topology splitting** |
+| Import | Reveal external-reference shape | Explanatory transition |
+| Export | Move/diminish outgoing shape | Explanatory transition |
+| Shell | Solidify Modifier increasing wall thickness | Parameter-driven shell preview |
+| Draft | Shape Key deformation of selected upper vertices | Approximate taper |
+| Sweep | Reveal curved tube along a path | Simplified sweep with circular section |
+| Loft | Shape Key transitions between cross-sections | Simplified loft preview |
+| Thread | Reveal helical curve/tube | Explanatory helix; not physical thread cut |
+| Hole | Animated Boolean Difference cutter radius | Live Boolean preview |
+
+**Important accuracy qualification:** HiM's paper reports support for 20
+modeling features in its Figure 7. Its implementation text explicitly details
+parameter animation for Extrude, Revolve, Fillet, Circular Pattern and
+Rectangular Pattern, and fade/scale approaches for features including
+Mirror, Split, Combine, Import and Export. This catalog covers those named
+features and ten related feature types useful for design examples. It is
+**not claimed to be a verified one-for-one reproduction of every label
+in Figure 7** or of the original HiM renderers. In particular, Boolean
+combination/splitting and actual selected-edge filleting remain incomplete.
+
+### Technical structure
+
+- `him_ops.py`: isolated Blender animation constructors and feature dispatcher.
+- `him_showcase.json`: ordered illustrative operation specifications,
+  with independent time ranges and simulated narration text.
+- `smoke_him_catalog.py`: runs **real Blender** with every operation,
+  checks animation values and evaluated geometry, and saves a `.blend`.
+- `test_him_core.py`: pure validation for all 20 operations.
+
+This gallery remains a *playback prototype*. The hardest next task is
+extracting meaningful, author-grounded operation specs and geometry from
+shared projects. The original source model is not altered.
+
 ## HiM-inspired operation animation (v0.2)
 
 The Blender player now includes a deliberately **HiM-inspired feature animation**
