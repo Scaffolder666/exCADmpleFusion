@@ -25,7 +25,7 @@ col=plugin.get_reference(scene)
 base=col.objects.get("exCADmple | 01 Base extrude")
 back=col.objects.get("exCADmple | 02 Angled back support")
 lip=col.objects.get("exCADmple | 03 Front lip extrude")
-assert base and back and lip
+assert base and back and lip\nassert all(o.hide_select for o in col.objects), "References must be unselectable"
 # HiM-inspired Extrude: vertex positions change, not the object's scale.
 base_key=base.data.shape_keys.key_blocks["Extrude"]
 lip_key=lip.data.shape_keys.key_blocks["Extrude"]
