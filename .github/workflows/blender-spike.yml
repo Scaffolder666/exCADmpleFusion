@@ -40,7 +40,24 @@ jobs:
           espeak -v en-us -s 218 -w blender/excadmple_blender/audio/ribs.wav "The inclined back could flex. Two narrow triangular braces add stability without filling the whole stand."
           espeak -v en-us -s 218 -w blender/excadmple_blender/audio/pads.wav "Rather than increasing the weight of the base, four grip pads increase friction against the desk."
           espeak -v en-us -s 218 -w blender/excadmple_blender/audio/back_window.wav "I cut an opening in the back to use less material. This trades some stiffness for a lighter structure."
-          espeak -v en-us -s 218 -w blender/excadmple_blender/audio/fit.wav "A temporary phone model helps me test the viewing angle, charging access, and the retaining lip before finalizing."
+          espeak -v en-us -s 218 -w blender/excadmple_blender/audio/fit.wav "A phone proxy helps check viewing angle, charging access, and lip clearance before finalizing."
+      - name: Ensure each narration track fits its design step
+        run: |
+          python - <<'PY'
+          import json
+          import wave
+          from pathlib import Path
+          root = Path("blender/excadmple_blender")
+          data = json.loads((root / "demo.json").read_text())
+          fps = data.get("fps", 24)
+          for step in data["steps"]:
+              audio = root / step["audio"]
+              with wave.open(str(audio), "rb") as wav:
+                  duration = wav.getnframes() / wav.getframerate()
+              slot = (step["end"] - step["start"] + 1) / fps
+              assert duration <= slot, (step["id"], duration, slot)
+          print("All", len(data["steps"]), "narrations fit their steps")
+          PY
       - name: Download official Blender 4.5.15 LTS
         run: |
           curl --fail --location --retry 3 --connect-timeout 25 \
