@@ -327,7 +327,7 @@ that requires a real Blender viewport test.
 
 ## Architecture / scope
 
-\`\`\`text
+```text
 excadmple_blender/core.py              Step data, captions, pointer interpolation
 excadmple_blender/demo.json            Synthetic nine-step Phone Stand example
 excadmple_blender/phone_stand_details.py  Bevel, Boolean, ribs, pads, fit check
