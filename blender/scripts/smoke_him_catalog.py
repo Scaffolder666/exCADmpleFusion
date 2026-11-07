@@ -78,7 +78,12 @@ for step in data["steps"]:
     elif kind in ("fillet","chamfer"):
         mod=next(m for m in one.modifiers if m.type=="BEVEL")
         assert mod.width>.2
-        assert ending[2]>beginning[2],(kind,beginning,ending)
+        assert len(begin_vertices)==len(end_vertices),(kind,beginning,ending)
+        motion=max(
+            max(abs(a[k]-b[k]) for k in range(3))
+            for a,b in zip(begin_vertices,end_vertices)
+        )
+        assert motion>.05,(kind,motion)
     elif kind == "shell":
         mod=next(m for m in one.modifiers if m.type=="SOLIDIFY")
         assert mod.thickness >= .19
