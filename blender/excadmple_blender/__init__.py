@@ -200,12 +200,12 @@ def update_focus(scene):
     _session["step_id"]=step["id"]
     scene["excadmple_focus_last"]=scene.excadmple_focus
     is_showcase=bool(scene.get("excadmple_showcase_mode",False))
+    focus_id=step.get("focus_step",step["id"])
     if not is_showcase:
         # This is a cumulative DESIGN PROCESS: earlier geometry remains
         # visible as users watch the model evolve; later objects stay hidden.
         order={s["id"]:j for j,s in enumerate(data["steps"])}
         position=order.get(step["id"],0)
-        focus_id=step.get("focus_step",step["id"])
     for obj in col.objects:
         obj_step=obj.get("excadmple_step")
         is_aux=bool(obj.get("excadmple_auxiliary"))
