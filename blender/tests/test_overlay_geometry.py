@@ -47,6 +47,23 @@ class SingleViewportOverlayTests(unittest.TestCase):
         self.assertIsNone(geometry.panel_layout(390,780,1,3))
         self.assertIsNone(geometry.panel_layout(1200,330,1,3))
 
+    def test_short_and_medium_viewports_never_overlap_speed_and_rationale(self):
+        for height in range(435, 781, 5):
+            for step_count in (1, 3, 20):
+                with self.subTest(height=height, steps=step_count):
+                    layout=geometry.panel_layout(1000, height, step_count-1, step_count)
+                    self.assertIsNotNone(layout)
+                    speed=layout["buttons"]["speed_minus"]
+                    safe_top=speed.y + speed.h + 12
+                    self.assertGreaterEqual(layout["why"].y, safe_top)
+                    transcript=layout["transcript"]
+                    if transcript is not None:
+                        self.assertGreaterEqual(transcript.y, safe_top)
+                        self.assertLessEqual(
+                            transcript.y+transcript.h, layout["why"].y)
+                    for index, card in layout["cards"]:
+                        self.assertGreaterEqual(card.y, layout["why"].y+layout["why"].h)
+
     def test_nearby_step_window_clamped(self):
         first = geometry.panel_layout(1400,700,0,20)
         self.assertEqual(first["cards"][0][0],0)
