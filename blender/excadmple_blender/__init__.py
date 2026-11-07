@@ -21,6 +21,7 @@ from mathutils import Vector
 from bpy_extras.view3d_utils import location_3d_to_region_2d
 from .core import load_example, step_at_frame, caption_at_frame, pointer_at_frame, pointer_world_at_frame, operation_phase, progress_in_step
 from .procedural import build_extrusion
+from .phone_stand_details import add_detail_steps
 from .him_ops import build_operation, OPERATION_TYPES
 from .viewport_panel import draw as draw_him_panel
 from .overlay_geometry import panel_layout, hit_test
@@ -123,9 +124,10 @@ def build_demo(scene,data,root):
     col["excadmple_reference_collection"]=True
     scene.collection.children.link(col)
     x=-2.8
+    steps_by_id={item["id"]:item for item in data["steps"]}
     # Shape-key extrusion animates actual profile vertices, not cube scale.
     base, base_sketch, base_gizmo=build_extrusion(
-        col,data["steps"][0],"exCADmple | 01 Base extrude"
+        col,steps_by_id["base"],"exCADmple | 01 Base extrude"
     )
     back=add_cube("exCADmple | 02 Angled back support",col,(.31,.62,.90,1))
     back["excadmple_step"]="support"
@@ -136,8 +138,12 @@ def build_demo(scene,data,root):
     key_pose(back,240,(x,.95,1.08),(1.42,.10,.95),-18)
     key_pose(back,360,(x,.95,1.08),(1.42,.10,.95),-18)
     lip, lip_sketch, lip_gizmo=build_extrusion(
-        col,data["steps"][2],"exCADmple | 03 Front lip extrude"
+        col,steps_by_id["lip"],"exCADmple | 03 Front lip extrude"
     )
+    # Extend the SAME evolving model with six purposeful design decisions:
+    # edge finishing, charging access, braces, grip, material reduction,
+    # and a phone proxy for checking the final design.
+    add_detail_steps(col,data["steps"],base,back,lip)
     scene.render.fps=int(data.get("fps",24))
     scene.frame_start=data["steps"][0]["start"]
     scene.frame_end=data["steps"][-1]["end"]
@@ -152,7 +158,7 @@ def build_demo(scene,data,root):
     for obj in col.objects:
         obj.hide_select = True
     update_focus(scene)
-    return {"objects":3,"audio_tracks":num_audio}
+    return {"objects":len(col.objects),"audio_tracks":num_audio}
 
 def build_showcase(scene, data):
     """Load 20 independent reference demonstrations without touching user meshes."""
@@ -194,8 +200,17 @@ def update_focus(scene):
     _session["step_id"]=step["id"]
     scene["excadmple_focus_last"]=scene.excadmple_focus
     is_showcase=bool(scene.get("excadmple_showcase_mode",False))
+    if not is_showcase:
+        # This is a cumulative DESIGN PROCESS: earlier geometry remains
+        # visible as users watch the model evolve; later objects stay hidden.
+        order={s["id"]:j for j,s in enumerate(data["steps"])}
+        position=order.get(step["id"],0)
+        focus_id=step.get("focus_step",step["id"])
     for obj in col.objects:
-        target=obj.get("excadmple_step")==step["id"]
+        obj_step=obj.get("excadmple_step")
+        is_aux=bool(obj.get("excadmple_auxiliary"))
+        target=(obj_step==step["id"] or
+                (not is_aux and obj_step==focus_id))
         if is_showcase:
             # Only the demonstrated feature is drawn; avoids 20 operations'
             # worth of spatial clutter. User objects outside this collection
@@ -205,11 +220,15 @@ def update_focus(scene):
                 obj.display_type = "TEXTURED" if not obj.get("excadmple_auxiliary") else "WIRE"
                 obj.show_in_front=bool(scene.excadmple_focus)
             continue
-        # Sketch and manipulator are aids for the current operation only.
-        if obj.get("excadmple_auxiliary"):
-            obj.hide_set(not target)
+        # The sketch, cutter and temporary device are shown only during
+        # their own authored step. They never become editable user geometry.
+        if is_aux:
+            obj.hide_set(obj_step!=step["id"])
             continue
-        obj.display_type="TEXTURED" if (not scene.excadmple_focus or target) else "WIRE"
+        obj.hide_set(order.get(obj_step,0)>position)
+        # Keep all prior operations filled, so the cumulative product is
+        # legible. Only the active design decision gets an in-front accent.
+        obj.display_type="TEXTURED"
         obj.show_in_front=bool(target and scene.excadmple_focus)
     # No user-created objects (outside REF_NAME) are touched.
 
@@ -354,7 +373,7 @@ def draw_overlay():
 class EXCADMPLE_OT_load_demo(bpy.types.Operator):
     bl_idname="excadmple.load_demo"
     bl_label="Load Example"
-    bl_description="Build a separate read-only animated example; preserve all other objects"
+    bl_description="Load a nine-step Phone Stand design example without altering your own objects"
     def execute(self,context):
         path=Path(__file__).parent/"demo.json"
         data=load_example(path)
