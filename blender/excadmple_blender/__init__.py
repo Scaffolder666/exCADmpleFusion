@@ -19,6 +19,7 @@ from bpy.props import BoolProperty, StringProperty
 from gpu_extras.batch import batch_for_shader
 from .core import load_example, step_at_frame, caption_at_frame, pointer_at_frame, operation_phase, progress_in_step
 from .procedural import build_extrusion
+from .him_ops import build_operation, OPERATION_TYPES
 
 REF_NAME = "exCADmple | Recorded example (read-only)"
 _session = {"draw_handler": None, "step_id": None}
@@ -118,11 +119,39 @@ def build_demo(scene,data,root):
     scene.frame_end=data["steps"][-1]["end"]
     scene["excadmple_example"]=json.dumps(data,separators=(",",":"))
     scene["excadmple_is_mock"]=True
+    scene["excadmple_showcase_mode"]=False
     scene.frame_set(scene.frame_start)
     num_audio=add_narration(scene,data,root)
     _session["step_id"]=None
     update_focus(scene)
     return {"objects":3,"audio_tracks":num_audio}
+
+def build_showcase(scene, data):
+    """Load 20 independent reference demonstrations without touching user meshes."""
+    from .core import validate_example
+    validate_example(data)
+    if data.get("geometry_preset") != "him_feature_showcase_v1":
+        raise ValueError("Not an operation showcase")
+    unlink_reference(scene)
+    col=bpy.data.collections.new(REF_NAME)
+    scene.collection.children.link(col)
+    total=0
+    for step in data["steps"]:
+        built=build_operation(col,step)
+        if not built:
+            raise RuntimeError("No reference geometry created for "+step["id"])
+        total+=len(built)
+    scene.render.fps=int(data.get("fps",24))
+    scene.frame_start=data["steps"][0]["start"]
+    scene.frame_end=data["steps"][-1]["end"]
+    scene["excadmple_example"]=json.dumps(data,separators=(",",":"))
+    scene["excadmple_is_mock"]=True
+    scene["excadmple_showcase_mode"]=True
+    _session["step_id"]=None
+    scene.frame_set(scene.frame_start)
+    update_focus(scene)
+    return {"steps":len(data["steps"]),"objects":total}
+
 
 def update_focus(scene):
     data=example_for_scene(scene)
@@ -133,8 +162,18 @@ def update_focus(scene):
         return
     _session["step_id"]=step["id"]
     scene["excadmple_focus_last"]=scene.excadmple_focus
+    is_showcase=bool(scene.get("excadmple_showcase_mode",False))
     for obj in col.objects:
         target=obj.get("excadmple_step")==step["id"]
+        if is_showcase:
+            # Only the demonstrated feature is drawn; avoids 20 operations'
+            # worth of spatial clutter. User objects outside this collection
+            # are never hidden or modified.
+            obj.hide_set(not target)
+            if target:
+                obj.display_type = "TEXTURED" if not obj.get("excadmple_auxiliary") else "WIRE"
+                obj.show_in_front=bool(scene.excadmple_focus)
+            continue
         # Sketch and manipulator are aids for the current operation only.
         if obj.get("excadmple_auxiliary"):
             obj.hide_set(not target)
@@ -209,6 +248,24 @@ class EXCADMPLE_OT_load_demo(bpy.types.Operator):
         self.report({"INFO"},"Loaded %d animated objects and %d audio tracks"%(stats["objects"],stats["audio_tracks"]))
         return {"FINISHED"}
 
+class EXCADMPLE_OT_load_him(bpy.types.Operator):
+    bl_idname="excadmple.load_him_showcase"
+    bl_label="Load HiM Animation Catalog"
+    bl_description="Open the 20-feature synthetic operation animation showcase"
+
+    def execute(self,context):
+        path=Path(__file__).parent/"him_showcase.json"
+        try:
+            data=load_example(path)
+            result=build_showcase(context.scene,data)
+        except Exception as error:
+            self.report({"ERROR"},str(error))
+            return {"CANCELLED"}
+        self.report({"INFO"},"Built %d animation steps (%d reference objects)"%
+                    (result["steps"],result["objects"]))
+        return {"FINISHED"}
+
+
 class EXCADMPLE_OT_import(bpy.types.Operator,ImportHelper):
     bl_idname="excadmple.import_example"
     bl_label="Import Example JSON"
@@ -217,7 +274,10 @@ class EXCADMPLE_OT_import(bpy.types.Operator,ImportHelper):
     def execute(self,context):
         try:
             data=load_example(self.filepath)
-            build_demo(context.scene,data,Path(self.filepath).parent)
+            if data["geometry_preset"]=="him_feature_showcase_v1":
+                build_showcase(context.scene,data)
+            else:
+                build_demo(context.scene,data,Path(self.filepath).parent)
         except Exception as error:
             self.report({"ERROR"},str(error))
             return {"CANCELLED"}
@@ -251,18 +311,29 @@ class EXCADMPLE_PT_sidebar(bpy.types.Panel):
         row=layout.row(align=True)
         row.operator("excadmple.load_demo",text="Load Demo",icon="FILE_REFRESH")
         row.operator("excadmple.import_example",text="Import JSON",icon="IMPORT")
+        row=layout.row(align=True)
+        row.operator("excadmple.load_him_showcase",text="HiM: 20 Feature Animations",icon="MODIFIER")
         if not data:
             layout.label(text="Load an example to explore it.")
             return
         layout.label(text=data.get("title","Example"),icon="OUTLINER_OB_MESH")
         layout.label(text="ILLUSTRATIVE REENACTMENT — NOT ORIGINAL HISTORY",icon="INFO")
         box=layout.box()
-        box.label(text="Design process",icon="ACTION")
-        for i,step in enumerate(data["steps"]):
-            row=box.row(align=True)
-            op=row.operator("excadmple.go_step",text=str(i+1)+"  "+step["title"],
-                            depress=step["start"]<=scene.frame_current<=step["end"])
-            op.frame=step["start"]
+        box.label(text="Design process / animation steps",icon="ACTION")
+        is_showcase=data.get("geometry_preset")=="him_feature_showcase_v1"
+        if is_showcase:
+            grid=box.grid_flow(row_major=True,columns=2,even_columns=True,align=True)
+            for i,step in enumerate(data["steps"]):
+                op=grid.operator("excadmple.go_step",
+                    text=str(i+1)+": "+step["title"],
+                    depress=step["start"]<=scene.frame_current<=step["end"])
+                op.frame=step["start"]
+        else:
+            for i,step in enumerate(data["steps"]):
+                row=box.row(align=True)
+                op=row.operator("excadmple.go_step",text=str(i+1)+"  "+step["title"],
+                                depress=step["start"]<=scene.frame_current<=step["end"])
+                op.frame=step["start"]
         row=layout.row(align=True)
         row.operator("excadmple.play_pause",text="Play / Pause",icon="PLAY")
         row.prop(scene,"frame_current",text="Frame")
@@ -287,7 +358,7 @@ class EXCADMPLE_PT_sidebar(bpy.types.Panel):
         layout.label(text="Reference (left) | Your work (anywhere)",icon="INFO")
         layout.label(text="Your objects are never played or dimmed.",icon="INFO")
 
-CLASSES=(EXCADMPLE_OT_load_demo,EXCADMPLE_OT_import,EXCADMPLE_OT_go_step,
+CLASSES=(EXCADMPLE_OT_load_demo,EXCADMPLE_OT_load_him,EXCADMPLE_OT_import,EXCADMPLE_OT_go_step,
          EXCADMPLE_OT_play,EXCADMPLE_PT_sidebar)
 
 def register():
