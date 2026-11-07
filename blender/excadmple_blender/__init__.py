@@ -1,7 +1,7 @@
 bl_info = {
     "name": "exCADmple — Design Reasoning Player (Prototype)",
     "author": "exCADmple research prototype",
-    "version": (0, 1, 0), "blender": (4, 1, 0),
+    "version": (0, 2, 0), "blender": (4, 1, 0),
     "location": "3D View > Sidebar > exCADmple",
     "description": "Explore design animations, recorded cursor paths, synchronized transcripts and audio",
     "category": "3D View",
@@ -17,7 +17,8 @@ from bpy.app.handlers import persistent
 from bpy_extras.io_utils import ImportHelper
 from bpy.props import BoolProperty, StringProperty
 from gpu_extras.batch import batch_for_shader
-from .core import load_example, step_at_frame, caption_at_frame, pointer_at_frame
+from .core import load_example, step_at_frame, caption_at_frame, pointer_at_frame, operation_phase, progress_in_step
+from .procedural import build_extrusion
 
 REF_NAME = "exCADmple | Recorded example (read-only)"
 _session = {"draw_handler": None, "step_id": None}
@@ -97,11 +98,10 @@ def build_demo(scene,data,root):
     col=bpy.data.collections.new(REF_NAME)
     scene.collection.children.link(col)
     x=-2.8
-    base=add_cube("exCADmple | 01 Base extrude",col,(.27,.53,.81,1))
-    base["excadmple_step"]="base"
-    key_pose(base,1,(x,0,.005),(1.7,1.2,.005))
-    key_pose(base,120,(x,0,.13),(1.7,1.2,.13))
-    key_pose(base,360,(x,0,.13),(1.7,1.2,.13))
+    # Shape-key extrusion animates actual profile vertices, not cube scale.
+    base, base_sketch, base_gizmo=build_extrusion(
+        col,data["steps"][0],"exCADmple | 01 Base extrude"
+    )
     back=add_cube("exCADmple | 02 Angled back support",col,(.31,.62,.90,1))
     back["excadmple_step"]="support"
     key_pose(back,1,(x,.75,.27),(.05,.09,.005))
@@ -110,12 +110,9 @@ def build_demo(scene,data,root):
     key_pose(back,184,(x,.75,1.15),(1.42,.10,.95),0)
     key_pose(back,240,(x,.95,1.08),(1.42,.10,.95),-18)
     key_pose(back,360,(x,.95,1.08),(1.42,.10,.95),-18)
-    lip=add_cube("exCADmple | 03 Front lip extrude",col,(.30,.53,.84,1))
-    lip["excadmple_step"]="lip"
-    key_pose(lip,1,(x,-.93,.28),(.005,.11,.005))
-    key_pose(lip,240,(x,-.93,.28),(.005,.11,.005))
-    key_pose(lip,241,(x,-.93,.28),(1.48,.11,.005))
-    key_pose(lip,360,(x,-.93,.39),(1.48,.11,.12))
+    lip, lip_sketch, lip_gizmo=build_extrusion(
+        col,data["steps"][2],"exCADmple | 03 Front lip extrude"
+    )
     scene.render.fps=int(data.get("fps",24))
     scene.frame_start=data["steps"][0]["start"]
     scene.frame_end=data["steps"][-1]["end"]
@@ -138,6 +135,10 @@ def update_focus(scene):
     scene["excadmple_focus_last"]=scene.excadmple_focus
     for obj in col.objects:
         target=obj.get("excadmple_step")==step["id"]
+        # Sketch and manipulator are aids for the current operation only.
+        if obj.get("excadmple_auxiliary"):
+            obj.hide_set(not target)
+            continue
         obj.display_type="TEXTURED" if (not scene.excadmple_focus or target) else "WIRE"
         obj.show_in_front=bool(target and scene.excadmple_focus)
     # No user-created objects (outside REF_NAME) are touched.
@@ -181,7 +182,14 @@ def draw_overlay():
     blf.size(font,14)
     blf.color(font,.96,.96,.95,1)
     blf.position(font,loc[0]+19,loc[1]+3,0)
-    blf.draw(font,"RECORDED  "+step["tool"])
+    blf.draw(font,"REPLAY  "+operation_phase(step,scene.frame_current))
+    if step.get("animation",{}).get("type")=="extrude":
+        spec=step["animation"]
+        phase=progress_in_step(step,scene.frame_current)
+        growth=max(0,min(1,(phase-.31)/.69))
+        if phase<.31: growth=0
+        blf.position(font,loc[0]+19,loc[1]-18,0)
+        blf.draw(font,"DISTANCE   %.2f / %.2f BU"%(growth*spec["distance"],spec["distance"]))
     blf.size(font,17)
     blf.color(font,1,1,1,1)
     blf.position(font,22,max(32,h-40),0)
@@ -247,7 +255,7 @@ class EXCADMPLE_PT_sidebar(bpy.types.Panel):
             layout.label(text="Load an example to explore it.")
             return
         layout.label(text=data.get("title","Example"),icon="OUTLINER_OB_MESH")
-        layout.label(text="MOCK DATA — no real author recording",icon="INFO")
+        layout.label(text="ILLUSTRATIVE REENACTMENT — NOT ORIGINAL HISTORY",icon="INFO")
         box=layout.box()
         box.label(text="Design process",icon="ACTION")
         for i,step in enumerate(data["steps"]):
@@ -262,10 +270,12 @@ class EXCADMPLE_PT_sidebar(bpy.types.Panel):
         layout.prop(scene,"excadmple_focus",text="Focus on current reference step")
         step=step_at_frame(data,scene.frame_current)
         box=layout.box()
-        box.label(text="Recorded tool",icon="TOOL_SETTINGS")
+        box.label(text="Operation replay",icon="TOOL_SETTINGS")
         tool=box.row()
         tool.alert=True
-        tool.label(text=step["tool"],icon="EVENT_E")
+        tool.label(text=operation_phase(step,scene.frame_current),icon="EVENT_E")
+        if step.get("animation",{}).get("type")=="extrude":
+            box.label(text="Distance: %.2f BU"%(step["animation"]["distance"]))
         box=layout.box()
         box.label(text="Why this decision?",icon="TEXT")
         for line in textwrap.wrap(step.get("reasoning",""),width=41):
