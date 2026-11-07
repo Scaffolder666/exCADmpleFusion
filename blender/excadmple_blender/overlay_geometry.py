@@ -21,7 +21,7 @@ class Rect:
 def panel_layout(region_width, region_height, active_index, step_count):
     """Compute a compact right-side overlay, never a second Blender viewport."""
     rw, rh = int(region_width), int(region_height)
-    if rw < 430 or rh < 350:
+    if rw < 430 or rh < 435:
         return None
     width = min(302, rw - 36)
     height = min(612, rh - 28)
