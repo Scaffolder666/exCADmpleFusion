@@ -35,20 +35,31 @@ def panel_layout(region_width, region_height, active_index, step_count):
         "next": Rect(left + 191, top - 104, 48, 36),
         "progress": Rect(left + 18, top - 146, width - 36, 14),
     }
-    capacity = 4 if height >= 565 else 3 if height >= 465 else 2
     total = max(0, int(step_count))
     current = min(max(0, int(active_index)), max(0, total - 1))
+    why_h = 76 if height >= 565 else 64
+    # Leave at least 12 px between the rationale/transcript and the speed
+    # buttons. The old height threshold produced overlapping controls at
+    # around 435–510 px and 593–610 px viewport heights.
+    speed_top = bottom + 42
+    usable_floor = speed_top + 12
+    capacity = 1
+    for n in range(min(4, max(1, total)), 0, -1):
+        last_bottom = top - 236 - (n - 1) * 57
+        if last_bottom - why_h - 14 >= usable_floor:
+            capacity = n
+            break
     first = max(0, min(current - 1, total - capacity))
     cards = [
         (i, Rect(left + 19, top - 236 - (i - first) * 57, width - 38, 52))
         for i in range(first, min(first + capacity, total))
     ]
     last_bottom = min((r.y for _, r in cards), default=top - 236)
-    why_h = 76 if height >= 565 else 64
     why = Rect(left + 18, last_bottom - why_h - 14, width - 36, why_h)
+    transcript_y = why.y - 56
     transcript = (
-        Rect(left + 18, why.y - 56, width - 36, 48)
-        if height >= 565 else None
+        Rect(left + 18, transcript_y, width - 36, 48)
+        if height >= 565 and transcript_y >= usable_floor else None
     )
     buttons["speed_minus"] = Rect(left + 130, bottom + 15, 29, 27)
     buttons["speed_plus"] = Rect(left + width - 42, bottom + 15, 29, 27)
