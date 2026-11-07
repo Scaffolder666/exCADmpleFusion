@@ -78,6 +78,23 @@ assert base.display_type=="WIRE"
 assert original.display_type=="TEXTURED"
 assert lip_sketch.hide_get() is False
 assert base_sketch.hide_get() is True
+# Reload the same preset into the same working Scene. This is the
+# prerequisite for later switching between several curated examples.
+# The learner's geometry survives and the prior reference is replaced.
+old_ref=col
+reloaded=plugin.build_demo(scene,data,path.parent)
+assert reloaded["audio_tracks"]==3,reloaded
+col=plugin.get_reference(scene)
+assert col is not None and col != old_ref
+assert all(o.hide_select for o in col.objects)
+assert (tuple(original.location),len(original.data.vertices))==snapshot
+assert original in scene.objects
+sound_strips=[
+    strip for strip in scene.sequence_editor.strips
+    if strip.name.startswith("exCADmple voice:")
+]
+assert len(sound_strips)==3, ("Narration duplicated during reload",len(sound_strips))
+
 # Pack generated WAV audio in the scene so the .blend artifact is portable.
 bpy.ops.file.pack_all()
 packed=sum(1 for sound in bpy.data.sounds if sound.packed_file is not None)
@@ -86,4 +103,19 @@ destination=Path("/tmp/excadmple_blender_smoke.blend")
 bpy.ops.wm.save_as_mainfile(filepath=str(destination))
 assert destination.exists() and destination.stat().st_size>10000
 print("EXCADMPLE BLENDER TEST PASSED",result,str(destination),destination.stat().st_size)
+
+# Scene isolation: avoid deleting a reference collection in another Scene.
+second=bpy.data.scenes.new("Unrelated user Scene")
+second_ref=bpy.data.collections.new(plugin.REF_NAME)
+second_ref["excadmple_reference_collection"]=True
+second.collection.children.link(second_ref)
+other_obj=bpy.data.objects.new("USER Scene B test reference",mesh)
+second_ref.objects.link(other_obj)
+assert plugin.get_reference(scene)==col
+assert plugin.get_reference(second)==second_ref
+plugin.unlink_reference(scene)
+assert plugin.get_reference(scene) is None
+assert plugin.get_reference(second)==second_ref
+assert other_obj in second_ref.objects
+assert original in scene.objects
 plugin.unregister()
