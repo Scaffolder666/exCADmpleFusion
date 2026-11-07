@@ -2,7 +2,7 @@
   "format": "excadmple-blender-v1",
   "geometry_preset": "phone_stand_v1",
   "title": "Phone Stand — Illustrated Design Process",
-  "description": "Synthetic example; no real designer recording or CAD construction history.",
+  "description": "Synthetic example with HiM-inspired profile tracing, parameter growth and a viewport operation gizmo. No author-recorded history.",
   "fps": 24,
   "steps": [
     {
@@ -53,7 +53,35 @@
           "y": 0.22
         }
       ],
-      "audio": "audio/base.wav"
+      "audio": "audio/base.wav",
+      "animation": {
+        "type": "extrude",
+        "profile_xy": [
+          [
+            -1.7,
+            -1.2
+          ],
+          [
+            1.7,
+            -1.2
+          ],
+          [
+            1.7,
+            1.2
+          ],
+          [
+            -1.7,
+            1.2
+          ]
+        ],
+        "origin_xyz": [
+          -2.8,
+          0,
+          0
+        ],
+        "distance": 0.26,
+        "unit": "Blender units"
+      }
     },
     {
       "id": "support",
@@ -153,7 +181,35 @@
           "y": 0.3
         }
       ],
-      "audio": "audio/lip.wav"
+      "audio": "audio/lip.wav",
+      "animation": {
+        "type": "extrude",
+        "profile_xy": [
+          [
+            -1.48,
+            -0.11
+          ],
+          [
+            1.48,
+            -0.11
+          ],
+          [
+            1.48,
+            0.11
+          ],
+          [
+            -1.48,
+            0.11
+          ]
+        ],
+        "origin_xyz": [
+          -2.8,
+          -0.93,
+          0.26
+        ],
+        "distance": 0.24,
+        "unit": "Blender units"
+      }
     }
   ]
 }
