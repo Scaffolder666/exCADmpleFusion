@@ -47,6 +47,31 @@ def validate_example(data):
             if t<prev_t or not 0<=t<=end-start or not(0<=x<=1 and 0<=y<=1):
                 raise ExampleError("Pointer path outside step")
             prev_t=t
+        # Optional world-anchored, purely visual pointer motion for preset
+        # 3D examples. The user's real operating-system cursor is untouched.
+        world_samples=step.get("pointer_world")
+        if world_samples is not None:
+            if not isinstance(world_samples,list) or not 2<=len(world_samples)<=100:
+                raise ExampleError("3D pointer requires 2–100 world-space samples")
+            previous_time=-1
+            for sample in world_samples:
+                if not isinstance(sample,dict):
+                    raise ExampleError("Invalid 3D pointer sample")
+                t=sample.get("at")
+                position=sample.get("xyz")
+                action=sample.get("event","move")
+                if not isinstance(t,(int,float)) or isinstance(t,bool) or not math.isfinite(t):
+                    raise ExampleError("3D pointer frame offset must be finite")
+                if t<previous_time or not 0<=t<=end-start:
+                    raise ExampleError("3D pointer frame outside the design step")
+                previous_time=t
+                if (not isinstance(position,list) or len(position)!=3
+                    or any(not isinstance(c,(int,float)) or isinstance(c,bool)
+                           or not math.isfinite(c) for c in position)):
+                    raise ExampleError("3D pointer coordinates must be finite xyz")
+                if action not in ("move","click","drag"):
+                    raise ExampleError("Unknown 3D pointer event")
+
         if preset == "him_feature_showcase_v1":
             feature=step.get("operation")
             if not isinstance(feature,dict) or feature.get("type") not in SHOWCASE_OPERATIONS:
@@ -129,3 +154,22 @@ def pointer_at_frame(step,frame):
 
 def progress_in_step(step,frame):
     return max(0.0,min(1.0,(frame-step["start"])/(step["end"]-step["start"])))
+
+def pointer_world_at_frame(step, frame):
+    """Interpolate a *visual-only* pointer on the preset model in world units.
+
+    Returns None when a legacy example has only screen-space pointer samples.
+    Blender's 3D viewport projects the point to screen every frame, so orbiting
+    the camera keeps the dot attached to the demonstrated reference model.
+    """
+    samples=step.get("pointer_world")
+    if not samples:
+        return None
+    t=max(0,frame-step["start"])
+    if t<=samples[0]["at"]:
+        return tuple(samples[0]["xyz"])
+    for a,b in zip(samples,samples[1:]):
+        if a["at"]<=t<=b["at"]:
+            fraction=(t-a["at"])/max(1e-6,b["at"]-a["at"])
+            return tuple(u+(v-u)*fraction for u,v in zip(a["xyz"],b["xyz"]))
+    return tuple(samples[-1]["xyz"])
