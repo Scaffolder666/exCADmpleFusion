@@ -81,14 +81,14 @@ assert base_sketch.hide_get() is True
 # Reload the same preset into the same working Scene. This is the
 # prerequisite for later switching between several curated examples.
 # The learner's geometry survives and the prior reference is replaced.
-old_ref=col
+old_ref_pointer=col.as_pointer()
 reloaded=plugin.build_demo(scene,data,path.parent)
 assert reloaded["audio_tracks"]==3,reloaded
 col=plugin.get_reference(scene)
-assert col is not None and col != old_ref
+assert col is not None and col.as_pointer() != old_ref_pointer
 assert all(o.hide_select for o in col.objects)
 assert (tuple(original.location),len(original.data.vertices))==snapshot
-assert original in scene.objects
+assert original.name in scene.objects
 sound_strips=[
     strip for strip in scene.sequence_editor.strips
     if strip.name.startswith("exCADmple voice:")
@@ -116,6 +116,6 @@ assert plugin.get_reference(second)==second_ref
 plugin.unlink_reference(scene)
 assert plugin.get_reference(scene) is None
 assert plugin.get_reference(second)==second_ref
-assert other_obj in second_ref.objects
-assert original in scene.objects
+assert other_obj.name in second_ref.objects
+assert original.name in scene.objects
 plugin.unregister()
