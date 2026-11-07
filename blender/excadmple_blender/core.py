@@ -39,12 +39,55 @@ def validate_example(data):
             if t<prev_t or not 0<=t<=end-start or not(0<=x<=1 and 0<=y<=1):
                 raise ExampleError("Pointer path outside step")
             prev_t=t
+        if step.get("animation") is not None:
+            validate_extrude_animation(step["animation"])
         for cue in step.get("captions",[]):
             if not isinstance(cue.get("at"),(int,float)) or not 0<=cue["at"]<=end-start:
                 raise ExampleError("Caption time outside step")
             if not isinstance(cue.get("text"),str):
                 raise ExampleError("Caption text required")
     return data
+
+
+def validate_extrude_animation(animation):
+    """Check explicit profile and parameter data before extrusion replay."""
+    if not isinstance(animation, dict) or animation.get("type") != "extrude":
+        raise ExampleError("Only explicit extrude previews are supported in the HiM-style spike")
+    profile = animation.get("profile_xy")
+    origin = animation.get("origin_xyz")
+    distance = animation.get("distance")
+    if not isinstance(profile, list) or not 3 <= len(profile) <= 64:
+        raise ExampleError("Extrude requires a polygon with 3–64 vertices")
+    if not isinstance(origin, list) or len(origin) != 3:
+        raise ExampleError("Extrude needs a 3D origin")
+    for item in profile + [origin]:
+        if not isinstance(item, list) or any(
+            not isinstance(v, (int, float)) or isinstance(v, bool) or not math.isfinite(v)
+            for v in item
+        ):
+            raise ExampleError("Nonfinite or nonnumeric extrusion coordinate")
+    if any(len(item) != 2 for item in profile):
+        raise ExampleError("Each profile point must be [x,y]")
+    if isinstance(distance, bool) or not isinstance(distance, (int,float)) or not math.isfinite(distance) or not 0.001 <= distance <= 100:
+        raise ExampleError("Extrude distance must be positive and finite")
+    area2 = sum(
+        profile[i][0] * profile[(i + 1) % len(profile)][1] -
+        profile[(i + 1) % len(profile)][0] * profile[i][1]
+        for i in range(len(profile))
+    )
+    if abs(area2) < 1e-8:
+        raise ExampleError("Extrude polygon must have nonzero area")
+    return animation
+
+def operation_phase(step, frame):
+    """Narrative replay phases, not recovered native Blender UI events."""
+    anim = step.get("animation") or {}
+    if anim.get("type") != "extrude":
+        return step.get("tool", "TRANSFORM")
+    t = progress_in_step(step, frame)
+    if t < .17: return "SKETCH PROFILE"
+    if t < .31: return "EXTRUDE TOOL"
+    return "DRAG EXTRUDE HANDLE"
 
 def step_at_frame(data,frame):
     for step in data["steps"]:
