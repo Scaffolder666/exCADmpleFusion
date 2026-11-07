@@ -1,8 +1,8 @@
 {
   "format": "excadmple-blender-v1",
   "geometry_preset": "phone_stand_v1",
-  "title": "Phone Stand — Illustrated Design Process",
-  "description": "Synthetic Phone Stand with HiM-inspired operation animation and a noninteractive model-anchored ghost pointer dot, click pulse, and drag trail. Pointer samples are scripted, not actual recorded mouse input.",
+  "title": "Phone Stand — Nine Design Decisions",
+  "description": "Synthetic nine-step Phone Stand design example combining geometry evolution, modeling operations, model-anchored ghost pointer, captions, spoken reasoning and a final phone fit-check. Not a recording of real CAD history.",
   "fps": 24,
   "steps": [
     {
@@ -360,6 +360,588 @@
           "event": "move"
         }
       ]
+    },
+    {
+      "id": "base_round",
+      "title": "Round the base edges",
+      "tool": "FILLET",
+      "start": 361,
+      "end": 480,
+      "reasoning": "Before moving to details, I soften the sharp base edges for handling while keeping enough flat contact for stability.",
+      "captions": [
+        {
+          "at": 0,
+          "text": "A wide base helps stability, but sharp edges feel unfinished."
+        },
+        {
+          "at": 45,
+          "text": "I increase the fillet radius a little at a time."
+        },
+        {
+          "at": 92,
+          "text": "Too much rounding would take away useful flat contact."
+        }
+      ],
+      "pointer": [
+        {
+          "at": 0,
+          "x": 0.2,
+          "y": 0.65
+        },
+        {
+          "at": 25,
+          "x": 0.35,
+          "y": 0.55
+        },
+        {
+          "at": 55,
+          "x": 0.48,
+          "y": 0.48
+        },
+        {
+          "at": 85,
+          "x": 0.6,
+          "y": 0.38
+        },
+        {
+          "at": 119,
+          "x": 0.7,
+          "y": 0.3
+        }
+      ],
+      "pointer_world": [
+        {
+          "at": 0,
+          "xyz": [
+            -4.2,
+            -1.1,
+            0.26
+          ],
+          "event": "move"
+        },
+        {
+          "at": 25,
+          "xyz": [
+            -4.15,
+            -0.55,
+            0.26
+          ],
+          "event": "click"
+        },
+        {
+          "at": 55,
+          "xyz": [
+            -4.16,
+            0.2,
+            0.26
+          ],
+          "event": "drag"
+        },
+        {
+          "at": 85,
+          "xyz": [
+            -4.17,
+            0.92,
+            0.26
+          ],
+          "event": "drag"
+        },
+        {
+          "at": 119,
+          "xyz": [
+            -3.87,
+            1,
+            0.26
+          ],
+          "event": "move"
+        }
+      ],
+      "audio": "audio/base_round.wav"
+    },
+    {
+      "id": "cable",
+      "title": "Leave a charging-cable passage",
+      "tool": "BOOLEAN / CUT",
+      "start": 481,
+      "end": 600,
+      "reasoning": "The retaining lip should not block charging. I cut a centered cable passage but keep support on both sides.",
+      "captions": [
+        {
+          "at": 0,
+          "text": "The phone still needs to charge while it is on the stand."
+        },
+        {
+          "at": 45,
+          "text": "I remove a small section of the front lip."
+        },
+        {
+          "at": 92,
+          "text": "Both lip segments remain to prevent sliding."
+        }
+      ],
+      "pointer": [
+        {
+          "at": 0,
+          "x": 0.2,
+          "y": 0.65
+        },
+        {
+          "at": 25,
+          "x": 0.35,
+          "y": 0.55
+        },
+        {
+          "at": 55,
+          "x": 0.48,
+          "y": 0.48
+        },
+        {
+          "at": 85,
+          "x": 0.6,
+          "y": 0.38
+        },
+        {
+          "at": 119,
+          "x": 0.7,
+          "y": 0.3
+        }
+      ],
+      "pointer_world": [
+        {
+          "at": 0,
+          "xyz": [
+            -2.8,
+            -1.35,
+            0.47
+          ],
+          "event": "move"
+        },
+        {
+          "at": 25,
+          "xyz": [
+            -2.8,
+            -1.25,
+            0.41
+          ],
+          "event": "click"
+        },
+        {
+          "at": 55,
+          "xyz": [
+            -2.8,
+            -1.06,
+            0.4
+          ],
+          "event": "drag"
+        },
+        {
+          "at": 85,
+          "xyz": [
+            -2.8,
+            -0.94,
+            0.4
+          ],
+          "event": "drag"
+        },
+        {
+          "at": 119,
+          "xyz": [
+            -2.8,
+            -0.92,
+            0.38
+          ],
+          "event": "move"
+        }
+      ],
+      "audio": "audio/cable.wav"
+    },
+    {
+      "id": "ribs",
+      "title": "Reinforce the back support",
+      "tool": "MIRROR / EXTRUDE",
+      "start": 601,
+      "end": 720,
+      "reasoning": "The angled back may flex. I add a pair of narrow ribs near the sides instead of filling the entire area with material.",
+      "captions": [
+        {
+          "at": 0,
+          "text": "The tilted back panel may need more stiffness."
+        },
+        {
+          "at": 45,
+          "text": "I build a narrow triangular rib near one side."
+        },
+        {
+          "at": 92,
+          "text": "I mirror the structural idea to keep the support balanced."
+        }
+      ],
+      "pointer": [
+        {
+          "at": 0,
+          "x": 0.2,
+          "y": 0.65
+        },
+        {
+          "at": 25,
+          "x": 0.35,
+          "y": 0.55
+        },
+        {
+          "at": 55,
+          "x": 0.48,
+          "y": 0.48
+        },
+        {
+          "at": 85,
+          "x": 0.6,
+          "y": 0.38
+        },
+        {
+          "at": 119,
+          "x": 0.7,
+          "y": 0.3
+        }
+      ],
+      "pointer_world": [
+        {
+          "at": 0,
+          "xyz": [
+            -3.9,
+            0.32,
+            0.27
+          ],
+          "event": "move"
+        },
+        {
+          "at": 25,
+          "xyz": [
+            -3.9,
+            0.75,
+            0.41
+          ],
+          "event": "click"
+        },
+        {
+          "at": 55,
+          "xyz": [
+            -3.9,
+            0.95,
+            0.99
+          ],
+          "event": "drag"
+        },
+        {
+          "at": 85,
+          "xyz": [
+            -1.7,
+            0.95,
+            1.2
+          ],
+          "event": "drag"
+        },
+        {
+          "at": 119,
+          "xyz": [
+            -1.7,
+            0.94,
+            1.52
+          ],
+          "event": "move"
+        }
+      ],
+      "audio": "audio/ribs.wav"
+    },
+    {
+      "id": "pads",
+      "title": "Pattern four anti-slip pads",
+      "tool": "RECTANGULAR PATTERN",
+      "start": 721,
+      "end": 840,
+      "reasoning": "Instead of making the base heavier, I use four small contact pads to increase friction and stabilize the stand on a table.",
+      "captions": [
+        {
+          "at": 0,
+          "text": "The stand should not slide on the desk."
+        },
+        {
+          "at": 45,
+          "text": "I place grip pads near the base corners."
+        },
+        {
+          "at": 92,
+          "text": "Four pads give support without extending the footprint."
+        }
+      ],
+      "pointer": [
+        {
+          "at": 0,
+          "x": 0.2,
+          "y": 0.65
+        },
+        {
+          "at": 25,
+          "x": 0.35,
+          "y": 0.55
+        },
+        {
+          "at": 55,
+          "x": 0.48,
+          "y": 0.48
+        },
+        {
+          "at": 85,
+          "x": 0.6,
+          "y": 0.38
+        },
+        {
+          "at": 119,
+          "x": 0.7,
+          "y": 0.3
+        }
+      ],
+      "pointer_world": [
+        {
+          "at": 0,
+          "xyz": [
+            -4.05,
+            -0.8,
+            -0.05
+          ],
+          "event": "move"
+        },
+        {
+          "at": 25,
+          "xyz": [
+            -1.55,
+            -0.8,
+            -0.05
+          ],
+          "event": "click"
+        },
+        {
+          "at": 55,
+          "xyz": [
+            -4.05,
+            0.8,
+            -0.05
+          ],
+          "event": "drag"
+        },
+        {
+          "at": 85,
+          "xyz": [
+            -1.55,
+            0.8,
+            -0.05
+          ],
+          "event": "drag"
+        },
+        {
+          "at": 119,
+          "xyz": [
+            -1.55,
+            0.8,
+            -0.057
+          ],
+          "event": "move"
+        }
+      ],
+      "audio": "audio/pads.wav"
+    },
+    {
+      "id": "back_window",
+      "title": "Lighten the back support",
+      "tool": "BOOLEAN / CUT",
+      "start": 841,
+      "end": 960,
+      "reasoning": "A solid back panel uses more material than needed. I explore a central opening while retaining side rails, accepting that it may reduce stiffness.",
+      "captions": [
+        {
+          "at": 0,
+          "text": "The solid back support may use unnecessary material."
+        },
+        {
+          "at": 45,
+          "text": "I cut an opening through its center."
+        },
+        {
+          "at": 92,
+          "text": "The side rails remain, but strength should still be checked."
+        }
+      ],
+      "pointer": [
+        {
+          "at": 0,
+          "x": 0.2,
+          "y": 0.65
+        },
+        {
+          "at": 25,
+          "x": 0.35,
+          "y": 0.55
+        },
+        {
+          "at": 55,
+          "x": 0.48,
+          "y": 0.48
+        },
+        {
+          "at": 85,
+          "x": 0.6,
+          "y": 0.38
+        },
+        {
+          "at": 119,
+          "x": 0.7,
+          "y": 0.3
+        }
+      ],
+      "pointer_world": [
+        {
+          "at": 0,
+          "xyz": [
+            -2.8,
+            0.95,
+            1.05
+          ],
+          "event": "move"
+        },
+        {
+          "at": 25,
+          "xyz": [
+            -3.2,
+            0.95,
+            1.05
+          ],
+          "event": "click"
+        },
+        {
+          "at": 55,
+          "xyz": [
+            -2.8,
+            0.95,
+            1.05
+          ],
+          "event": "drag"
+        },
+        {
+          "at": 85,
+          "xyz": [
+            -2.5,
+            0.95,
+            1.05
+          ],
+          "event": "drag"
+        },
+        {
+          "at": 119,
+          "xyz": [
+            -2.8,
+            0.95,
+            1.05
+          ],
+          "event": "move"
+        }
+      ],
+      "audio": "audio/back_window.wav"
+    },
+    {
+      "id": "fit",
+      "title": "Check phone fit and clearance",
+      "tool": "MOVE / ASSEMBLY CHECK",
+      "start": 961,
+      "end": 1080,
+      "reasoning": "I bring in a simplified phone proxy to check the viewing angle, charging access, and whether the lip clears the device before committing to dimensions.",
+      "captions": [
+        {
+          "at": 0,
+          "text": "I want to check the design with a phone-sized object."
+        },
+        {
+          "at": 45,
+          "text": "I position a temporary proxy against the angled back."
+        },
+        {
+          "at": 92,
+          "text": "I inspect the lip and charging clearance before finalizing."
+        }
+      ],
+      "pointer": [
+        {
+          "at": 0,
+          "x": 0.2,
+          "y": 0.65
+        },
+        {
+          "at": 25,
+          "x": 0.35,
+          "y": 0.55
+        },
+        {
+          "at": 55,
+          "x": 0.48,
+          "y": 0.48
+        },
+        {
+          "at": 85,
+          "x": 0.6,
+          "y": 0.38
+        },
+        {
+          "at": 119,
+          "x": 0.7,
+          "y": 0.3
+        }
+      ],
+      "pointer_world": [
+        {
+          "at": 0,
+          "xyz": [
+            -2.8,
+            -1.6,
+            2.66
+          ],
+          "event": "move"
+        },
+        {
+          "at": 25,
+          "xyz": [
+            -2.8,
+            -0.8,
+            2.6
+          ],
+          "event": "click"
+        },
+        {
+          "at": 55,
+          "xyz": [
+            -2.8,
+            -0.15,
+            2.1
+          ],
+          "event": "drag"
+        },
+        {
+          "at": 85,
+          "xyz": [
+            -2.8,
+            0.45,
+            1.66
+          ],
+          "event": "drag"
+        },
+        {
+          "at": 119,
+          "xyz": [
+            -2.8,
+            0.45,
+            1.66
+          ],
+          "event": "move"
+        }
+      ],
+      "audio": "audio/fit.wav"
     }
   ]
 }
