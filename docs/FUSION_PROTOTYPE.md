@@ -1,5 +1,7 @@
 # exCADmple — Fusion Player (MVP)
 
+> **Development reference:** This file preserves the earlier Fusion-specific technical documentation. The current project overview is in [README.md](../README.md), and the nine-step Blender POC is described in [blender/README.md](../blender/README.md). These prototypes use different schemas and are not a single released product.
+
 **exCADmple: Supporting Design Reasoning Through Shared CAD Models**
 
 An Autodesk Fusion add-in for **exploring a recorded design example while building your own design in the same CAD workspace**. The example has a separate, data-driven timeline; the user's native Fusion feature timeline is never rolled backward.
@@ -46,7 +48,7 @@ An example is a JSON object with `format: "excadmple"`, `version: 1`, a `title`,
 | `cues[]` | Time-stamped operation descriptions within a step |
 | `media.audio`, `media.video` | Optional **relative** paths to media assets |
 
-See [examples/phone_stand.json](examples/phone_stand.json) for a complete runnable example.
+See [examples/phone_stand.json](../examples/phone_stand.json) for a complete runnable example.
 
 For a portable `.excadmple` package, create a ZIP containing `manifest.json` (the same schema) and the referenced media assets at their relative paths. For example:
 
