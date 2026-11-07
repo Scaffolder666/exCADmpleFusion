@@ -18,6 +18,22 @@ class PlaybackTests(unittest.TestCase):
         self.assertEqual([m.step_at_frame(self.data,f)["id"] for f in (1,120,121,240,241,360)],
                          ["base","base","support","support","lip","lip"])
 
+    def test_nine_step_story_has_distinct_operations_and_reasoning(self):
+        steps=self.data["steps"]
+        self.assertEqual(len(steps),9)
+        self.assertEqual([s["id"] for s in steps],[
+            "base","support","lip","base_round","cable","ribs",
+            "pads","back_window","fit",
+        ])
+        self.assertEqual(steps[-1]["end"],1080)
+        self.assertEqual(len(set(s["audio"] for s in steps)),9)
+        for i,step in enumerate(steps):
+            with self.subTest(step=step["id"]):
+                self.assertGreaterEqual(len(step["reasoning"]),65)
+                self.assertGreaterEqual(len(step.get("pointer_world",[])),4)
+                self.assertTrue(step.get("captions"))
+                self.assertEqual(m.step_at_frame(self.data,step["start"])["id"],step["id"])
+
     def test_cursor_interpolation(self):
         x,y=m.pointer_at_frame(self.data["steps"][0],11)
         self.assertAlmostEqual(x,.165)
