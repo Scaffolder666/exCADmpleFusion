@@ -1,7 +1,7 @@
 bl_info = {
     "name": "exCADmple — Design Reasoning Player (Prototype)",
     "author": "exCADmple research prototype",
-    "version": (0, 4, 1), "blender": (4, 1, 0),
+    "version": (0, 4, 2), "blender": (4, 1, 0),
     "location": "3D View > Sidebar > exCADmple",
     "description": "Explore design animations, recorded cursor paths, synchronized transcripts and audio",
     "category": "3D View",
@@ -370,18 +370,18 @@ class EXCADMPLE_PT_sidebar(bpy.types.Panel):
         scene = context.scene
         data = example_for_scene(scene)
 
-        # Import is deliberately secondary once a reference is loaded.
+        # The user explores a curated example. Arbitrary model ingestion and
+        # process extraction are explicitly outside this prototype's scope.
         header = layout.row(align=True)
-        header.label(text="MODEL DESIGN PROCESS", icon="OUTLINER_OB_MESH")
-        header.operator("excadmple.import_example", text="", icon="IMPORT")
+        header.label(text="DESIGN EXAMPLE", icon="OUTLINER_OB_MESH")
         if not data:
             box = layout.box()
-            box.label(text="Open a recorded design example", icon="INFO")
-            box.operator("excadmple.import_example", text="Import Example", icon="IMPORT")
-            box.operator("excadmple.load_demo", text="Try Phone Stand Demo", icon="FILE_3D")
+            box.label(text="Pre-authored model", icon="INFO")
+            box.operator("excadmple.load_demo",
+                         text="Open Phone Stand Example", icon="FILE_3D")
             box.separator()
-            box.label(text="A model's recorded steps appear here.")
-            box.label(text="Your own design remains editable.")
+            box.label(text="Play its modeling steps and decisions.")
+            box.label(text="Your own geometry stays editable.")
             return
 
         steps = data["steps"]
@@ -420,7 +420,7 @@ class EXCADMPLE_PT_sidebar(bpy.types.Panel):
         # default, with the active operation visibly depressed.
         panel = layout.box()
         head = panel.row(align=True)
-        head.label(text="MODELING FEATURES", icon="MODIFIER")
+        head.label(text="DESIGN STEPS", icon="MODIFIER")
         head.prop(scene, "excadmple_show_all_steps",
                   text="", icon="TRIA_DOWN" if scene.excadmple_show_all_steps else "TRIA_RIGHT")
         if scene.excadmple_show_all_steps:
@@ -479,16 +479,13 @@ class EXCADMPLE_PT_sidebar(bpy.types.Panel):
         footer.label(text="Keep modeling; examples are only references.")
         if is_showcase:
             footer.label(text="This is test data, not a captured author workflow.")
-        if scene.excadmple_show_sources:
-            footer.operator("excadmple.import_example", text="Open Another Example", icon="IMPORT")
-            footer.operator("excadmple.load_demo", text="Try Phone Stand Demo", icon="FILE_3D")
-        footer.prop(scene, "excadmple_show_sources", text="Change model example",
-                    icon="TRIA_DOWN" if scene.excadmple_show_sources else "TRIA_RIGHT")
+        # A second curated case can be added later without exposing
+        # arbitrary model import or history reconstruction in this UI.
 
 
 CLASSES = (
     EXCADMPLE_OT_load_demo,
-    EXCADMPLE_OT_import, EXCADMPLE_OT_go_step,
+    EXCADMPLE_OT_go_step,
     EXCADMPLE_OT_play, EXCADMPLE_OT_navigate,
     EXCADMPLE_PT_sidebar
 )
@@ -508,8 +505,6 @@ def register():
         name="Show all reference steps", default=False)
     bpy.types.Scene.excadmple_show_transcript = BoolProperty(
         name="Show synchronized transcript", default=True)
-    bpy.types.Scene.excadmple_show_sources = BoolProperty(
-        name="Change example", default=False)
     if on_frame not in bpy.app.handlers.frame_change_post:
         bpy.app.handlers.frame_change_post.append(on_frame)
     if not bpy.app.background and _session["draw_handler"] is None:
@@ -526,7 +521,7 @@ def unregister():
         bpy.app.handlers.frame_change_post.remove(on_frame)
     for prop in ("excadmple_overlay", "excadmple_focus",
                  "excadmple_step_progress", "excadmple_show_all_steps",
-                 "excadmple_show_transcript", "excadmple_show_sources"):
+                 "excadmple_show_transcript"):
         if hasattr(bpy.types.Scene, prop):
             delattr(bpy.types.Scene, prop)
     for cls in reversed(CLASSES):
