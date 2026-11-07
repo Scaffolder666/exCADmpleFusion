@@ -2,7 +2,7 @@
   "format": "excadmple-blender-v1",
   "geometry_preset": "phone_stand_v1",
   "title": "Phone Stand — Illustrated Design Process",
-  "description": "Synthetic example with HiM-inspired profile tracing, parameter growth and a viewport operation gizmo. No author-recorded history.",
+  "description": "Synthetic Phone Stand with HiM-inspired operation animation and a noninteractive model-anchored ghost pointer dot, click pulse, and drag trail. Pointer samples are scripted, not actual recorded mouse input.",
   "fps": 24,
   "steps": [
     {
@@ -81,7 +81,63 @@
         ],
         "distance": 0.26,
         "unit": "Blender units"
-      }
+      },
+      "pointer_world": [
+        {
+          "at": 0,
+          "xyz": [
+            -4.05,
+            -0.85,
+            0
+          ],
+          "event": "move"
+        },
+        {
+          "at": 20,
+          "xyz": [
+            -3.65,
+            -1.15,
+            0
+          ],
+          "event": "move"
+        },
+        {
+          "at": 44,
+          "xyz": [
+            -2.85,
+            -0.22,
+            0
+          ],
+          "event": "click"
+        },
+        {
+          "at": 58,
+          "xyz": [
+            -1.65,
+            -0.15,
+            0.02
+          ],
+          "event": "drag"
+        },
+        {
+          "at": 90,
+          "xyz": [
+            -1.65,
+            -0.15,
+            0.21
+          ],
+          "event": "drag"
+        },
+        {
+          "at": 119,
+          "xyz": [
+            -1.65,
+            -0.15,
+            0.26
+          ],
+          "event": "move"
+        }
+      ]
     },
     {
       "id": "support",
@@ -131,7 +187,54 @@
           "y": 0.23
         }
       ],
-      "audio": "audio/support.wav"
+      "audio": "audio/support.wav",
+      "pointer_world": [
+        {
+          "at": 0,
+          "xyz": [
+            -3.45,
+            0.75,
+            0.25
+          ],
+          "event": "move"
+        },
+        {
+          "at": 34,
+          "xyz": [
+            -2.8,
+            0.75,
+            0.3
+          ],
+          "event": "click"
+        },
+        {
+          "at": 63,
+          "xyz": [
+            -2.55,
+            0.75,
+            0.85
+          ],
+          "event": "drag"
+        },
+        {
+          "at": 90,
+          "xyz": [
+            -2.5,
+            0.95,
+            1.25
+          ],
+          "event": "drag"
+        },
+        {
+          "at": 119,
+          "xyz": [
+            -2.35,
+            0.95,
+            1.12
+          ],
+          "event": "move"
+        }
+      ]
     },
     {
       "id": "lip",
@@ -209,7 +312,54 @@
         ],
         "distance": 0.24,
         "unit": "Blender units"
-      }
+      },
+      "pointer_world": [
+        {
+          "at": 0,
+          "xyz": [
+            -3.85,
+            -0.93,
+            0.26
+          ],
+          "event": "move"
+        },
+        {
+          "at": 27,
+          "xyz": [
+            -3.1,
+            -0.93,
+            0.26
+          ],
+          "event": "click"
+        },
+        {
+          "at": 61,
+          "xyz": [
+            -1.55,
+            -0.93,
+            0.29
+          ],
+          "event": "drag"
+        },
+        {
+          "at": 88,
+          "xyz": [
+            -1.55,
+            -0.93,
+            0.44
+          ],
+          "event": "drag"
+        },
+        {
+          "at": 119,
+          "xyz": [
+            -1.55,
+            -0.93,
+            0.5
+          ],
+          "event": "move"
+        }
+      ]
     }
   ]
 }
