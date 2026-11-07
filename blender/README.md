@@ -33,6 +33,44 @@ a reenactment layer. They do not literally move Blender's system cursor,
 click the Toolbar, or execute the original creator's input events.
 The data is illustrative; it is not grounded in a real CAD session.
 
+## Model-first workflow (v0.4 UI)
+
+The **end-user workflow is a model's design process**, not a command gallery.
+HiM-inspired feature renderers remain an internal animation library.
+
+1. **Open a recorded design example:** Open a prepared `.blend` containing
+   example reference data, or choose **Import Example** for a supported
+   example JSON. **Try Phone Stand Demo** loads our clearly labeled
+   synthetic test model. Opening an arbitrary `.blend` without prepared
+   example data cannot reconstruct its original design process.
+2. **Explore that model's steps:** exCADmple lists only the modeling steps
+   in the selected model (e.g. Sketch Base → Extrude Base → Tilt Support).
+   It does **not** ask the learner to pick from 20 CAD functions.
+3. **Play / pause / scrub:** 3D geometry reenacts the operation associated
+   with the currently playing step. The viewport shows the ghost cursor and
+   operation, while the sidebar shows the associated reasoning and
+   synchronized transcript/audio if included.
+4. **Model alongside it:** The reference resides in a separate collection,
+   so the user can build or change their own meshes. They can watch a
+   full example, revisit one step or make different decisions without an
+   explicit Follow/Adapt/Skip mode.
+
+The product sidebar now prioritizes **Play, Previous/Next Step, Step Progress,
+Current Operation, Why This Decision?** and narration. The full step list
+is collapsible, keeping the 3D viewport central, similar to HiM's emphasis
+on spatial operation playback.
+
+**Developer-only feature catalog:** `him_showcase.json` and
+`him_ops.py` are retained to test 20 operation renderers, but the
+`HiM: 20 Feature Animations` button is not exposed in the normal
+user-facing UI. It is not a learning flow.
+
+**Remaining gap:** Blender's scene frame controls the current prototype's
+playback and any native animated user object; full isolation would require
+an independent example playback clock or separate scene. Native model
+reconstruction and real author-recorded operations/reasoning are also not
+implemented.
+
 ## HiM-inspired 20-operation animation gallery (experimental)
 
 A second demo, **HiM: 20 Feature Animations**, is now available from the
