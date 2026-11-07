@@ -1,0 +1,977 @@
+{
+  "format": "excadmple-blender-v1",
+  "geometry_preset": "him_feature_showcase_v1",
+  "title": "HiM-Inspired CAD Feature Animations",
+  "description": "Synthetic 20-operation catalog. Parameters animate or geometry visually reenacts operations; this is not HiM's original feature history.",
+  "fps": 24,
+  "steps": [
+    {
+      "id": "extrude",
+      "title": "Extrude",
+      "tool": "EXTRUDE",
+      "operation": {
+        "type": "extrude"
+      },
+      "start": 1,
+      "end": 84,
+      "reasoning": "Illustrative decision example: A 2D footprint becomes a three-dimensional solid; the chosen depth determines the resulting volume.",
+      "captions": [
+        {
+          "at": 0,
+          "text": "Inspect the source geometry and affected region."
+        },
+        {
+          "at": 20,
+          "text": "Observe how the operation parameter or transition changes."
+        },
+        {
+          "at": 62,
+          "text": "Consider why this operation might be selected."
+        }
+      ],
+      "pointer": [
+        {
+          "at": 0,
+          "x": 0.21,
+          "y": 0.36
+        },
+        {
+          "at": 18,
+          "x": 0.32,
+          "y": 0.45
+        },
+        {
+          "at": 44,
+          "x": 0.52,
+          "y": 0.53
+        },
+        {
+          "at": 83,
+          "x": 0.74,
+          "y": 0.35
+        }
+      ],
+      "animation": {
+        "type": "extrude",
+        "profile_xy": [
+          [
+            -1,
+            -1
+          ],
+          [
+            1,
+            -1
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            -1,
+            1
+          ]
+        ],
+        "origin_xyz": [
+          0,
+          0,
+          0
+        ],
+        "distance": 1.35,
+        "unit": "Blender units"
+      }
+    },
+    {
+      "id": "revolve",
+      "title": "Revolve",
+      "tool": "REVOLVE",
+      "operation": {
+        "type": "revolve"
+      },
+      "start": 85,
+      "end": 168,
+      "reasoning": "Illustrative decision example: A radial section revolves about an axis; this approach maintains rotational symmetry.",
+      "captions": [
+        {
+          "at": 0,
+          "text": "Inspect the source geometry and affected region."
+        },
+        {
+          "at": 20,
+          "text": "Observe how the operation parameter or transition changes."
+        },
+        {
+          "at": 62,
+          "text": "Consider why this operation might be selected."
+        }
+      ],
+      "pointer": [
+        {
+          "at": 0,
+          "x": 0.21,
+          "y": 0.36
+        },
+        {
+          "at": 18,
+          "x": 0.32,
+          "y": 0.45
+        },
+        {
+          "at": 44,
+          "x": 0.52,
+          "y": 0.53
+        },
+        {
+          "at": 83,
+          "x": 0.74,
+          "y": 0.35
+        }
+      ]
+    },
+    {
+      "id": "fillet",
+      "title": "Fillet",
+      "tool": "FILLET",
+      "operation": {
+        "type": "fillet"
+      },
+      "start": 169,
+      "end": 252,
+      "reasoning": "Illustrative decision example: Rounded edges can improve handling and redistribute stress; the radius is a design choice.",
+      "captions": [
+        {
+          "at": 0,
+          "text": "Inspect the source geometry and affected region."
+        },
+        {
+          "at": 20,
+          "text": "Observe how the operation parameter or transition changes."
+        },
+        {
+          "at": 62,
+          "text": "Consider why this operation might be selected."
+        }
+      ],
+      "pointer": [
+        {
+          "at": 0,
+          "x": 0.21,
+          "y": 0.36
+        },
+        {
+          "at": 18,
+          "x": 0.32,
+          "y": 0.45
+        },
+        {
+          "at": 44,
+          "x": 0.52,
+          "y": 0.53
+        },
+        {
+          "at": 83,
+          "x": 0.74,
+          "y": 0.35
+        }
+      ]
+    },
+    {
+      "id": "chamfer",
+      "title": "Chamfer",
+      "tool": "CHAMFER",
+      "operation": {
+        "type": "chamfer"
+      },
+      "start": 253,
+      "end": 336,
+      "reasoning": "Illustrative decision example: A bevel changes how parts meet and can simplify machining or assembly.",
+      "captions": [
+        {
+          "at": 0,
+          "text": "Inspect the source geometry and affected region."
+        },
+        {
+          "at": 20,
+          "text": "Observe how the operation parameter or transition changes."
+        },
+        {
+          "at": 62,
+          "text": "Consider why this operation might be selected."
+        }
+      ],
+      "pointer": [
+        {
+          "at": 0,
+          "x": 0.21,
+          "y": 0.36
+        },
+        {
+          "at": 18,
+          "x": 0.32,
+          "y": 0.45
+        },
+        {
+          "at": 44,
+          "x": 0.52,
+          "y": 0.53
+        },
+        {
+          "at": 83,
+          "x": 0.74,
+          "y": 0.35
+        }
+      ]
+    },
+    {
+      "id": "circular_pattern",
+      "title": "Circular Pattern",
+      "tool": "CIRCULAR PATTERN",
+      "operation": {
+        "type": "circular_pattern"
+      },
+      "start": 337,
+      "end": 420,
+      "reasoning": "Illustrative decision example: Repeated elements share a common pitch radius and angular spacing.",
+      "captions": [
+        {
+          "at": 0,
+          "text": "Inspect the source geometry and affected region."
+        },
+        {
+          "at": 20,
+          "text": "Observe how the operation parameter or transition changes."
+        },
+        {
+          "at": 62,
+          "text": "Consider why this operation might be selected."
+        }
+      ],
+      "pointer": [
+        {
+          "at": 0,
+          "x": 0.21,
+          "y": 0.36
+        },
+        {
+          "at": 18,
+          "x": 0.32,
+          "y": 0.45
+        },
+        {
+          "at": 44,
+          "x": 0.52,
+          "y": 0.53
+        },
+        {
+          "at": 83,
+          "x": 0.74,
+          "y": 0.35
+        }
+      ]
+    },
+    {
+      "id": "rectangular_pattern",
+      "title": "Rectangular Pattern",
+      "tool": "RECTANGULAR PATTERN",
+      "operation": {
+        "type": "rectangular_pattern"
+      },
+      "start": 421,
+      "end": 504,
+      "reasoning": "Illustrative decision example: A regular grid makes spacing and repetition easier to maintain.",
+      "captions": [
+        {
+          "at": 0,
+          "text": "Inspect the source geometry and affected region."
+        },
+        {
+          "at": 20,
+          "text": "Observe how the operation parameter or transition changes."
+        },
+        {
+          "at": 62,
+          "text": "Consider why this operation might be selected."
+        }
+      ],
+      "pointer": [
+        {
+          "at": 0,
+          "x": 0.21,
+          "y": 0.36
+        },
+        {
+          "at": 18,
+          "x": 0.32,
+          "y": 0.45
+        },
+        {
+          "at": 44,
+          "x": 0.52,
+          "y": 0.53
+        },
+        {
+          "at": 83,
+          "x": 0.74,
+          "y": 0.35
+        }
+      ]
+    },
+    {
+      "id": "mirror",
+      "title": "Mirror",
+      "tool": "MIRROR",
+      "operation": {
+        "type": "mirror"
+      },
+      "start": 505,
+      "end": 588,
+      "reasoning": "Illustrative decision example: The mirrored side reflects a symmetry decision, not an independently edited part.",
+      "captions": [
+        {
+          "at": 0,
+          "text": "Inspect the source geometry and affected region."
+        },
+        {
+          "at": 20,
+          "text": "Observe how the operation parameter or transition changes."
+        },
+        {
+          "at": 62,
+          "text": "Consider why this operation might be selected."
+        }
+      ],
+      "pointer": [
+        {
+          "at": 0,
+          "x": 0.21,
+          "y": 0.36
+        },
+        {
+          "at": 18,
+          "x": 0.32,
+          "y": 0.45
+        },
+        {
+          "at": 44,
+          "x": 0.52,
+          "y": 0.53
+        },
+        {
+          "at": 83,
+          "x": 0.74,
+          "y": 0.35
+        }
+      ]
+    },
+    {
+      "id": "copy",
+      "title": "Copy",
+      "tool": "COPY",
+      "operation": {
+        "type": "copy"
+      },
+      "start": 589,
+      "end": 672,
+      "reasoning": "Illustrative decision example: Duplicating a detail can reuse geometry while allowing a new placement.",
+      "captions": [
+        {
+          "at": 0,
+          "text": "Inspect the source geometry and affected region."
+        },
+        {
+          "at": 20,
+          "text": "Observe how the operation parameter or transition changes."
+        },
+        {
+          "at": 62,
+          "text": "Consider why this operation might be selected."
+        }
+      ],
+      "pointer": [
+        {
+          "at": 0,
+          "x": 0.21,
+          "y": 0.36
+        },
+        {
+          "at": 18,
+          "x": 0.32,
+          "y": 0.45
+        },
+        {
+          "at": 44,
+          "x": 0.52,
+          "y": 0.53
+        },
+        {
+          "at": 83,
+          "x": 0.74,
+          "y": 0.35
+        }
+      ]
+    },
+    {
+      "id": "move",
+      "title": "Move",
+      "tool": "MOVE",
+      "operation": {
+        "type": "move"
+      },
+      "start": 673,
+      "end": 756,
+      "reasoning": "Illustrative decision example: Moving a part changes its relationship to the overall assembly.",
+      "captions": [
+        {
+          "at": 0,
+          "text": "Inspect the source geometry and affected region."
+        },
+        {
+          "at": 20,
+          "text": "Observe how the operation parameter or transition changes."
+        },
+        {
+          "at": 62,
+          "text": "Consider why this operation might be selected."
+        }
+      ],
+      "pointer": [
+        {
+          "at": 0,
+          "x": 0.21,
+          "y": 0.36
+        },
+        {
+          "at": 18,
+          "x": 0.32,
+          "y": 0.45
+        },
+        {
+          "at": 44,
+          "x": 0.52,
+          "y": 0.53
+        },
+        {
+          "at": 83,
+          "x": 0.74,
+          "y": 0.35
+        }
+      ]
+    },
+    {
+      "id": "scale",
+      "title": "Scale",
+      "tool": "SCALE",
+      "operation": {
+        "type": "scale"
+      },
+      "start": 757,
+      "end": 840,
+      "reasoning": "Illustrative decision example: Changing size can improve fit, but it may also change clearances.",
+      "captions": [
+        {
+          "at": 0,
+          "text": "Inspect the source geometry and affected region."
+        },
+        {
+          "at": 20,
+          "text": "Observe how the operation parameter or transition changes."
+        },
+        {
+          "at": 62,
+          "text": "Consider why this operation might be selected."
+        }
+      ],
+      "pointer": [
+        {
+          "at": 0,
+          "x": 0.21,
+          "y": 0.36
+        },
+        {
+          "at": 18,
+          "x": 0.32,
+          "y": 0.45
+        },
+        {
+          "at": 44,
+          "x": 0.52,
+          "y": 0.53
+        },
+        {
+          "at": 83,
+          "x": 0.74,
+          "y": 0.35
+        }
+      ]
+    },
+    {
+      "id": "combine",
+      "title": "Combine",
+      "tool": "COMBINE",
+      "operation": {
+        "type": "combine"
+      },
+      "start": 841,
+      "end": 924,
+      "reasoning": "Illustrative decision example: Bringing solids together is a step toward treating them as one design.",
+      "captions": [
+        {
+          "at": 0,
+          "text": "Inspect the source geometry and affected region."
+        },
+        {
+          "at": 20,
+          "text": "Observe how the operation parameter or transition changes."
+        },
+        {
+          "at": 62,
+          "text": "Consider why this operation might be selected."
+        }
+      ],
+      "pointer": [
+        {
+          "at": 0,
+          "x": 0.21,
+          "y": 0.36
+        },
+        {
+          "at": 18,
+          "x": 0.32,
+          "y": 0.45
+        },
+        {
+          "at": 44,
+          "x": 0.52,
+          "y": 0.53
+        },
+        {
+          "at": 83,
+          "x": 0.74,
+          "y": 0.35
+        }
+      ]
+    },
+    {
+      "id": "split",
+      "title": "Split",
+      "tool": "SPLIT",
+      "operation": {
+        "type": "split"
+      },
+      "start": 925,
+      "end": 1008,
+      "reasoning": "Illustrative decision example: Separating a body can enable different manufacturing or assembly decisions.",
+      "captions": [
+        {
+          "at": 0,
+          "text": "Inspect the source geometry and affected region."
+        },
+        {
+          "at": 20,
+          "text": "Observe how the operation parameter or transition changes."
+        },
+        {
+          "at": 62,
+          "text": "Consider why this operation might be selected."
+        }
+      ],
+      "pointer": [
+        {
+          "at": 0,
+          "x": 0.21,
+          "y": 0.36
+        },
+        {
+          "at": 18,
+          "x": 0.32,
+          "y": 0.45
+        },
+        {
+          "at": 44,
+          "x": 0.52,
+          "y": 0.53
+        },
+        {
+          "at": 83,
+          "x": 0.74,
+          "y": 0.35
+        }
+      ]
+    },
+    {
+      "id": "import",
+      "title": "Import",
+      "tool": "IMPORT",
+      "operation": {
+        "type": "import"
+      },
+      "start": 1009,
+      "end": 1092,
+      "reasoning": "Illustrative decision example: Imported geometry brings an external reference or part into the design.",
+      "captions": [
+        {
+          "at": 0,
+          "text": "Inspect the source geometry and affected region."
+        },
+        {
+          "at": 20,
+          "text": "Observe how the operation parameter or transition changes."
+        },
+        {
+          "at": 62,
+          "text": "Consider why this operation might be selected."
+        }
+      ],
+      "pointer": [
+        {
+          "at": 0,
+          "x": 0.21,
+          "y": 0.36
+        },
+        {
+          "at": 18,
+          "x": 0.32,
+          "y": 0.45
+        },
+        {
+          "at": 44,
+          "x": 0.52,
+          "y": 0.53
+        },
+        {
+          "at": 83,
+          "x": 0.74,
+          "y": 0.35
+        }
+      ]
+    },
+    {
+      "id": "export",
+      "title": "Export",
+      "tool": "EXPORT",
+      "operation": {
+        "type": "export"
+      },
+      "start": 1093,
+      "end": 1176,
+      "reasoning": "Illustrative decision example: Exporting a part conveys its geometry to another process or collaborator.",
+      "captions": [
+        {
+          "at": 0,
+          "text": "Inspect the source geometry and affected region."
+        },
+        {
+          "at": 20,
+          "text": "Observe how the operation parameter or transition changes."
+        },
+        {
+          "at": 62,
+          "text": "Consider why this operation might be selected."
+        }
+      ],
+      "pointer": [
+        {
+          "at": 0,
+          "x": 0.21,
+          "y": 0.36
+        },
+        {
+          "at": 18,
+          "x": 0.32,
+          "y": 0.45
+        },
+        {
+          "at": 44,
+          "x": 0.52,
+          "y": 0.53
+        },
+        {
+          "at": 83,
+          "x": 0.74,
+          "y": 0.35
+        }
+      ]
+    },
+    {
+      "id": "shell",
+      "title": "Shell",
+      "tool": "SHELL",
+      "operation": {
+        "type": "shell"
+      },
+      "start": 1177,
+      "end": 1260,
+      "reasoning": "Illustrative decision example: A hollow form can reduce mass while introducing wall-thickness constraints.",
+      "captions": [
+        {
+          "at": 0,
+          "text": "Inspect the source geometry and affected region."
+        },
+        {
+          "at": 20,
+          "text": "Observe how the operation parameter or transition changes."
+        },
+        {
+          "at": 62,
+          "text": "Consider why this operation might be selected."
+        }
+      ],
+      "pointer": [
+        {
+          "at": 0,
+          "x": 0.21,
+          "y": 0.36
+        },
+        {
+          "at": 18,
+          "x": 0.32,
+          "y": 0.45
+        },
+        {
+          "at": 44,
+          "x": 0.52,
+          "y": 0.53
+        },
+        {
+          "at": 83,
+          "x": 0.74,
+          "y": 0.35
+        }
+      ]
+    },
+    {
+      "id": "draft",
+      "title": "Draft",
+      "tool": "DRAFT",
+      "operation": {
+        "type": "draft"
+      },
+      "start": 1261,
+      "end": 1344,
+      "reasoning": "Illustrative decision example: Draft changes wall angle to make a mold-release direction feasible.",
+      "captions": [
+        {
+          "at": 0,
+          "text": "Inspect the source geometry and affected region."
+        },
+        {
+          "at": 20,
+          "text": "Observe how the operation parameter or transition changes."
+        },
+        {
+          "at": 62,
+          "text": "Consider why this operation might be selected."
+        }
+      ],
+      "pointer": [
+        {
+          "at": 0,
+          "x": 0.21,
+          "y": 0.36
+        },
+        {
+          "at": 18,
+          "x": 0.32,
+          "y": 0.45
+        },
+        {
+          "at": 44,
+          "x": 0.52,
+          "y": 0.53
+        },
+        {
+          "at": 83,
+          "x": 0.74,
+          "y": 0.35
+        }
+      ]
+    },
+    {
+      "id": "sweep",
+      "title": "Sweep",
+      "tool": "SWEEP",
+      "operation": {
+        "type": "sweep"
+      },
+      "start": 1345,
+      "end": 1428,
+      "reasoning": "Illustrative decision example: A profile follows a path, useful for routing or forming elongated elements.",
+      "captions": [
+        {
+          "at": 0,
+          "text": "Inspect the source geometry and affected region."
+        },
+        {
+          "at": 20,
+          "text": "Observe how the operation parameter or transition changes."
+        },
+        {
+          "at": 62,
+          "text": "Consider why this operation might be selected."
+        }
+      ],
+      "pointer": [
+        {
+          "at": 0,
+          "x": 0.21,
+          "y": 0.36
+        },
+        {
+          "at": 18,
+          "x": 0.32,
+          "y": 0.45
+        },
+        {
+          "at": 44,
+          "x": 0.52,
+          "y": 0.53
+        },
+        {
+          "at": 83,
+          "x": 0.74,
+          "y": 0.35
+        }
+      ]
+    },
+    {
+      "id": "loft",
+      "title": "Loft",
+      "tool": "LOFT",
+      "operation": {
+        "type": "loft"
+      },
+      "start": 1429,
+      "end": 1512,
+      "reasoning": "Illustrative decision example: Changing cross-sections allows the geometry to transition between forms.",
+      "captions": [
+        {
+          "at": 0,
+          "text": "Inspect the source geometry and affected region."
+        },
+        {
+          "at": 20,
+          "text": "Observe how the operation parameter or transition changes."
+        },
+        {
+          "at": 62,
+          "text": "Consider why this operation might be selected."
+        }
+      ],
+      "pointer": [
+        {
+          "at": 0,
+          "x": 0.21,
+          "y": 0.36
+        },
+        {
+          "at": 18,
+          "x": 0.32,
+          "y": 0.45
+        },
+        {
+          "at": 44,
+          "x": 0.52,
+          "y": 0.53
+        },
+        {
+          "at": 83,
+          "x": 0.74,
+          "y": 0.35
+        }
+      ]
+    },
+    {
+      "id": "thread",
+      "title": "Thread",
+      "tool": "THREAD",
+      "operation": {
+        "type": "thread"
+      },
+      "start": 1513,
+      "end": 1596,
+      "reasoning": "Illustrative decision example: Helical geometry expresses a fastening interface and its pitch.",
+      "captions": [
+        {
+          "at": 0,
+          "text": "Inspect the source geometry and affected region."
+        },
+        {
+          "at": 20,
+          "text": "Observe how the operation parameter or transition changes."
+        },
+        {
+          "at": 62,
+          "text": "Consider why this operation might be selected."
+        }
+      ],
+      "pointer": [
+        {
+          "at": 0,
+          "x": 0.21,
+          "y": 0.36
+        },
+        {
+          "at": 18,
+          "x": 0.32,
+          "y": 0.45
+        },
+        {
+          "at": 44,
+          "x": 0.52,
+          "y": 0.53
+        },
+        {
+          "at": 83,
+          "x": 0.74,
+          "y": 0.35
+        }
+      ]
+    },
+    {
+      "id": "hole",
+      "title": "Hole",
+      "tool": "HOLE",
+      "operation": {
+        "type": "hole"
+      },
+      "start": 1597,
+      "end": 1680,
+      "reasoning": "Illustrative decision example: A cut through an existing body creates access, fit, or attachment opportunities.",
+      "captions": [
+        {
+          "at": 0,
+          "text": "Inspect the source geometry and affected region."
+        },
+        {
+          "at": 20,
+          "text": "Observe how the operation parameter or transition changes."
+        },
+        {
+          "at": 62,
+          "text": "Consider why this operation might be selected."
+        }
+      ],
+      "pointer": [
+        {
+          "at": 0,
+          "x": 0.21,
+          "y": 0.36
+        },
+        {
+          "at": 18,
+          "x": 0.32,
+          "y": 0.45
+        },
+        {
+          "at": 44,
+          "x": 0.52,
+          "y": 0.53
+        },
+        {
+          "at": 83,
+          "x": 0.74,
+          "y": 0.35
+        }
+      ]
+    }
+  ]
+}
