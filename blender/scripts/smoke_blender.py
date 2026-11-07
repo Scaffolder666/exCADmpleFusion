@@ -35,7 +35,7 @@ base_gizmo=col.objects.get("exCADmple | 01 Base extrude — manipulator")
 lip_sketch=col.objects.get("exCADmple | 03 Front lip extrude — sketch")
 lip_gizmo=col.objects.get("exCADmple | 03 Front lip extrude — manipulator")
 assert all((base_sketch,base_gizmo,lip_sketch,lip_gizmo))
-assert len(col.objects)==16,len(col.objects
+assert len(col.objects)==16,len(col.objects)
 scene.frame_set(1)
 start=base_key.value
 assert abs(start)<.01,start
