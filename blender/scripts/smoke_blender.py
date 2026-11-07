@@ -74,7 +74,7 @@ scene.frame_set(300)
 plugin._session["step_id"]=None
 plugin.update_focus(scene)
 assert lip.display_type=="TEXTURED"
-assert base.display_type=="WIRE"
+assert base.display_type=="TEXTURED"  # completed geometry remains visible
 assert original.display_type=="TEXTURED"
 assert lip_sketch.hide_get() is False
 assert base_sketch.hide_get() is True
