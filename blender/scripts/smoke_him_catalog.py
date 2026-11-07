@@ -59,9 +59,11 @@ for step in data["steps"]:
     assert all(o.hide_get() is False for o in objects),(step["id"],focus_names)
     assert all(o.hide_get() is True for o in col.objects if o not in objects)
     one=primary(step)
-    beginning=(tuple(one.location),tuple(one.scale),len(eval_verts(one)))
+    begin_vertices=eval_verts(one)
+    beginning=(tuple(one.location),tuple(one.scale),len(begin_vertices))
     scene.frame_set(step["end"])
-    ending=(tuple(one.location),tuple(one.scale),len(eval_verts(one)))
+    end_vertices=eval_verts(one)
+    ending=(tuple(one.location),tuple(one.scale),len(end_vertices))
     kind=step["operation"]["type"]
     if kind == "extrude":
         shape=one.data.shape_keys.key_blocks["Extrude"]
@@ -70,7 +72,9 @@ for step in data["steps"]:
     elif kind == "revolve":
         mod=next(m for m in one.modifiers if m.type=="SCREW")
         assert abs(mod.angle-6.283185307)<.001,mod.angle
-        assert ending[2]>beginning[2],(kind,beginning,ending)
+        begin_span=max(v[1] for v in begin_vertices)-min(v[1] for v in begin_vertices)
+        end_span=max(v[1] for v in end_vertices)-min(v[1] for v in end_vertices)
+        assert end_span>begin_span+.5,(kind,begin_span,end_span)
     elif kind in ("fillet","chamfer"):
         mod=next(m for m in one.modifiers if m.type=="BEVEL")
         assert mod.width>.2
