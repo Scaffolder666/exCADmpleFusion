@@ -7,6 +7,7 @@ on:
       - feat/blender-him-animation-catalog
       - feat/blender-him-ui-workflow
       - feat/blender-single-viewport-him-overlay
+      - fix/blender-functional-audit
     paths:
       - "blender/**"
       - ".github/workflows/blender-spike.yml"
