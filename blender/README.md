@@ -14,8 +14,9 @@ to copy, follow, or manipulate the reference object's history.
 
 The included **synthetic Phone Stand demo** demonstrates:
 
-- 3D shape progression (base extrusion, tilted support, lip extrusion),
-  driven by Blender keyframes;
+- HiM-inspired profile-to-solid Extrude animations for base and lip, with an
+  orange Sketch profile, moving golden 3D manipulator, distance indicator,
+  and a separate illustrative support rotation;
 - step navigation, play/pause, and native timeline scrubbing;
 - a yellow **recorded ghost cursor** and blue trail drawn on the 3D View,
   independent from the real user's input;
@@ -31,6 +32,57 @@ The included **synthetic Phone Stand demo** demonstrates:
 a reenactment layer. They do not literally move Blender's system cursor,
 click the Toolbar, or execute the original creator's input events.
 The data is illustrative; it is not grounded in a real CAD session.
+
+## HiM-inspired operation animation (v0.2)
+
+The Blender player now includes a deliberately **HiM-inspired feature animation**
+for the two Extrude operations in the mock Phone Stand example. This replaces
+the earlier "stretch a cube" illusion:
+
+1. An orange **Sketch profile** is drawn using a real Blender Curve outline.
+2. The tool phase switches from **SKETCH PROFILE** to **EXTRUDE TOOL**, then
+   **DRAG EXTRUDE HANDLE**; the recorded ghost cursor remains synchronized.
+3. The blue solid is generated from the polygon profile. Its **top vertices
+   change position over time through Shape Keys**, keeping bottom vertices fixed,
+   so the extrusion grows from the plane instead of scaling a cube.
+4. A golden 3D **manipulator arrow** extends alongside the growing solid.
+5. Playback presents the current extrusion distance, synchronized subtitles
+   and mock audio; unrelated reference objects are de-emphasized. The
+   user's own geometry is never changed.
+
+The underlying `demo.json` stores an actual 2D polygon, its 3D origin and
+an Extrude distance (in **Blender units**). For the sample:
+```json
+"animation": {
+  "type": "extrude",
+  "profile_xy": [[-1.7,-1.2],[1.7,-1.2],[1.7,1.2],[-1.7,1.2]],
+  "origin_xyz": [-2.8,0,0],
+  "distance": 0.26,
+  "unit": "Blender units"
+}
+```
+The second step still uses an illustrative growing/rotating support.
+
+**Not yet implemented:** robust reconstruction of an arbitrary source
+model's actual Sketch/Extrude history; curved profiles and inner loops;
+Fillet/Revolve/Cut/Boolean live previews; highlighting Blender's actual
+native Extrude menu button; moving the operating-system pointer; an
+independent playback clock that leaves the user's scene animation frozen.
+The yellow pointer and labeled tool phases are **graphical reenactments**,
+not recovered original mouse events. The intro and UI visibly label the
+data as synthetic.
+
+The design choice follows Veuskens et al., *History in Motion* (SCF 2023):
+animate the *operation parameter and its affected geometry* and keep the
+original user's work untouched. Blender shape keys and Blender Curves
+provide a simpler, in-canvas visual equivalent for explicit extrusion data.
+It is **not** a reimplementation of HiM's full feature dependency filtering
+algorithm nor its two-instance Fusion renderer.
+
+The CI smoke test now confirms the profile mesh uses Shape Key deformation
+instead of object scaling, checks the sketch trace and manipulator existence,
+ensures only reference objects enter Focus Mode and leaves independent user
+objects unchanged.
 
 ## Install in Blender 4.1+ (4.5 LTS recommended)
 
