@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - feat/blender-reasoning-player-spike
+      - feat/blender-him-animation-catalog
     paths:
       - "blender/**"
       - ".github/workflows/blender-spike.yml"
@@ -42,8 +43,15 @@ jobs:
           /tmp/blender-4.5.15-linux-x64/blender --background --factory-startup \
             --python blender/scripts/smoke_blender.py
           test -s /tmp/excadmple_blender_smoke.blend
+      - name: Exercise HiM-style feature animations in Blender
+        run: |
+          /tmp/blender-4.5.15-linux-x64/blender --background --factory-startup \
+            --python blender/scripts/smoke_him_catalog.py
+          test -s /tmp/excadmple_blender_him_catalog.blend
       - uses: actions/upload-artifact@v4
         with:
           name: excadmple-blender-smoke-scene
-          path: /tmp/excadmple_blender_smoke.blend
+          path: |
+            /tmp/excadmple_blender_smoke.blend
+            /tmp/excadmple_blender_him_catalog.blend
           retention-days: 7
