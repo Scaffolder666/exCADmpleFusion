@@ -30,7 +30,7 @@ assert set(step["operation"]["type"] for step in data["steps"]) == set(SHOWCASE_
 stats=app.build_showcase(scene,data)
 assert stats["steps"] == 20, stats
 col=app.get_reference(scene)
-assert len(col.objects) >= 25,len(col.objects)
+assert len(col.objects) >= 25,len(col.objects)\nassert all(o.hide_select for o in col.objects), "Gallery references must be unselectable"
 assert len([obj for obj in bpy.data.objects if obj == user])==1
 
 def step_objects(step):
