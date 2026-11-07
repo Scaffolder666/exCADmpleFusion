@@ -8,6 +8,7 @@ on:
       - feat/blender-him-ui-workflow
       - feat/blender-single-viewport-him-overlay
       - fix/blender-functional-audit
+      - feat/phone-stand-nine-step-example
     paths:
       - "blender/**"
       - ".github/workflows/blender-spike.yml"
@@ -34,6 +35,12 @@ jobs:
           espeak -v en-us -s 218 -w blender/excadmple_blender/audio/base.wav "First I define a broad base. A wider footprint improves stability before I set a viewing angle."
           espeak -v en-us -s 218 -w blender/excadmple_blender/audio/support.wav "Next I make the back support and test the viewing angle. I can change it for another device."
           espeak -v en-us -s 218 -w blender/excadmple_blender/audio/lip.wav "Finally I add a small lip so the phone stays in place. The size depends on the phone."
+          espeak -v en-us -s 218 -w blender/excadmple_blender/audio/base_round.wav "I round the base edges to make handling more comfortable. But I keep a broad flat contact for stability."
+          espeak -v en-us -s 218 -w blender/excadmple_blender/audio/cable.wav "The front lip might block a charging cable. I remove the center while keeping two surfaces to hold the phone."
+          espeak -v en-us -s 218 -w blender/excadmple_blender/audio/ribs.wav "The inclined back could flex. Two narrow triangular braces add stability without filling the whole stand."
+          espeak -v en-us -s 218 -w blender/excadmple_blender/audio/pads.wav "Rather than increasing the weight of the base, four grip pads increase friction against the desk."
+          espeak -v en-us -s 218 -w blender/excadmple_blender/audio/back_window.wav "I cut an opening in the back to use less material. This trades some stiffness for a lighter structure."
+          espeak -v en-us -s 218 -w blender/excadmple_blender/audio/fit.wav "A temporary phone model helps me test the viewing angle, charging access, and the retaining lip before finalizing."
       - name: Download official Blender 4.5.15 LTS
         run: |
           curl --fail --location --retry 3 --connect-timeout 25 \
