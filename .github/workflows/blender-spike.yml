@@ -5,6 +5,7 @@ on:
     branches:
       - feat/blender-reasoning-player-spike
       - feat/blender-him-animation-catalog
+      - feat/blender-him-ui-workflow
     paths:
       - "blender/**"
       - ".github/workflows/blender-spike.yml"
