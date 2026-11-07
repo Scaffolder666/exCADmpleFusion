@@ -17,7 +17,9 @@ from bpy.app.handlers import persistent
 from bpy_extras.io_utils import ImportHelper
 from bpy.props import BoolProperty, StringProperty, FloatProperty, EnumProperty
 from gpu_extras.batch import batch_for_shader
-from .core import load_example, step_at_frame, caption_at_frame, pointer_at_frame, operation_phase, progress_in_step
+from mathutils import Vector
+from bpy_extras.view3d_utils import location_3d_to_region_2d
+from .core import load_example, step_at_frame, caption_at_frame, pointer_at_frame, pointer_world_at_frame, operation_phase, progress_in_step
 from .procedural import build_extrusion
 from .him_ops import build_operation, OPERATION_TYPES
 from .viewport_panel import draw as draw_him_panel
@@ -199,55 +201,123 @@ def on_frame(scene,_depsgraph=None):
     if example_for_scene(scene):
         update_focus(scene)
 
+def _draw_ghost_circle(shader, location, radius, color, outline=False):
+    """Visual feedback only. No synthetic mouse events are sent to Blender."""
+    count=32
+    ring=[
+        (location[0]+math.cos(2*math.pi*i/count)*radius,
+         location[1]+math.sin(2*math.pi*i/count)*radius)
+        for i in range(count)
+    ]
+    if outline:
+        batch=batch_for_shader(shader,"LINE_LOOP",{"pos":ring})
+    else:
+        vertices=[location]+ring
+        triangles=[(0,i+1,(i+1)%count+1) for i in range(count)]
+        batch=batch_for_shader(shader,"TRIS",{"pos":vertices},indices=triangles)
+    shader.bind()
+    shader.uniform_float("color",color)
+    batch.draw(shader)
+
+
+def _project_ghost_position(ctx, xyz):
+    """Project a model-space reference event through the current 3D view."""
+    rv3d=getattr(ctx.space_data,"region_3d",None)
+    if rv3d is None:
+        return None
+    screen=location_3d_to_region_2d(ctx.region,rv3d,Vector(xyz))
+    return None if screen is None else (float(screen.x),float(screen.y))
+
+
+def _ghost_position(ctx, step, frame):
+    xyz=pointer_world_at_frame(step,frame)
+    if xyz is not None:
+        return _project_ghost_position(ctx,xyz)
+    # Backward compatibility for developer examples with screen-space cues.
+    x,y=pointer_at_frame(step,frame)
+    return (x*ctx.region.width,y*ctx.region.height)
+
+
 def draw_cursor_overlay():
+    """A noninteractive ghost *dot* illustrating the preset author's actions.
+
+    The real mouse belongs entirely to the learner; this GPU drawing is not a
+    cursor override, a mouse event, or a clickable control. World-space cues
+    follow the reference model when the single viewport's camera changes.
+    """
     ctx=bpy.context
-    if ctx.area is None or ctx.area.type!="VIEW_3D" or ctx.region is None: return
+    if ctx.area is None or ctx.area.type!="VIEW_3D" or ctx.region is None:
+        return
     scene=ctx.scene
     data=example_for_scene(scene)
-    if not data or not scene.excadmple_overlay: return
+    if not data or not scene.excadmple_overlay:
+        return
     step=step_at_frame(data,scene.frame_current)
+    loc=_ghost_position(ctx,step,scene.frame_current)
+    if loc is None:
+        return
     w,h=ctx.region.width,ctx.region.height
-    x,y=pointer_at_frame(step,scene.frame_current)
-    loc=(x*w,y*h)
     trail=[]
-    for frame in range(max(step["start"],scene.frame_current-18),scene.frame_current+1,2):
-        px,py=pointer_at_frame(step,frame)
-        trail.append((px*w,py*h))
+    for frame in range(max(step["start"],scene.frame_current-22),
+                       scene.frame_current+1,2):
+        point=_ghost_position(ctx,step,frame)
+        if point is not None:
+            trail.append(point)
     gpu.state.blend_set("ALPHA")
     shader=gpu.shader.from_builtin("UNIFORM_COLOR")
-    if len(trail)>1:
-        batch=batch_for_shader(shader,"LINE_STRIP",{"pos":trail})
-        shader.bind()
-        shader.uniform_float("color",(.16,.54,.98,.70))
-        gpu.state.line_width_set(3.)
-        batch.draw(shader)
-    points=[loc,(loc[0]+4,loc[1]-17),(loc[0]+8,loc[1]-10),(loc[0]+15,loc[1]-9)]
-    triangles=[points[0],points[1],points[2],points[0],points[2],points[3]]
-    batch=batch_for_shader(shader,"TRIS",{"pos":triangles})
-    shader.bind()
-    shader.uniform_float("color",(.98,.74,.20,.96))
-    batch.draw(shader)
-    gpu.state.line_width_set(1.)
-    gpu.state.blend_set("NONE")
-    font=0
-    blf.size(font,14)
-    blf.color(font,.96,.96,.95,1)
-    blf.position(font,loc[0]+19,loc[1]+3,0)
-    blf.draw(font,"REPLAY  "+operation_phase(step,scene.frame_current))
-    if step.get("animation",{}).get("type")=="extrude":
-        spec=step["animation"]
-        phase=progress_in_step(step,scene.frame_current)
-        growth=max(0,min(1,(phase-.31)/.69))
-        if phase<.31: growth=0
-        blf.position(font,loc[0]+19,loc[1]-18,0)
-        blf.draw(font,"DISTANCE   %.2f / %.2f BU"%(growth*spec["distance"],spec["distance"]))
-    blf.size(font,17)
-    blf.color(font,1,1,1,1)
-    blf.position(font,22,max(32,h-40),0)
-    blf.draw(font,"exCADmple  |  "+step["title"])
-    blf.size(font,14)
-    blf.position(font,22,30,0)
-    blf.draw(font,caption_at_frame(step,scene.frame_current)[:max(28,int(w/9))])
+    try:
+        if len(trail)>1:
+            batch=batch_for_shader(shader,"LINE_STRIP",{"pos":trail})
+            shader.bind()
+            shader.uniform_float("color",(.98,.64,.26,.60))
+            gpu.state.line_width_set(2.5)
+            batch.draw(shader)
+
+        # The ghost is a soft halo + small dot, visibly distinct from the
+        # learner's true OS cursor. No input handler is registered for it.
+        _draw_ghost_circle(shader,loc,11,(.96,.63,.24,.16))
+        _draw_ghost_circle(shader,loc,5.8,(.98,.66,.28,.94))
+        _draw_ghost_circle(shader,loc,2.3,(1.,1.,1.,.93))
+
+        # Click is represented by a short, fading ripple at the point
+        # of the previous designer's illustrated click event.
+        relative=scene.frame_current-step["start"]
+        for sample in step.get("pointer_world",[]):
+            if sample.get("event")!="click":
+                continue
+            elapsed=relative-sample["at"]
+            if not 0<=elapsed<=9:
+                continue
+            click_pos=_project_ghost_position(ctx,sample["xyz"])
+            if click_pos is not None:
+                amount=elapsed/9.
+                _draw_ghost_circle(shader,click_pos,10+18*amount,
+                                   (.98,.72,.34,.85*(1.-amount)),
+                                   outline=True)
+        font=0
+        blf.size(font,12)
+        blf.color(font,.96,.88,.71,1.)
+        blf.position(font,loc[0]+13,loc[1]+10,0)
+        blf.draw(font,"EXAMPLE")
+        blf.size(font,12)
+        blf.color(font,.94,.94,.95,1.)
+        blf.position(font,loc[0]+13,loc[1]-11,0)
+        blf.draw(font,operation_phase(step,scene.frame_current))
+        if step.get("animation",{}).get("type")=="extrude":
+            spec=step["animation"]
+            phase=progress_in_step(step,scene.frame_current)
+            growth=max(0,min(1,(phase-.31)/.69))
+            blf.position(font,loc[0]+13,loc[1]-28,0)
+            blf.draw(font,"%.2f / %.2f BU"%(growth*spec["distance"],
+                                            spec["distance"]))
+        # Keep captions but do not draw a fake software pointer.
+        blf.color(font,1,1,1,1)
+        blf.position(font,22,30,0)
+        blf.draw(font,caption_at_frame(step,scene.frame_current)
+                 [:max(28,int(w/9))])
+    finally:
+        gpu.state.line_width_set(1.)
+        gpu.state.blend_set("NONE")
 
 def draw_overlay():
     """Render mouse reenactment and HiM panel over ONE editable 3D region."""
