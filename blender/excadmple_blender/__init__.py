@@ -39,7 +39,22 @@ def example_for_scene(scene):
     except Exception: return None
 
 def get_reference(scene):
-    return bpy.data.collections.get(REF_NAME)
+    """Find only the reference attached to this Scene, never a global name.
+
+    A .blend may contain several Scenes; the earlier global lookup could
+    accidentally delete another Scene's reference when reloading a demo.
+    """
+    for col in scene.collection.children:
+        if col.get("excadmple_reference_collection"):
+            return col
+    # Legacy saved smoke scenes lack the collection marker. Recognize them
+    # by both name and our object metadata, not name alone.
+    for col in scene.collection.children:
+        if col.name.startswith(REF_NAME) and any(
+            obj.get("excadmple_reference") for obj in col.objects
+        ):
+            return col
+    return None
 
 def add_cube(name, collection, color):
     # Reference shapes are synthetic and NEVER claim to be recovered F3D history.
@@ -105,6 +120,7 @@ def build_demo(scene,data,root):
     # This spike deliberately accepts ONLY the phone_stand_v1 geometry preset.
     unlink_reference(scene)
     col=bpy.data.collections.new(REF_NAME)
+    col["excadmple_reference_collection"]=True
     scene.collection.children.link(col)
     x=-2.8
     # Shape-key extrusion animates actual profile vertices, not cube scale.
@@ -146,6 +162,7 @@ def build_showcase(scene, data):
         raise ValueError("Not an operation showcase")
     unlink_reference(scene)
     col=bpy.data.collections.new(REF_NAME)
+    col["excadmple_reference_collection"]=True
     scene.collection.children.link(col)
     total=0
     for step in data["steps"]:
