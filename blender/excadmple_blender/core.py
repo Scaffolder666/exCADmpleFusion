@@ -5,6 +5,13 @@ from pathlib import Path
 
 class ExampleError(ValueError): pass
 
+SHOWCASE_OPERATIONS = (
+    "extrude", "revolve", "fillet", "chamfer", "circular_pattern",
+    "rectangular_pattern", "mirror", "copy", "move", "scale", "combine",
+    "split", "import", "export", "shell", "draft", "sweep", "loft",
+    "thread", "hole"
+)
+
 def load_example(path):
     data=json.loads(Path(path).read_text(encoding="utf-8"))
     validate_example(data)
@@ -13,8 +20,9 @@ def load_example(path):
 def validate_example(data):
     if not isinstance(data,dict) or data.get("format")!="excadmple-blender-v1":
         raise ExampleError("Incorrect demo data format")
-    if data.get("geometry_preset")!="phone_stand_v1":
-        raise ExampleError("This spike supports the illustrative phone_stand_v1 preset only")
+    preset=data.get("geometry_preset")
+    if preset not in ("phone_stand_v1", "him_feature_showcase_v1"):
+        raise ExampleError("Unknown reference-animation geometry preset")
     steps=data.get("steps")
     if not isinstance(steps,list) or not 1<=len(steps)<=100:
         raise ExampleError("Expected 1–100 steps")
@@ -39,6 +47,12 @@ def validate_example(data):
             if t<prev_t or not 0<=t<=end-start or not(0<=x<=1 and 0<=y<=1):
                 raise ExampleError("Pointer path outside step")
             prev_t=t
+        if preset == "him_feature_showcase_v1":
+            feature=step.get("operation")
+            if not isinstance(feature,dict) or feature.get("type") not in SHOWCASE_OPERATIONS:
+                raise ExampleError("Each showcase step requires a supported operation type")
+            if feature["type"] == "extrude" and not step.get("animation"):
+                raise ExampleError("Extrude showcase steps require an explicit profile")
         if step.get("animation") is not None:
             validate_extrude_animation(step["animation"])
         for cue in step.get("captions",[]):
