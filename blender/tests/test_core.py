@@ -34,6 +34,25 @@ class PlaybackTests(unittest.TestCase):
         d["steps"][0]["pointer"][1]["x"]=2
         with self.assertRaises(m.ExampleError): m.validate_example(d)
 
+    def test_him_style_extrude_operation_phases(self):
+        first=self.data["steps"][0]
+        self.assertEqual(m.operation_phase(first,1),"SKETCH PROFILE")
+        self.assertEqual(m.operation_phase(first,23),"EXTRUDE TOOL")
+        self.assertEqual(m.operation_phase(first,80),"DRAG EXTRUDE HANDLE")
+        self.assertEqual(m.operation_phase(self.data["steps"][1],150),"ROTATE / EXTRUDE")
+
+    def test_extrude_data_validation_and_geometry_parameters(self):
+        for idx in (0,2):
+            item=m.validate_extrude_animation(self.data["steps"][idx]["animation"])
+            self.assertEqual(len(item["profile_xy"]),4)
+            self.assertGreater(item["distance"],0)
+        bad=json.loads(json.dumps(self.data))
+        bad["steps"][0]["animation"]["distance"]=-3
+        with self.assertRaises(m.ExampleError): m.validate_example(bad)
+        bad=json.loads(json.dumps(self.data))
+        bad["steps"][0]["animation"]["profile_xy"]=[[0,0],[1,0],[2,0]]
+        with self.assertRaises(m.ExampleError): m.validate_example(bad)
+
     def test_reject_unsupported_geometry(self):
         d=json.loads(json.dumps(self.data))
         d["geometry_preset"]="unknown"
