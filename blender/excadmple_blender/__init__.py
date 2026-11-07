@@ -1,7 +1,7 @@
 bl_info = {
     "name": "exCADmple — Design Reasoning Player (Prototype)",
     "author": "exCADmple research prototype",
-    "version": (0, 4, 2), "blender": (4, 1, 0),
+    "version": (0, 5, 0), "blender": (4, 1, 0),
     "location": "3D View > Sidebar > exCADmple",
     "description": "Explore design animations, recorded cursor paths, synchronized transcripts and audio",
     "category": "3D View",
@@ -20,9 +20,15 @@ from gpu_extras.batch import batch_for_shader
 from .core import load_example, step_at_frame, caption_at_frame, pointer_at_frame, operation_phase, progress_in_step
 from .procedural import build_extrusion
 from .him_ops import build_operation, OPERATION_TYPES
+from .viewport_panel import draw as draw_him_panel
+from .overlay_geometry import panel_layout, hit_test
 
 REF_NAME = "exCADmple | Recorded example (read-only)"
-_session = {"draw_handler": None, "step_id": None}
+_session = {
+    "draw_handler": None, "step_id": None,
+    "panel_active": False, "panel_area": None,
+    "panel_generation": 0, "panel_speed": 1.0,
+}
 
 def example_for_scene(scene):
     raw = scene.get("excadmple_example", "")
@@ -123,6 +129,10 @@ def build_demo(scene,data,root):
     scene.frame_set(scene.frame_start)
     num_audio=add_narration(scene,data,root)
     _session["step_id"]=None
+    _session["panel_speed"]=1.0
+    # The reference is inspectable but not directly editable or selectable.
+    for obj in col.objects:
+        obj.hide_select = True
     update_focus(scene)
     return {"objects":3,"audio_tracks":num_audio}
 
@@ -149,6 +159,8 @@ def build_showcase(scene, data):
     scene["excadmple_showcase_mode"]=True
     _session["step_id"]=None
     scene.frame_set(scene.frame_start)
+    for obj in col.objects:
+        obj.hide_select = True
     update_focus(scene)
     return {"steps":len(data["steps"]),"objects":total}
 
@@ -187,7 +199,7 @@ def on_frame(scene,_depsgraph=None):
     if example_for_scene(scene):
         update_focus(scene)
 
-def draw_overlay():
+def draw_cursor_overlay():
     ctx=bpy.context
     if ctx.area is None or ctx.area.type!="VIEW_3D" or ctx.region is None: return
     scene=ctx.scene
@@ -237,6 +249,21 @@ def draw_overlay():
     blf.position(font,22,30,0)
     blf.draw(font,caption_at_frame(step,scene.frame_current)[:max(28,int(w/9))])
 
+def draw_overlay():
+    """Render mouse reenactment and HiM panel over ONE editable 3D region."""
+    ctx = bpy.context
+    if not ctx.area or ctx.area.type != "VIEW_3D" or not ctx.region:
+        return
+    example = example_for_scene(ctx.scene)
+    if not example:
+        return
+    if ctx.scene.excadmple_overlay:
+        draw_cursor_overlay()
+    if (_session.get("panel_active")
+            and _session.get("panel_area") == ctx.area.as_pointer()):
+        draw_him_panel(ctx, example, _session.get("panel_speed", 1.0))
+
+
 class EXCADMPLE_OT_load_demo(bpy.types.Operator):
     bl_idname="excadmple.load_demo"
     bl_label="Load Example"
@@ -245,6 +272,14 @@ class EXCADMPLE_OT_load_demo(bpy.types.Operator):
         path=Path(__file__).parent/"demo.json"
         data=load_example(path)
         stats=build_demo(context.scene,data,path.parent)
+        # An explicit operator runs in the same VIEW_3D area. No second
+        # window/viewport is created. In headless CI, skip modal UI.
+        if not bpy.app.background and not _session.get("panel_active"):
+            try:
+                bpy.ops.excadmple.viewport_panel("INVOKE_DEFAULT")
+            except RuntimeError:
+                # The user can also activate via the N-sidebar button.
+                pass
         self.report({"INFO"},"Loaded %d animated objects and %d audio tracks"%(stats["objects"],stats["audio_tracks"]))
         return {"FINISHED"}
 
@@ -357,8 +392,140 @@ def _wrapped_labels(layout, message, width=39):
         layout.label(text=line)
 
 
+
+class EXCADMPLE_OT_viewport_panel(bpy.types.Operator):
+    """Capture input only over the floating HiM panel.
+
+    Every event outside the right-side overlay is PASS_THROUGH, allowing
+    normal selection, mesh editing, navigation and Blender shortcuts in
+    the same 3D Viewport.
+    """
+    bl_idname = "excadmple.viewport_panel"
+    bl_label = "Show exCADmple HiM Player"
+    bl_description = "Show the interactive player inside this 3D viewport"
+
+    def invoke(self, context, event):
+        if not context.area or context.area.type != "VIEW_3D":
+            self.report({"ERROR"}, "Open this control from a 3D Viewport")
+            return {"CANCELLED"}
+        if not example_for_scene(context.scene):
+            self.report({"ERROR"}, "Open the preset model first")
+            return {"CANCELLED"}
+        if _session.get("panel_active"):
+            return {"CANCELLED"}
+        region = next((r for r in context.area.regions if r.type == "WINDOW"), None)
+        if not region:
+            return {"CANCELLED"}
+        self._area = context.area
+        self._region = region
+        self._dragging = False
+        _session["panel_generation"] += 1
+        self._generation = _session["panel_generation"]
+        _session["panel_active"] = True
+        _session["panel_area"] = context.area.as_pointer()
+        context.window_manager.modal_handler_add(self)
+        self._area.tag_redraw()
+        return {"RUNNING_MODAL"}
+
+    def _layout_and_local(self, context, event):
+        # Use window coordinates rather than mouse_region_x, which refers to
+        # the Sidebar when the operator was started from the N-panel.
+        region = self._region
+        x = event.mouse_x - region.x
+        y = event.mouse_y - region.y
+        data = example_for_scene(context.scene)
+        if not data:
+            return None, x, y
+        index = _active_step_index(data, context.scene.frame_current)
+        return panel_layout(region.width, region.height, index, len(data["steps"])), x, y
+
+    def _seek_to_x(self, context, layout, x):
+        bar = layout["buttons"]["progress"]
+        position = min(1.0, max(0.0, (x - bar.x) / max(1.0, bar.w)))
+        _progress_set(context.scene, position)
+
+    def _close(self):
+        if _session.get("panel_generation") == self._generation:
+            _session["panel_active"] = False
+            _session["panel_area"] = None
+            _session["panel_generation"] += 1
+        try:
+            self._area.tag_redraw()
+        except ReferenceError:
+            pass
+
+    def modal(self, context, event):
+        if (not _session.get("panel_active") or
+                _session.get("panel_generation") != self._generation):
+            return {"CANCELLED"}
+        if not self._area or not self._region:
+            self._close()
+            return {"CANCELLED"}
+        if context.window is None:
+            self._close()
+            return {"CANCELLED"}
+        if not example_for_scene(context.scene):
+            self._close()
+            return {"CANCELLED"}
+
+        layout, x, y = self._layout_and_local(context, event)
+        if layout is None:
+            return {"PASS_THROUGH"}
+        if self._dragging:
+            if event.type == "MOUSEMOVE":
+                self._seek_to_x(context, layout, x)
+                self._area.tag_redraw()
+                return {"RUNNING_MODAL"}
+            if event.type == "LEFTMOUSE" and event.value == "RELEASE":
+                self._seek_to_x(context, layout, x)
+                self._dragging = False
+                self._area.tag_redraw()
+                return {"RUNNING_MODAL"}
+
+        if event.type != "LEFTMOUSE" or event.value != "PRESS":
+            return {"PASS_THROUGH"}
+
+        action = hit_test(layout, x, y)
+        if action is None:
+            return {"PASS_THROUGH"}
+        if action == "close":
+            self._close()
+            return {"CANCELLED"}
+
+        data = example_for_scene(context.scene)
+        scene = context.scene
+        current_idx = _active_step_index(data, scene.frame_current)
+        if action.startswith("step:"):
+            index = int(action.split(":", 1)[1])
+            scene.frame_set(data["steps"][index]["start"])
+        elif action == "previous":
+            scene.frame_set(data["steps"][max(0, current_idx - 1)]["start"])
+        elif action == "next":
+            scene.frame_set(data["steps"][min(len(data["steps"]) - 1,
+                                              current_idx + 1)]["start"])
+        elif action == "play_pause":
+            bpy.ops.screen.animation_play()
+        elif action == "progress":
+            self._dragging = True
+            self._seek_to_x(context, layout, x)
+        elif action in ("speed_minus", "speed_plus"):
+            speeds = (0.5, 1.0, 1.5, 2.0)
+            old = _session["panel_speed"]
+            i = min(range(len(speeds)), key=lambda j: abs(speeds[j] - old))
+            i = max(0, i - 1) if action == "speed_minus" else min(len(speeds) - 1, i + 1)
+            _session["panel_speed"] = speeds[i]
+            # Native Blender's scene frame currently drives both the
+            # reference and any user-authored animation. Speed affects
+            # that global clock, not the user's static geometry.
+            scene.render.fps = max(1, int(round(
+                data.get("fps", 24) * speeds[i])))
+        # 'panel' consumes clicks to prevent selecting a mesh underneath it.
+        self._area.tag_redraw()
+        return {"RUNNING_MODAL"}
+
+
 class EXCADMPLE_PT_sidebar(bpy.types.Panel):
-    """HiM-like compact 3D player, adapted for design reasoning use."""
+    """Minimal launch control; actual HiM-style UI lives in the 3D viewport."""
     bl_label = "exCADmple"
     bl_idname = "EXCADMPLE_PT_sidebar"
     bl_space_type = "VIEW_3D"
@@ -369,125 +536,29 @@ class EXCADMPLE_PT_sidebar(bpy.types.Panel):
         layout = self.layout
         scene = context.scene
         data = example_for_scene(scene)
-
-        # The user explores a curated example. Arbitrary model ingestion and
-        # process extraction are explicitly outside this prototype's scope.
-        header = layout.row(align=True)
-        header.label(text="DESIGN EXAMPLE", icon="OUTLINER_OB_MESH")
+        layout.label(text="PRESET DESIGN EXAMPLE", icon="OUTLINER_OB_MESH")
         if not data:
-            box = layout.box()
-            box.label(text="Pre-authored model", icon="INFO")
-            box.operator("excadmple.load_demo",
-                         text="Open Phone Stand Example", icon="FILE_3D")
-            box.separator()
-            box.label(text="Play its modeling steps and decisions.")
-            box.label(text="Your own geometry stays editable.")
+            layout.operator("excadmple.load_demo",
+                            text="Open Phone Stand Example", icon="FILE_3D")
             return
-
-        steps = data["steps"]
-        i = _active_step_index(data, scene.frame_current)
-        current = steps[i]
-        is_showcase = data.get("geometry_preset") == "him_feature_showcase_v1"
-        layout.label(text=data.get("title", "Design example")[:48])
-        layout.label(text="DEMO / REENACTMENT — not source history", icon="INFO")
-
-        # The main focus is the viewport; controls occupy a compact band.
-        box = layout.box()
-        row = box.row(align=True)
-        row.label(text="PLAYBACK", icon="PLAY")
-        row.label(text="%02d / %02d" % (i + 1, len(steps)))
-
-        transport = box.row(align=True)
-        btn = transport.operator("excadmple.navigate", text="", icon="REW")
-        btn.action = "BEGINNING"
-        btn = transport.operator("excadmple.navigate", text="", icon="BACK")
-        btn.action = "PREVIOUS"
-        playing = bool(getattr(context.screen, "is_animation_playing", False))
-        transport.operator("excadmple.play_pause",
-                           text="Pause" if playing else "Play",
-                           icon="PAUSE" if playing else "PLAY")
-        btn = transport.operator("excadmple.navigate", text="", icon="FORWARD")
-        btn.action = "NEXT"
-        btn = transport.operator("excadmple.navigate", text="", icon="FILE_REFRESH")
-        btn.action = "REPLAY"
-
-        box.prop(scene, "excadmple_step_progress", text="Step progress", slider=True)
-        meta = box.row(align=True)
-        meta.label(text="Step %d · %s" % (i+1, current["title"][:26]))
-        meta.label(text="%d / %d" % (scene.frame_current, scene.frame_end))
-
-        # HiM-style relevant-feature list: only the current neighborhood by
-        # default, with the active operation visibly depressed.
-        panel = layout.box()
-        head = panel.row(align=True)
-        head.label(text="DESIGN STEPS", icon="MODIFIER")
-        head.prop(scene, "excadmple_show_all_steps",
-                  text="", icon="TRIA_DOWN" if scene.excadmple_show_all_steps else "TRIA_RIGHT")
-        if scene.excadmple_show_all_steps:
-            span = range(len(steps))
+        layout.label(text=data.get("title", "Design example")[:38])
+        if _session.get("panel_active"):
+            layout.label(text="Player visible in the viewport", icon="CHECKMARK")
+            layout.label(text="Use its X to close it.")
         else:
-            span = range(max(0, i - 2), min(len(steps), i + 4))
-        for k in span:
-            item = steps[k]
-            row = panel.row(align=True)
-            op = row.operator("excadmple.go_step",
-                              text="%02d  %s" % (k+1, item["title"][:25]),
-                              icon="DOT" if k == i else "BLANK1", depress=(k == i))
-            op.frame = item["start"]
-            if k == i:
-                row.label(text="NOW")
-        if not scene.excadmple_show_all_steps and len(steps) > 6:
-            panel.label(text="Nearby steps · expand for all %d" % len(steps))
-
-        # Operation and reasoning are linked to exactly the same animation
-        # clock. The rationale is an essential part, not a hidden tutorial.
-        detail = layout.box()
-        detail.label(text="CURRENT OPERATION", icon="TOOL_SETTINGS")
-        detail.label(text=operation_phase(current, scene.frame_current))
-        spec = current.get("animation") or {}
-        if spec.get("type") == "extrude":
-            detail.label(text="Distance: %.2f BU" % spec["distance"])
-        else:
-            operation = (current.get("operation") or {}).get("type")
-            if operation:
-                detail.label(text="Feature: " + operation.replace("_", " ").title())
-
-        why = layout.box()
-        why.label(text="WHY THIS DECISION?", icon="QUESTION")
-        _wrapped_labels(why, current.get("reasoning", ""), width=37)
-        why.label(text="Illustrative rationale, not author recording", icon="INFO")
-
-        evidence = layout.box()
-        heading = evidence.row(align=True)
-        heading.label(text="ACTIONS & NARRATION", icon="SPEAKER")
-        heading.prop(scene, "excadmple_show_transcript", text="",
-                     icon="TRIA_DOWN" if scene.excadmple_show_transcript else "TRIA_RIGHT")
-        if scene.excadmple_show_transcript:
-            _wrapped_labels(evidence,
-                            caption_at_frame(current, scene.frame_current), width=37)
-            evidence.label(text="Ghost cursor and tool label in viewport")
-            if is_showcase:
-                evidence.label(text="No audio supplied for this catalog")
-            else:
-                evidence.label(text="Demo voice if audio strips are present")
-
-        options = layout.row(align=True)
-        options.prop(scene, "excadmple_overlay", text="Cursor / captions")
-        options.prop(scene, "excadmple_focus", text="Focus")
-        footer = layout.column(align=True)
-        footer.label(text="REFERENCE  |  YOUR DESIGN")
-        footer.label(text="Keep modeling; examples are only references.")
-        if is_showcase:
-            footer.label(text="This is test data, not a captured author workflow.")
-        # A second curated case can be added later without exposing
-        # arbitrary model import or history reconstruction in this UI.
-
+            layout.operator("excadmple.viewport_panel",
+                            text="Show HiM-style Player", icon="PLAY")
+        layout.prop(scene, "excadmple_overlay", text="Ghost cursor / captions")
+        layout.prop(scene, "excadmple_focus", text="Focus on example step")
+        layout.separator()
+        layout.label(text="Example and your design share ONE viewport.")
+        layout.label(text="Reference objects cannot be selected.")
 
 CLASSES = (
     EXCADMPLE_OT_load_demo,
     EXCADMPLE_OT_go_step,
     EXCADMPLE_OT_play, EXCADMPLE_OT_navigate,
-    EXCADMPLE_PT_sidebar
+    EXCADMPLE_OT_viewport_panel, EXCADMPLE_PT_sidebar
 )
 
 
@@ -513,6 +584,9 @@ def register():
 
 
 def unregister():
+    _session["panel_active"] = False
+    _session["panel_area"] = None
+    _session["panel_generation"] += 1
     if _session["draw_handler"] is not None:
         bpy.types.SpaceView3D.draw_handler_remove(
             _session["draw_handler"], "WINDOW")
