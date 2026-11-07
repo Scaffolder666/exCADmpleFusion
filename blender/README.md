@@ -6,11 +6,12 @@ of Fusion's modeling history.
 
 ## Intended interaction
 
-A designer imports (or eventually downloads) a shared modeling example and
-opens the exCADmple tab in Blender's 3D View sidebar. While the independent
-reference geometry plays back, the designer can continue working on any of
-their own meshes in the same scene. The add-on does **not** require the user
-to copy, follow, or manipulate the reference object's history.
+A designer opens a **pre-authored model example** and uses exCADmple
+to play through that model's preset design steps, CAD operation animations,
+pointer trajectories, narration, transcript, and design rationale. Alongside
+the reference, the user can freely edit their own design. **Reconstructing
+steps from a newly imported or arbitrary model is out of scope for this
+prototype**, not a prerequisite for evaluating the playback experience.
 
 The included **synthetic Phone Stand demo** demonstrates:
 
@@ -33,57 +34,42 @@ a reenactment layer. They do not literally move Blender's system cursor,
 click the Toolbar, or execute the original creator's input events.
 The data is illustrative; it is not grounded in a real CAD session.
 
-## Model-first workflow (v0.4 UI)
+## Preset-model user workflow (v0.4 UI)
 
-The **end-user workflow is a model's design process**, not a command gallery.
-HiM-inspired feature renderers remain an internal animation library.
+The **only user-facing case at this stage** is the curated **Phone Stand
+Example**. Users are not asked to select an operation from a gallery and
+are not expected to load an arbitrary CAD model.
 
-1. **Open a recorded design example:** Open a prepared `.blend` containing
-   example reference data, or choose **Import Example** for a supported
-   example JSON. **Try Phone Stand Demo** loads our clearly labeled
-   synthetic test model. Opening an arbitrary `.blend` without prepared
-   example data cannot reconstruct its original design process.
-2. **Explore that model's steps:** exCADmple lists only the modeling steps
-   in the selected model (e.g. Sketch Base → Extrude Base → Tilt Support).
-   It does **not** ask the learner to pick from 20 CAD functions.
-3. **Play / pause / scrub:** 3D geometry reenacts the operation associated
-   with the currently playing step. The viewport shows the ghost cursor and
-   operation, while the sidebar shows the associated reasoning and
-   synchronized transcript/audio if included.
-4. **Model alongside it:** The reference resides in a separate collection,
-   so the user can build or change their own meshes. They can watch a
-   full example, revisit one step or make different decisions without an
-   explicit Follow/Adapt/Skip mode.
+1. **Open the preset:** In Blender's 3D Viewport, press **N**, open
+   **exCADmple**, and click **Open Phone Stand Example**. Alternatively,
+   open a prepared `.blend` containing the example data.
+2. **Browse this model's design steps:** Step navigation shows the modeling
+   decisions in the **Phone Stand**, not a list of every available operation.
+3. **Play, pause or scrub:** Each step's scripted geometry animation is
+   synchronized with the simulated ghost cursor, operation label, optional
+   sample narration, captions, and **Why This Decision?** explanation.
+4. **Continue designing:** Model independently in the same scene. The add-on
+   isolates its own reference collection. Users are free to follow, adapt,
+   skip, or explore alternatives without formal mode-switching.
 
-The product sidebar now prioritizes **Play, Previous/Next Step, Step Progress,
-Current Operation, Why This Decision?** and narration. The full step list
-is collapsible, keeping the 3D viewport central, similar to HiM's emphasis
-on spatial operation playback.
+The interface prioritizes the **3D reference and a compact HiM-like player**
+with previous/next, step-progress slider, relevant steps, the current
+operation, and design reasoning. This is a **research prototype for exploring
+a fixed, pre-authored example**, not a model-import or tutorial-generation
+system.
 
-**Developer-only feature catalog:** `him_showcase.json` and
-`him_ops.py` are retained to test 20 operation renderers, but the
-`HiM: 20 Feature Animations` button is not exposed in the normal
-user-facing UI. It is not a learning flow.
+### Internal HiM animation gallery (developer tests only)
 
-**Remaining gap:** Blender's scene frame controls the current prototype's
-playback and any native animated user object; full isolation would require
-an independent example playback clock or separate scene. Native model
-reconstruction and real author-recorded operations/reasoning are also not
-implemented.
+The `him_ops.py` library contains a range of operation animations and the
+`him_showcase.json` file is used by the **headless integration tests**.
+No **20 Feature Animations** or generic **Import Example** control appears
+in the normal exCADmple user interface. This catalog is not part of the
+participant workflow. Operations are invoked by the preset model's steps.
 
-## HiM-inspired 20-operation animation gallery (experimental)
-
-A second demo, **HiM: 20 Feature Animations**, is now available from the
-Blender exCADmple sidebar. This gives a single playback example with twenty
-typed operations, each with a distinct step interval, demonstration geometry,
-synchronized pointer trajectory, tool label, subtitle, and **synthetic**
-rationale. It is not a reproduction of a genuine author's history.
-
-To try it: enable the add-on, press **N** inside Blender's 3D Viewport,
-open **exCADmple**, click **HiM: 20 Feature Animations**, then click any of
-the two-column step buttons or press Space to play and scrub the timeline.
-Only that step's reference objects are shown; the user's geometry remains
-untouched. The example JSON is `excadmple_blender/him_showcase.json`.
+The gallery currently covers twenty illustrative feature types. They are
+**not claimed to be an exact one-to-one reproduction** of HiM Figure 7, and
+some use explanatory transitions rather than exact CAD geometry algorithms.
+It remains a test harness for future model-specific use.
 
 ### How each animation works
 
@@ -133,7 +119,7 @@ This gallery remains a *playback prototype*. The hardest next task is
 extracting meaningful, author-grounded operation specs and geometry from
 shared projects. The original source model is not altered.
 
-## HiM-inspired operation animation (v0.2)
+## HiM-inspired operation animation (prototype implementation)
 
 The Blender player now includes a deliberately **HiM-inspired feature animation**
 for the two Extrude operations in the mock Phone Stand example. This replaces
