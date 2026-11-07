@@ -1,4 +1,14 @@
-# exCADmple — Fusion Player (MVP)
+# exCADmple — Autodesk Fusion Prototype
+
+**Permanent `fusion` development branch.** This is the Autodesk Fusion
+implementation of [exCADmple](https://github.com/Scaffolder666/exCADmpleFusion),
+a research project about reusing design reasoning from curated CAD examples.
+All future Fusion changes should be committed directly to this branch.
+The parallel [`blender` branch](https://github.com/Scaffolder666/exCADmpleFusion/tree/blender)
+contains the single-viewport Blender prototype and its nine-step Phone Stand.
+The default [`main`](https://github.com/Scaffolder666/exCADmpleFusion)
+contains the project-level overview.
+
 
 **exCADmple: Supporting Design Reasoning Through Shared CAD Models**
 
