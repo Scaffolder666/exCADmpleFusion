@@ -55,22 +55,24 @@ The most developed experimental branch is a **Blender 4.5 prototype with a pre-a
 
 The example is **pre-scripted, not a recording of a real designer's CAD session**. The narration is synthesized, and some geometry transitions illustrate an operation rather than replaying a native command. The project does **not** claim to infer authentic design intent from a finished model.
 
-### Implementation and development status
+### Two permanent development branches
 
-This repository currently keeps experimental implementations in **draft pull requests** rather than the default `main` branch:
+The project is maintained directly on **two long-lived branches**. New features and fixes are committed to the appropriate branch rather than opening stacked feature branches.
 
-| Prototype | Link | Status |
+| Branch | Implementation | Current state |
 |---|---|---|
-| **Blender single-viewport player + 9-step Phone Stand** | [Latest Blender development PR #7](https://github.com/Scaffolder666/exCADmpleFusion/pull/7) · [Blender setup and implementation notes](https://github.com/Scaffolder666/exCADmpleFusion/blob/feat/phone-stand-nine-step-example/blender/README.md) | Nine-step geometry/narration pass automated Blender tests; desktop GPU/UI interaction still needs hands-on validation |
-| **Autodesk Fusion player** | [Fusion MVP PR #1](https://github.com/Scaffolder666/exCADmpleFusion/pull/1) | Earlier technical spike using read-only example geometry alongside the user's native Fusion history |
+| **[`blender`](https://github.com/Scaffolder666/exCADmpleFusion/tree/blender)** | [Blender setup and implementation](https://github.com/Scaffolder666/exCADmpleFusion/blob/blender/blender/README.md) | Single 3D viewport, in-viewport HiM-inspired controls, passive ghost dot, and nine-step Phone Stand with synthetic narration; headless Blender tests pass, desktop GPU/UI remains to be tested |
+| **[`fusion`](https://github.com/Scaffolder666/exCADmpleFusion/tree/fusion)** | [Autodesk Fusion prototype](https://github.com/Scaffolder666/exCADmpleFusion/blob/fusion/README.md) | Earlier read-only reference player integrated in the user's native Fusion CAD workspace |
+
+The default `main` branch is the **project overview**. It does not yet contain the runnable prototypes. To inspect or install an implementation, select its branch.
 
 **Not yet implemented in the Blender prototype:** switching among multiple distinct Design Examples, independently persisting each example's playback position, and a playback clock independent of Blender's Scene timeline. These are important next steps for the research interaction, **not existing features**.
 
 **Out of scope for the current POC:** automatically reconstructing arbitrary CAD histories, converting video into tutorials, or building a general catalog of CAD commands. A small number of intentionally authored examples is sufficient to investigate the interaction.
 
-## Try the Blender prototype
+## Try the prototypes
 
-See the [Blender README on the current development branch](https://github.com/Scaffolder666/exCADmpleFusion/blob/feat/phone-stand-nine-step-example/blender/README.md) for installation, demo instructions, test limitations and underlying animation mechanisms. The prototype files are also available through [PR #7](https://github.com/Scaffolder666/exCADmpleFusion/pull/7) and its associated CI artifacts. Because these changes remain in draft PRs, **downloading `main` alone does not include the Blender add-on**.
+For the nine-step Phone Stand demo, check out the [`blender` branch](https://github.com/Scaffolder666/exCADmpleFusion/tree/blender) and follow [its installation guide](https://github.com/Scaffolder666/exCADmpleFusion/blob/blender/blender/README.md). Use the [`fusion` branch](https://github.com/Scaffolder666/exCADmpleFusion/tree/fusion) for the Autodesk Fusion add-in and its separate setup instructions.
 
 ## Inspiration
 
