@@ -1,7 +1,7 @@
 bl_info = {
     "name": "exCADmple — Design Reasoning Player (Prototype)",
     "author": "exCADmple research prototype",
-    "version": (0, 4, 0), "blender": (4, 1, 0),
+    "version": (0, 4, 1), "blender": (4, 1, 0),
     "location": "3D View > Sidebar > exCADmple",
     "description": "Explore design animations, recorded cursor paths, synchronized transcripts and audio",
     "category": "3D View",
@@ -372,14 +372,16 @@ class EXCADMPLE_PT_sidebar(bpy.types.Panel):
 
         # Import is deliberately secondary once a reference is loaded.
         header = layout.row(align=True)
-        header.label(text="DESIGN PROCESS", icon="OUTLINER_OB_MESH")
+        header.label(text="MODEL DESIGN PROCESS", icon="OUTLINER_OB_MESH")
         header.operator("excadmple.import_example", text="", icon="IMPORT")
         if not data:
             box = layout.box()
-            box.label(text="Choose a design example", icon="INFO")
-            box.operator("excadmple.load_demo", text="Phone Stand Example", icon="FILE_3D")
-            box.operator("excadmple.load_him_showcase", text="20 CAD Animations", icon="MODIFIER")
-            box.label(text="Example playback is separate from your geometry.")
+            box.label(text="Open a recorded design example", icon="INFO")
+            box.operator("excadmple.import_example", text="Import Example", icon="IMPORT")
+            box.operator("excadmple.load_demo", text="Try Phone Stand Demo", icon="FILE_3D")
+            box.separator()
+            box.label(text="A model's recorded steps appear here.")
+            box.label(text="Your own design remains editable.")
             return
 
         steps = data["steps"]
@@ -476,16 +478,16 @@ class EXCADMPLE_PT_sidebar(bpy.types.Panel):
         footer.label(text="REFERENCE  |  YOUR DESIGN")
         footer.label(text="Keep modeling; examples are only references.")
         if is_showcase:
-            footer.label(text="20 operations are separate examples.")
+            footer.label(text="This is test data, not a captured author workflow.")
         if scene.excadmple_show_sources:
-            footer.operator("excadmple.load_demo", text="Switch to Phone Stand")
-            footer.operator("excadmple.load_him_showcase", text="Reload 20 animations")
-        footer.prop(scene, "excadmple_show_sources", text="Switch example",
+            footer.operator("excadmple.import_example", text="Open Another Example", icon="IMPORT")
+            footer.operator("excadmple.load_demo", text="Try Phone Stand Demo", icon="FILE_3D")
+        footer.prop(scene, "excadmple_show_sources", text="Change model example",
                     icon="TRIA_DOWN" if scene.excadmple_show_sources else "TRIA_RIGHT")
 
 
 CLASSES = (
-    EXCADMPLE_OT_load_demo, EXCADMPLE_OT_load_him,
+    EXCADMPLE_OT_load_demo,
     EXCADMPLE_OT_import, EXCADMPLE_OT_go_step,
     EXCADMPLE_OT_play, EXCADMPLE_OT_navigate,
     EXCADMPLE_PT_sidebar
