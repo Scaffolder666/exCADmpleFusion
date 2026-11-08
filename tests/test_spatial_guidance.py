@@ -155,12 +155,25 @@ class Group:
     def __init__(self, log):
         self.isValid, self.isVisible, self.isSelectable, self.isChildrenSelectable = True, True, True, True
         self.name, self.meshes = "", []
+        self.lines, self.texts = [], []
         log.append(self)
 
     def addMesh(self, coords, triangles, normals, normal_indices):
         entity = Entity(coords, triangles)
         self.meshes.append(entity)
         return entity
+
+    def addLines(self, coords, indices, isLineStrip):
+        line = types.SimpleNamespace(coords=coords, indices=indices, color=None,
+                                     isSelectable=True, weight=1, depthPriority=0)
+        self.lines.append(line)
+        return line
+
+    def addText(self, text, font, size, matrix):
+        label = types.SimpleNamespace(text=text, font=font, size=size, color=None,
+                                      isSelectable=True, depthPriority=0, viewPlacement=None)
+        self.texts.append(label)
+        return label
 
     def deleteMe(self):
         self.isValid = False
@@ -170,6 +183,22 @@ adsk.fusion.CustomGraphicsCoordinates = types.SimpleNamespace(create=lambda flat
 adsk.fusion.CustomGraphicsBasicMaterialColorEffect = types.SimpleNamespace(
     create=lambda diffuse, *rest: ("teal", diffuse))
 adsk.core.Color = types.SimpleNamespace(create=lambda *rgba: tuple(rgba))
+adsk.fusion.CustomGraphicsSolidColorEffect = types.SimpleNamespace(
+    create=lambda color: ("solid", color))
+adsk.fusion.CustomGraphicsViewPlacement = types.SimpleNamespace(
+    create=lambda anchor, corner, point: (anchor, corner, point))
+adsk.fusion.ViewCorners = types.SimpleNamespace(upperLeftViewCorner="upper-left")
+adsk.core.Point2D = types.SimpleNamespace(create=lambda x, y: (x, y))
+adsk.core.Point3D = types.SimpleNamespace(
+    create=lambda x, y, z: types.SimpleNamespace(x=x, y=y, z=z))
+class Matrix:
+    def __init__(self):
+        self.cells = {}
+
+    def setCell(self, row, col, val):
+        self.cells[(row, col)] = val
+
+adsk.core.Matrix3D = types.SimpleNamespace(create=lambda: Matrix())
 from core.renderer import ReferenceRenderer, CHANGE_COLOR  # noqa: E402
 
 
@@ -204,13 +233,37 @@ class RendererLifecycleTests(unittest.TestCase):
         xs = lip[0].coords[0::3]
         self.assertEqual((min(xs), max(xs)), (0.5, 9.5))
 
+    def test_arrow_targets_changed_lip_and_command_is_shown_in_viewport(self):
+        self.renderer.render(self.steps[2], [0, 0, 0], self.previous(2))
+        self.assertIsNotNone(self.renderer.guidance_group)
+        lines = self.renderer.guidance_group.lines
+        self.assertEqual(len(lines), 1)
+        arrow = lines[0]
+        self.assertFalse(arrow.isSelectable)
+        self.assertEqual(arrow.weight, 4)
+        self.assertEqual(arrow.indices, [0, 1, 2, 1, 3, 1])
+        tip = arrow.coords[3:6]
+        self.assertTrue(0.5 <= tip[0] <= 9.5)
+        self.assertTrue(0.4 <= tip[1] <= 1.0)
+        self.assertAlmostEqual(tip[2], 1.7)
+
+        self.assertTrue(self.renderer.render_command(self.steps[2]))
+        label = self.renderer.command_group.texts[0]
+        self.assertIn("Sketch", label.text)
+        self.assertIn("Extrude", label.text)
+        self.assertFalse(label.isSelectable)
+        self.assertIsNotNone(label.viewPlacement)
+
     def test_switching_steps_replaces_the_highlight(self):
         self.renderer.render(self.steps[2], [0, 0, 0], self.previous(2))
         first = self.renderer.group
+        old_arrow = self.renderer.guidance_group
         self.renderer.render(self.steps[3], [0, 0, 0], self.previous(3))
         self.assertFalse(first.isValid)
+        self.assertFalse(old_arrow.isValid)
         self.assertTrue(teal(self.renderer.group))
-        self.assertEqual([g for g in self.groups if g.isValid], [self.renderer.group])
+        self.assertEqual([g for g in self.groups if g.isValid],
+                         [self.renderer.group, self.renderer.guidance_group])
 
     def test_paused_animation_frame_keeps_its_highlight(self):
         self.renderer.render(self.steps[2], [0, 0, 0], self.previous(2))
@@ -223,7 +276,8 @@ class RendererLifecycleTests(unittest.TestCase):
         self.assertLess(max(zs), 1.7)                     # the lip is half grown
         self.assertGreater(max(zs), 0.7)
         # Nothing else is drawn while paused: the frame stays as it is.
-        self.assertEqual([g for g in self.groups if g.isValid], [self.renderer.group, frame])
+        self.assertEqual([g for g in self.groups if g.isValid],
+                         [self.renderer.group, self.renderer.guidance_group, frame])
         self.renderer.finish_animation()
         self.assertFalse(frame.isValid)
         self.assertTrue(self.renderer.group.isVisible and teal(self.renderer.group))
@@ -234,10 +288,15 @@ class RendererLifecycleTests(unittest.TestCase):
 
     def test_clear_and_hide_remove_highlights(self):
         self.renderer.render(self.steps[2], [0, 0, 0], self.previous(2))
+        self.assertTrue(self.renderer.render_command(self.steps[2]))
         self.renderer.set_visible(False)
         self.assertFalse(self.renderer.group.isVisible)
+        self.assertFalse(self.renderer.guidance_group.isVisible)
+        self.assertFalse(self.renderer.command_group.isVisible)
         self.renderer.set_visible(True)
         self.assertTrue(self.renderer.group.isVisible)
+        self.assertTrue(self.renderer.guidance_group.isVisible)
+        self.assertTrue(self.renderer.command_group.isVisible)
         self.renderer.clear()                             # new example / close / stop
         self.assertTrue(all(not g.isValid for g in self.groups))
 
