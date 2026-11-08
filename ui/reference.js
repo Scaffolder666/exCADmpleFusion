@@ -206,7 +206,9 @@ function tick(now) {
     // Wall-time is accounted for while Fusion recomputes a frame, but
     // progress is advanced ONLY when that frame has finished rendering.
     if (S.frameClock) S.frameClock.tick(dt, S.speed);
-    render();
+    // Do not rebuild up to 150 timeline cards at 60 FPS while the CAD
+    // kernel is busy computing a single native animation frame.
+    if (!S.inFlight) render();
   }
   requestAnimationFrame(tick);
 }
@@ -372,7 +374,16 @@ window.fusionJavaScriptHandler = {
         const i = payload.index;
         if (typeof i === "number" && i >= 0 && i < steps().length) {
           if (payload.play) selectStep(i);
-          else if (i !== S.index) { const at = S.clip.indexOf(i); if (at >= 0) S.pos = at; S.index = i; S.elapsed = 0; S.fresh = true; render(); }
+          else if (i !== S.index) {
+            const at = S.clip.indexOf(i);
+            if (at >= 0) S.pos = at;
+            S.epoch++;
+            S.index = i; S.elapsed = 0; S.frameClock = null;
+            S.shown = null; S.fresh = true; S.playing = false;
+            S.manualFrame = false;
+            stopAudio(); stopSpeech();
+            render();
+          }
         }
       } else if (action === "status") {
         if (!/^unknown action:\s*response$/i.test(String(payload.message || "").trim())) status(payload.message, payload.error);
