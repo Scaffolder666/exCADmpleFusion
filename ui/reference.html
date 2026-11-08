@@ -7,63 +7,53 @@
   <link rel="stylesheet" href="reference.css">
 </head>
 <body>
+  <!-- Version A control panel. It runs in the second (reference) Fusion
+       instance; that instance's canvas is the interactive reference viewport. -->
   <header class="bar">
     <div class="brand"><strong>exCADmple</strong><span>Reference example</span></div>
-    <select id="exampleSwitch" aria-label="Open examples"></select>
-    <button id="closeExample" class="quiet" type="button" title="Close this example">Close</button>
     <button id="import" class="quiet" type="button" title="Open a .excadmple or .json example">+ Import</button>
   </header>
+  <div class="examples">
+    <select id="exampleSwitch" aria-label="Open examples"></select>
+    <button id="closeExample" class="quiet" type="button" title="Close this example">Close</button>
+  </div>
+  <details id="brief" class="brief" hidden>
+    <summary>The designer's goal</summary>
+    <p id="briefGoal"></p>
+    <small id="briefMore"></small>
+  </details>
+  <p id="source" class="source"></p>
 
-  <main class="him">
-    <section class="view" aria-label="Reference viewport">
-      <div id="viewer" class="viewer"></div>
-      <div class="view-foot">
-        <span id="viewHint">Click the model to see which steps made that part · drag to orbit · right-drag to pan · scroll to zoom</span>
-        <button id="resetView" class="link" type="button">Reset view</button>
-      </div>
-      <div id="brief" class="brief" hidden>
-        <b>The designer's goal</b> <span id="briefGoal"></span>
-        <small id="briefMore"></small>
-      </div>
-    </section>
+  <div class="transport" role="group" aria-label="Playback">
+    <button id="back" title="Step backward (plays the step in reverse)" aria-label="Step backward">&#9198;</button>
+    <button id="play" title="Play / pause" aria-label="Play">&#9654;</button>
+    <button id="replay" title="Replay from the start" aria-label="Replay">&#8635;</button>
+    <button id="forward" title="Step forward" aria-label="Step forward">&#9197;</button>
+    <span id="clock" class="clock">00:00</span>
+  </div>
+  <div id="mode" class="mode">
+    <span id="modeText">Whole design process</span>
+    <button id="showMore" class="link" type="button" hidden>Show more</button>
+    <button id="showAll" class="link" type="button" hidden>Show all steps</button>
+  </div>
+  <p class="hint">Select a face, edge or vertex of the reference model to see which steps made it.</p>
+  <ol id="rail" class="rail" aria-label="Design steps"></ol>
 
-    <aside class="panel" aria-label="Design history">
-      <div class="transport" role="group" aria-label="Playback">
-        <button id="back" title="Step backward (plays the step in reverse)" aria-label="Step backward">&#9198;</button>
-        <button id="play" title="Play / pause" aria-label="Play">&#9654;</button>
-        <button id="replay" title="Replay from the start" aria-label="Replay">&#8635;</button>
-        <button id="forward" title="Step forward" aria-label="Step forward">&#9197;</button>
-        <span id="clock" class="clock">00:00</span>
-      </div>
-      <div id="mode" class="mode">
-        <span id="modeText">Whole design process</span>
-        <button id="showMore" class="link" type="button" hidden>Show more</button>
-        <button id="showAll" class="link" type="button" hidden>Show all steps</button>
-      </div>
-      <ol id="rail" class="rail" aria-label="Design steps"></ol>
-      <div class="panel-foot">
-        <label>Speed <input id="speed" type="range" min="0.5" max="2" step="0.25" value="1"> <output id="speedValue">1×</output></label>
-        <div class="options">
-          <label><input id="ghost" type="checkbox" checked> Final model as ghost</label>
-          <label><input id="captions" type="checkbox" checked> Captions</label>
-          <label><input id="narration" type="checkbox"> Synthetic narration</label>
-        </div>
-        <div class="authoring">
-          <button id="demo" class="link" type="button">Open sample examples</button>
-          <button id="extractDraft" class="link" type="button" title="Authoring: export the open design's timeline as an example draft">Extract example draft…</button>
-        </div>
-        <p id="status" class="status" role="status" aria-live="polite"></p>
-      </div>
-    </aside>
-  </main>
+  <footer class="foot">
+    <label>Speed <input id="speed" type="range" min="0.5" max="2" step="0.25" value="1"> <output id="speedValue">1×</output></label>
+    <div class="options">
+      <label><input id="dim" type="checkbox" checked> Other bodies transparent</label>
+      <label><input id="captions" type="checkbox" checked> Captions</label>
+      <label><input id="narration" type="checkbox"> Synthetic narration</label>
+      <button id="fit" class="link" type="button">Fit view</button>
+    </div>
+    <div class="authoring">
+      <button id="demo" class="link" type="button">Open sample examples</button>
+      <button id="extractDraft" class="link" type="button" title="Authoring: export the open design's timeline as an example draft">Extract example draft…</button>
+    </div>
+    <p id="status" class="status" role="status" aria-live="polite"></p>
+  </footer>
   <audio id="audio" preload="metadata"></audio>
-  <video id="video" preload="metadata" hidden></video>
-
-  <script src="vendor/three.min.js"></script>
-  <script src="vendor/OrbitControls.js"></script>
-  <script src="shared/animation.js"></script>
-  <script src="shared/history_filter.js"></script>
-  <script src="shared/viewer.js"></script>
   <script src="reference.js"></script>
 </body>
 </html>

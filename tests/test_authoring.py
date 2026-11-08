@@ -134,3 +134,21 @@ class TranscriptTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SourceModelTests(unittest.TestCase):
+    def test_source_f3d_travels_in_the_package(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            f3d = Path(tmp) / "Stand.f3d"
+            f3d.write_bytes(b"fake f3d")
+            audio = Path(tmp) / "session.wav"
+            audio.write_bytes(b"RIFF")
+            m = build_manifest(EXTRACT, ANNOTATION, transcript.parse_cues(SRT), source_model=f3d)
+            self.assertEqual(m["source_model"], "source/Stand.f3d")
+            out = write_package(m, Path(tmp) / "s.excadmple", [audio], f3d)
+            package = open_package(out)
+            try:
+                self.assertEqual(package.source_model_path().read_bytes(), b"fake f3d")
+                self.assertEqual(package.source_path, out.resolve())
+            finally:
+                package.close()

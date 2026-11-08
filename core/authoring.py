@@ -130,7 +130,7 @@ def _media_name(path):
     return str(PurePosixPath("media") / Path(path).name)
 
 
-def build_manifest(extract, annotation, segments, offset_cm=None):
+def build_manifest(extract, annotation, segments, offset_cm=None, source_model=None):
     check_extract(extract)
     check_annotation(annotation)
     transcript_mod.validate(segments)
@@ -206,6 +206,9 @@ def build_manifest(extract, annotation, segments, offset_cm=None):
         "reference_offset_cm": offset_cm,
         "steps": steps,
     }
+    if source_model:
+        # Version A plays the tutorial on a copy of this model (HiM style).
+        manifest["source_model"] = str(PurePosixPath("source") / Path(source_model).name)
     try:
         validate_package(manifest)
     except PackageError as error:
@@ -213,8 +216,8 @@ def build_manifest(extract, annotation, segments, offset_cm=None):
     return manifest
 
 
-def write_package(manifest, out_path, media_paths=()):
-    """ZIP: manifest.json + media/<file> for the referenced recordings."""
+def write_package(manifest, out_path, media_paths=(), source_model=None):
+    """ZIP: manifest.json + media/<file> for the recordings + source/<.f3d>."""
     wanted = {m.get(k) for s in manifest["steps"] for m in [s.get("media", {})] for k in ("audio", "video")}
     wanted.discard(None)
     provided = {_media_name(p): Path(p) for p in media_paths}
@@ -225,4 +228,7 @@ def write_package(manifest, out_path, media_paths=()):
         archive.writestr("manifest.json", json.dumps(manifest, ensure_ascii=False))
         for name in sorted(wanted):
             archive.write(provided[name], name)
+        if manifest.get("source_model"):
+            _require(source_model and Path(source_model).is_file(), "Missing source model " + manifest["source_model"])
+            archive.write(source_model, manifest["source_model"])
     return out_path

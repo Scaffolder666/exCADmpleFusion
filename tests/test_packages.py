@@ -95,15 +95,3 @@ class PackageTests(unittest.TestCase):
 if __name__ == "__main__":
     unittest.main()
 
-
-class ReferenceGeometryTests(unittest.TestCase):
-    def test_reference_viewport_gets_every_step(self):
-        pkg = open_package(Path(__file__).resolve().parents[1] / "examples" / "phone_stand.json")
-        try:
-            data = pkg.reference_geometry()
-            self.assertEqual(len(data["steps"]), 9)
-            first = data["steps"][0]
-            self.assertEqual(set(first), {"geometry", "animation", "pointer", "duration_ms"})
-            self.assertTrue(first["geometry"]["meshes"] and first["pointer"])
-        finally:
-            pkg.close()

@@ -1,10 +1,10 @@
-/* Version A — History in Motion layout: a separate interactive reference
-   viewport (left) and a narrow vertical history control panel (right). */
+/* Version A — History in Motion control panel, docked beside the reference
+   instance's canvas: transport on top, vertical history, speed below. */
 :root { color-scheme:light; --ink:#1f2a37; --muted:#6b7785; --line:#e3e7ec; --panel:#f6f7f9; --white:#fff;
   --blue:#2563eb; --green:#2a8558; --extrude:#2f7d5b; --revolve:#7c4dce; --fillet:#c26a12; --pattern:#0e7490;
   --mirror:#b4236a; --cut:#b42318; --move:#4b5563; --other:#64748b; }
 * { box-sizing:border-box; }
-html, body { margin:0; height:100%; overflow:hidden; background:var(--white); color:var(--ink);
+html, body { margin:0; height:100%; background:var(--white); color:var(--ink);
   font:13px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }
 button, input, select { font:inherit; }
 button { cursor:pointer; }
@@ -15,16 +15,6 @@ button { cursor:pointer; }
 .bar select { max-width:280px; border:1px solid #d3d8df; border-radius:6px; padding:3px 6px; background:white; }
 .quiet { border:1px solid #d3d8df; background:white; border-radius:6px; padding:3px 9px; font-size:11px; font-weight:650; }
 .link { border:0; background:none; color:var(--blue); padding:0; font-size:11px; }
-.him { display:flex; height:calc(100% - 45px); }
-.view { flex:1; min-width:0; display:flex; flex-direction:column; background:#f4f6f9; position:relative; }
-.viewer { flex:1; min-height:0; }
-.viewer canvas { display:block; }
-.view-foot { display:flex; justify-content:space-between; gap:8px; padding:5px 10px; font-size:11px; color:var(--muted);
-  background:white; border-top:1px solid var(--line); }
-.brief { position:absolute; left:10px; top:10px; max-width:52%; padding:7px 10px; border-radius:8px;
-  background:#ffffffe6; border:1px solid var(--line); font-size:12px; }
-.brief small { display:block; color:var(--muted); }
-
 .panel { width:360px; flex:none; display:flex; flex-direction:column; border-left:1px solid var(--line); background:white; }
 .transport { display:flex; align-items:center; gap:6px; padding:10px 12px; border-bottom:1px solid var(--line); }
 .transport button { width:34px; height:34px; border-radius:17px; border:1px solid #cdd4dc; background:white; font-size:13px; }
@@ -73,3 +63,16 @@ button { cursor:pointer; }
 [data-kind=extrude]{--kind:var(--extrude)} [data-kind=revolve]{--kind:var(--revolve)} [data-kind=fillet]{--kind:var(--fillet)}
 [data-kind=pattern]{--kind:var(--pattern)} [data-kind=mirror]{--kind:var(--mirror)} [data-kind=cut]{--kind:var(--cut)}
 [data-kind=move]{--kind:var(--move)}
+
+body { display:flex; flex-direction:column; }
+.examples { display:flex; gap:6px; padding:6px 12px; }
+.examples select { flex:1; min-width:0; border:1px solid #d3d8df; border-radius:6px; padding:3px 6px; background:white; }
+.brief { margin:0 12px 6px; padding:6px 9px; border-radius:8px; background:var(--panel); font-size:12px; }
+.brief summary { cursor:pointer; font-size:10px; letter-spacing:.4px; text-transform:uppercase; color:var(--muted); }
+.brief p { margin:4px 0 2px; } .brief small { color:var(--muted); }
+.source { margin:0 12px 6px; font-size:11px; color:var(--muted); }
+.source.recorded { color:#b45309; }
+.hint { margin:6px 12px 0; font-size:11px; color:var(--muted); }
+.foot { border-top:1px solid var(--line); padding:8px 12px 10px; display:grid; gap:5px; font-size:12px; }
+.foot input[type=range] { vertical-align:middle; width:150px; }
+.rail { flex:1; }
