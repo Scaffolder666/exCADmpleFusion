@@ -151,6 +151,23 @@ class LocalPairPackage(ExamplePackage):
     def source_model_path(self):
         return self.model_path
 
+    def _edited_steps(self, target):
+        """Steps of an existing ``<name>.generated.json`` for the same model."""
+        try:
+            edited = json.loads(target.read_text(encoding="utf-8"))
+        except (OSError, ValueError) as error:
+            raise PackageError("Cannot read {}: {}. Fix it, or delete it to regenerate.".format(
+                target.name, error)) from error
+        if (not isinstance(edited, dict) or edited.get("format") != "excadmple-pair"
+                or edited.get("model") != self.raw.get("model")
+                or (self.raw.get("model_sha256") or "").lower()
+                != (edited.get("model_sha256") or "").lower()):
+            raise PackageError("{} belongs to a different model. Delete it to regenerate.".format(target.name))
+        steps = edited.get("steps")
+        if not isinstance(steps, list) or not steps:
+            raise PackageError("{} has no steps. Delete it to regenerate.".format(target.name))
+        return steps
+
     def populate_from_features(self, features, model=None):
         """Build player steps from the imported, real .f3d Feature Timeline."""
         features = sorted(features, key=lambda f: f.index)
@@ -173,7 +190,14 @@ class LocalPairPackage(ExamplePackage):
         supplied = self.raw.get("steps", [])
         if not isinstance(supplied, list):
             raise PackageError("steps must be a list")
-        if auto:
+        target = self.json_path.with_name(self.json_path.stem + ".generated.json")
+        if auto and target.is_file():
+            # Steps were generated before and may have been edited by a
+            # researcher: play those, never regenerate over them.
+            supplied = self._edited_steps(target)
+            auto = False
+            self.generated_path = target
+        elif auto:
             supplied = [{
                 "id": "feature-" + str(feature.index),
                 "title": feature.name,
@@ -264,11 +288,7 @@ class LocalPairPackage(ExamplePackage):
             output = dict(self.raw)
             output["auto_generate"] = False
             output["steps"] = persisted
-            target = self.json_path.with_name(self.json_path.stem + ".generated.json")
-            if target.is_file():
-                # Never overwrite a researcher's hand-edited transcript.
-                self.generated_path = target
-            else:
+            if not target.is_file():          # never overwrite hand edits
                 try:
                     target.write_text(json.dumps(output, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
                     self.generated_path = target

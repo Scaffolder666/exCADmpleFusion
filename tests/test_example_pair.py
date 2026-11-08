@@ -89,7 +89,8 @@ class LocalExamplePairTests(unittest.TestCase):
         annotated = original.generated_path
         raw = json.loads(annotated.read_text(encoding="utf-8"))
         raw["steps"][1]["transcript"] = "Human-edited explanation for the extrude."
-        raw["steps"][1].pop("cues")
+        # The generated file has one editable text field per step, no cues.
+        self.assertNotIn("cues", raw["steps"][1])
         annotated.write_text(json.dumps(raw), encoding="utf-8")
         pkg = open_package(annotated)
         pkg.populate_from_features(self.features)
@@ -97,6 +98,41 @@ class LocalExamplePairTests(unittest.TestCase):
                          "Human-edited explanation for the extrude.")
         self.assertFalse(pkg.needs_populate)
         self.assertEqual(self.model.read_bytes(), self.original_bytes)
+
+    def test_reimporting_the_original_json_plays_the_edited_generated_steps(self):
+        first = open_package(self.config)
+        first.populate_from_features(self.features)
+        edited = json.loads(first.generated_path.read_text(encoding="utf-8"))
+        edited["steps"][3]["transcript"] = "My own words about the revolve."
+        edited["steps"][3]["title"] = "Turn the profile"
+        first.generated_path.write_text(json.dumps(edited), encoding="utf-8")
+        before = first.generated_path.read_bytes()
+        again = open_package(self.config)                 # the auto_generate: true file
+        again.populate_from_features(self.features)
+        step = again.data["steps"][3]
+        self.assertEqual(step["title"], "Turn the profile")
+        self.assertEqual(step["cues"][0]["label"], "My own words about the revolve.")
+        self.assertEqual(step["source_features"], [{"index": 3, "name": "Revolve1", "kind": "RevolveFeature"}])
+        self.assertEqual(again.generated_path.read_bytes(), before)   # not overwritten
+        self.assertEqual(self.model.read_bytes(), self.original_bytes)
+
+    def test_generated_file_for_another_model_is_rejected_not_overwritten(self):
+        target = self.folder / "fusion_example.generated.json"
+        foreign = dict(self.raw, auto_generate=False, model_sha256="0" * 64,
+                       steps=[{"features": [0], "transcript": "x"}])
+        target.write_text(json.dumps(foreign), encoding="utf-8")
+        with self.assertRaisesRegex(PackageError, "different model"):
+            open_package(self.config).populate_from_features(self.features)
+        self.assertEqual(json.loads(target.read_text(encoding="utf-8"))["model_sha256"], "0" * 64)
+
+    def test_edited_generated_file_that_no_longer_matches_the_timeline_is_explicit(self):
+        first = open_package(self.config)
+        first.populate_from_features(self.features)
+        edited = json.loads(first.generated_path.read_text(encoding="utf-8"))
+        edited["steps"][1]["features"][0]["name"] = "Renamed"
+        first.generated_path.write_text(json.dumps(edited), encoding="utf-8")
+        with self.assertRaisesRegex(PackageError, "Timeline changed at index 1"):
+            open_package(self.config).populate_from_features(self.features)
 
     def test_duplicate_names_must_use_timeline_indices(self):
         self.raw["auto_generate"] = False

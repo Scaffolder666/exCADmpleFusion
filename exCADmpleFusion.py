@@ -197,6 +197,7 @@ def _load(filename):
             data = package.player_data()
         except Exception:
             package.close()
+            _post_source()       # the previous reference copy is closed now
             raise
         _renderer.clear()
         if _spatial:
