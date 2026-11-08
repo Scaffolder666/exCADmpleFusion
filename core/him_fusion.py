@@ -433,7 +433,7 @@ class HiMController:
         self.active_position = None
         self.active = {}            # prepared data of the feature being animated
         self.last_frame_seconds = None
-        self.dim_others = True
+        self.dim_others = False
         # Inspect mode animates the *user's own* features in place (paper
         # behaviour). Off by default: the user's model is the main line.
         self.inspect = False
