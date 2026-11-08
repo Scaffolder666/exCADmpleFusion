@@ -19,6 +19,48 @@ CHANGE_COLOR = (20, 184, 166, 255)
 FRAME_BUDGET = 6000      # triangles compared per animation frame
 TRAIL_COLOR = (250, 190, 90, 255)
 
+# The snapshot demo does not record timestamps for its individual Sketch,
+# Extrude, etc. actions. Only label the operation that the step is actually
+# visualizing; never pretend to play a precise sequence of tool activations.
+ANIMATED_COMMANDS = {
+    "extrude": ("extrude",),
+    "revolve": ("revolve", "rotate"),
+    "fillet": ("fillet",),
+    "boolean": ("cut", "combine"),
+    "mirror": ("mirror",),
+    "rectangular_pattern": ("rectangular pattern",),
+    "circular_pattern": ("circular pattern",),
+    "transform": ("move", "transform"),
+    "pattern": ("pattern",),
+}
+
+
+def active_fusion_command(step, feature_kind=None):
+    """Single recorded Fusion command represented by the current animation.
+
+    A source .f3d feature kind is authoritative. Snapshot examples instead
+    supply one animation type plus a list of tools WITHOUT per-tool timings.
+    Return the matching recorded tool, not a fabricated per-tool timeline.
+    """
+    tools = [str(tool).strip() for tool in step.get("tools", ()) if str(tool).strip()]
+    if feature_kind:
+        kind = str(feature_kind).split("::")[-1]
+        if kind.endswith("Feature"):
+            kind = kind[:-7]
+        normalized = "".join(ch for ch in kind.lower() if ch.isalnum())
+        for tool in reversed(tools):
+            tool_normalized = "".join(ch for ch in tool.lower() if ch.isalnum())
+            if normalized and (normalized in tool_normalized or tool_normalized in normalized):
+                return tool
+        return kind if kind else None
+    animation = step.get("animation") or {}
+    keys = ANIMATED_COMMANDS.get(str(animation.get("type", "")).lower(), ())
+    for key in keys:
+        for tool in reversed(tools):
+            if key in tool.lower():
+                return tool
+    return None
+
 ARROW_COLOR = (235, 109, 35, 255)  # orange locator, distinct from teal surface highlight
 
 
@@ -117,6 +159,7 @@ class ReferenceRenderer:
         self.pointer_group = None
         self.hud_group = None
         self.command_group = None
+        self.command_name = None
         self.guidance_group = None
         self.visible = True
         self.last_step = None
@@ -174,19 +217,31 @@ class ReferenceRenderer:
         self._refresh()
         return True
 
+    def clear_command(self):
+        self._delete(self.command_group)
+        self.command_group = None
+        self.command_name = None
+
     def clear_guidance(self):
         self._delete(self.guidance_group)
         self.guidance_group = None
-        self._delete(self.command_group)
-        self.command_group = None
+        self.clear_command()
 
-    def render_command(self, step):
-        """One short Fusion-tool label within the CAD viewport, not in the panel."""
-        self._delete(self.command_group)
-        self.command_group = None
-        tools = [str(tool).strip() for tool in (step.get("tools") or []) if str(tool).strip()]
-        if not tools or not self.visible:
+    def render_command(self, step, feature_kind=None):
+        """Small screen-aligned label for the CURRENT operation, not all tools.
+
+        Fusion CustomGraphicsGroup.addText uses centimeters, NOT pixels.
+        Billboard + view scaling keep a 0.32 cm text at ~14 px rather than
+        creating enormous lettering over the design when zoomed.
+        """
+        command = active_fusion_command(step, feature_kind)
+        if not command or not self.visible:
+            self.clear_command()
             return False
+        if (command == self.command_name and self.command_group
+                and self.command_group.isValid):
+            return True
+        self.clear_command()
         design = adsk.fusion.Design.cast(self.app.activeProduct)
         if not design:
             return False
@@ -194,22 +249,24 @@ class ReferenceRenderer:
         group.isSelectable = False
         group.isChildrenSelectable = False
         try:
-            label = "FUSION  ·  " + "  →  ".join(tools[:4])
-            if len(tools) > 4:
-                label += "  …"
-            graphic = group.addText(label, "Arial", 15, adsk.core.Matrix3D.create())
+            anchor = adsk.core.Point3D.create(0, 0, 0)
+            graphic = group.addText(command, "Arial", 0.32, adsk.core.Matrix3D.create())
             graphic.color = adsk.fusion.CustomGraphicsSolidColorEffect.create(
                 adsk.core.Color.create(*ARROW_COLOR))
             graphic.isSelectable = False
             graphic.depthPriority = 3
             graphic.viewPlacement = adsk.fusion.CustomGraphicsViewPlacement.create(
-                adsk.core.Point3D.create(0, 0, 0),
-                adsk.fusion.ViewCorners.upperLeftViewCorner,
+                anchor, adsk.fusion.ViewCorners.upperLeftViewCorner,
                 adsk.core.Point2D.create(350, 95))
+            graphic.viewScale = adsk.fusion.CustomGraphicsViewScale.create(45, anchor)
+            billboard = adsk.fusion.CustomGraphicsBillBoard.create(anchor)
+            billboard.billBoardStyle = adsk.fusion.CustomGraphicsBillBoardStyles.ScreenBillBoardStyle
+            graphic.billBoarding = billboard
         except Exception:
             self._delete(group)
             return False
         self.command_group = group
+        self.command_name = command
         self._refresh()
         return True
 
