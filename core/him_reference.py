@@ -1,12 +1,18 @@
-"""Version A — the reference instance (as in History in Motion).
+"""Version A — the reference instance (History in Motion, Veuskens et al.).
 
 Runs in the second Fusion instance. It opens a copy of the designer's .f3d
-from the tutorial package. For each step the timeline is rolled to the end
-of that step, so the user can rotate and inspect the designer's real model
-as it was after the step. Selecting a face, edge or vertex runs HiM's
-Algorithm 1 on the model and lists the steps containing the features that
-made or changed it; "show more" follows the supporting sketches' faces.
-The copy is never saved and no parameter is changed.
+from the example package and plays the tutorial on that real parametric
+model, the way HiM does:
+
+* rolling the timeline to the feature being shown and growing its
+  parameters from ~0 to their value (distance, angle, radius, pattern
+  spacing...), with other bodies made transparent and the profile / edges
+  highlighted; parameter-less features fade in;
+* selecting a face, edge or vertex runs HiM's Algorithm 1 on the model and
+  filters the tutorial to the steps containing those features; "show more"
+  follows the supporting sketches' faces.
+
+The copy is never saved. Every changed parameter is restored.
 If a package has no source model, the recorded step geometry is drawn
 instead (Custom Graphics), and the panel says so.
 """
@@ -14,19 +20,21 @@ import adsk.core
 import adsk.fusion
 
 from . import him_filter
-from .him_fusion import FusionTimelineModel
-from .reference_plan import map_steps, steps_for_features
+from .him_fusion import FusionTimelineModel, HiMController
+from .him_motion import Frame
+from .reference_plan import map_steps, animated, frame_target, steps_for_features
 
 
 class ReferenceSession:
     def __init__(self, app, ui, log=None):
         self.app, self.ui = app, ui
         self.log = log or (lambda *_: None)
+        self.him = HiMController(app, ui, lambda *_: None, self.log)
         self.document = None
         self.model = None
         self.mapped = []
         self.unmatched = []
-        self.shown = None
+        self.current = None
         self.filter_result = None
         self.source_name = ""
 
@@ -37,7 +45,7 @@ class ReferenceSession:
     # --- opening the designer's model ------------------------------------------------
     def open(self, package):
         """Open a fresh copy of the package's .f3d. Returns True when the
-        tutorial can be shown on the real model."""
+        tutorial can play on the real model."""
         self.close()
         path = package.source_model_path()
         if path is None:
@@ -61,6 +69,7 @@ class ReferenceSession:
         return True
 
     def close(self):
+        self.stop()
         if self.document is not None:
             try:
                 self.document.close(False)        # a copy: never saved
@@ -68,22 +77,48 @@ class ReferenceSession:
                 pass
         self.document = self.model = None
         self.mapped, self.unmatched, self.filter_result = [], [], None
-        self.shown = None
 
     def stop(self):
-        """Nothing is animated; kept for the add-in's save/stop hooks."""
-        self.shown = None
+        try:
+            self.him._finish_feature()
+        except Exception as error:
+            self.log("HiM restore: " + str(error))
+        self.current = None
 
-    # --- showing a step ----------------------------------------------------------------
-    def show_result(self, step_index):
-        """The designer's model as it is after this step (timeline rolled)."""
-        if not self.live or step_index == self.shown or not 0 <= step_index < len(self.mapped):
+    # --- playback -------------------------------------------------------------------------
+    def _roll_after(self, feature):
+        self.model.go(feature.index + 1)
+
+    def frame(self, step_index, progress):
+        """Show step ``step_index`` at ``progress`` (0..1) on the real model."""
+        if not self.live or not 0 <= step_index < len(self.mapped):
             return
-        self.shown = step_index
+        items = animated(self.mapped[step_index])
+        position, local = frame_target(self.mapped[step_index], progress)
+        if position is None:
+            self.show_result(step_index)
+            return
+        key = (step_index, position)
+        if key != self.current:
+            self.stop()
+            self._roll_after(items[position])
+            self.him.clip = [items[position]]
+            self.him.active_position = None
+            self.current = key
+        self.him._render(Frame(0, local))
+
+    def show_result(self, step_index):
+        """The model as it is after this step (timeline rolled, nothing animated)."""
+        if not self.live:
+            return
+        self.stop()
         if step_index >= len(self.mapped) - 1:
             self.model.go(self.model.end_state())        # the finished model
         elif self.mapped[step_index]:
-            self.model.go(self.mapped[step_index][-1].index + 1)
+            self._roll_after(self.mapped[step_index][-1])
+
+    def set_dim(self, enabled):
+        self.him.dim_others = bool(enabled)
 
     # --- HiM filtering ------------------------------------------------------------------------
     def filter(self, entity):
@@ -93,7 +128,7 @@ class ReferenceSession:
         ref = FusionTimelineModel._ref(entity)
         if not ref:
             return None
-        self.shown = None
+        self.stop()
         self.model.go(self.model.end_state())
         result = him_filter.extract_relevant_features(self.model, ref)
         self.model.go(self.model.end_state())
@@ -103,7 +138,7 @@ class ReferenceSession:
     def show_more(self):
         if not self.live or self.filter_result is None:
             return None
-        self.shown = None
+        self.stop()
         him_filter.show_more(self.model, self.filter_result)
         self.model.go(self.model.end_state())
         return self._describe(self.filter_result)
