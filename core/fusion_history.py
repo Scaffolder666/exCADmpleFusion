@@ -74,3 +74,72 @@ def scan_candidate_features(design, selected, limit=300):
         except Exception:
             continue
     return list(reversed(results))
+
+
+def _adjacent_faces(entity):
+    """Collect faces touching a selected BRep face, edge, or vertex."""
+    if adsk.fusion.BRepFace.cast(entity):
+        return [entity]
+    if adsk.fusion.BRepEdge.cast(entity):
+        return [entity.faces.item(i) for i in range(entity.faces.count)]
+    if adsk.fusion.BRepVertex.cast(entity):
+        faces = []
+        for i in range(entity.edges.count):
+            edge = entity.edges.item(i)
+            for j in range(edge.faces.count):
+                face = edge.faces.item(j)
+                if not any(existing is face for existing in faces):
+                    faces.append(face)
+        return faces
+    return []
+
+
+def _feature_from_face(face):
+    """Fusion exposes a creator on some BRepFace implementations only.
+
+    Never substitute body membership for face provenance.
+    """
+    try:
+        return face.createdByFeature
+    except (AttributeError, RuntimeError):
+        return None
+
+
+def trace_direct_creators(design, selected):
+    """Conservative direct creator attribution, not complete ancestry.
+
+    Edge/vertex provenance is ambiguous if adjacent faces have different
+    creators. Such features are reported as adjacent-face provenance.
+    """
+    if not design or not selected:
+        return {"features": [], "complete": False, "reason": "No selected geometry"}
+    faces = _adjacent_faces(selected)
+    if not faces:
+        return {"features": [], "complete": False, "reason": "No adjacent BRep faces"}
+    result = {}
+    for face in faces:
+        feature = _feature_from_face(face)
+        if not feature:
+            continue
+        token = _token(feature)
+        key = token or str(id(feature))
+        result[key] = feature
+    features = []
+    for feature in result.values():
+        try:
+            timeline = feature.timelineObject
+            index = timeline.index if timeline else None
+        except Exception:
+            index = None
+        features.append({
+            "timeline_index": index,
+            "name": getattr(feature, "name", "") or "Feature",
+            "object_type": getattr(feature, "objectType", ""),
+            "entity_token": _token(feature),
+            "association": "face_creator" if adsk.fusion.BRepFace.cast(selected) else "adjacent_face_creator",
+        })
+    features.sort(key=lambda item: item["timeline_index"] if item["timeline_index"] is not None else -1, reverse=True)
+    return {
+        "features": features, "complete": False,
+        "reason": "Direct creator attribution only; complete historical topology lineage is not exposed",
+    }
