@@ -21,8 +21,18 @@ def _point(value):
 
 def validate_animation(data):
     """Validate v1 extrusion preview specification; reject unsupported ops."""
-    if not isinstance(data, dict) or data.get("type") != "extrude":
-        raise AnimationError("Only 'extrude' previews are implemented in v0.5")
+    if not isinstance(data, dict):
+        raise AnimationError("Animation must be an object")
+    if data.get("type") == "reveal":
+        meshes = data.get("new_meshes")
+        if not isinstance(meshes, list) or not 1 <= len(meshes) <= 25:
+            raise AnimationError("Reveal needs 1–25 new meshes")
+        context = data.get("context_meshes", [])
+        if not isinstance(context, list) or len(context) > 25:
+            raise AnimationError("Reveal context needs 0–25 meshes")
+        return data
+    if data.get("type") != "extrude":
+        raise AnimationError("Supported previews: extrude and reveal")
     profile = data.get("profile")
     if not isinstance(profile, list) or not 3 <= len(profile) <= 120:
         raise AnimationError("Extrude profile requires 3–120 vertices")
@@ -76,3 +86,21 @@ def extrude_mesh(animation, progress):
         triangles.append([i, j, j + count])
         triangles.append([i, j + count, i + count])
     return {"vertices": vertices, "triangles": triangles}
+
+def reveal_meshes(animation, progress):
+    """Illustrative new-part appearance; not native feature recomputation."""
+    validate_animation(animation)
+    if animation["type"] != "reveal":
+        raise AnimationError("Expected reveal animation")
+    if isinstance(progress, bool) or not isinstance(progress, (int, float)) or not math.isfinite(progress):
+        raise AnimationError("Invalid animation progress")
+    t = max(0.001, min(1.0, float(progress)))
+    output = list(animation.get("context_meshes", []))
+    for mesh in animation["new_meshes"]:
+        vertices = mesh["vertices"]
+        center = [sum(p[i] for p in vertices) / len(vertices) for i in range(3)]
+        output.append({
+            "vertices": [[center[i] + (p[i] - center[i]) * t for i in range(3)] for p in vertices],
+            "triangles": mesh["triangles"]
+        })
+    return output
