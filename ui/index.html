@@ -20,6 +20,11 @@
       <div class="overline">REFERENCE EXAMPLE <span id="exampleType" class="type-note">Design process</span></div>
       <h1 id="exampleTitle">Loading example…</h1>
       <p id="exampleDescription">Explore the original design, then continue with your own.</p>
+      <div id="brief" class="brief" hidden>
+        <div class="decision-label">The designer's goal</div>
+        <p id="briefGoal"></p>
+        <p id="briefMore" class="brief-more"></p>
+      </div>
       <div class="example-meta">
         <span id="exampleSteps">—</span>
         <span aria-hidden="true">·</span>
@@ -58,6 +63,10 @@
         <label><input id="narrationEnabled" type="checkbox"> Synthetic cue narration</label>
       </div>
 
+      <div id="stepContext" class="decision-box" hidden>
+        <p id="stepScope" class="decision-scope" hidden></p>
+        <p id="stepDeps" class="decision-deps" hidden></p>
+      </div>
       <section id="decisionBox" class="decision-box" hidden aria-label="The design decision in this step">
         <div class="section-heading detail-heading">
           <span>The decision</span>
@@ -68,6 +77,8 @@
         <ul id="decisionCriteria" class="criteria"></ul>
         <div class="decision-label">Options</div>
         <ol id="decisionOptions" class="decision-options"></ol>
+        <p id="decisionScope" class="decision-scope" hidden></p>
+        <p id="decisionDeps" class="decision-deps" hidden></p>
         <button id="compareDecision" class="geometry-btn primary" type="button">Compare with my design &amp; other examples →</button>
       </section>
 
@@ -122,6 +133,7 @@
       <div class="workflow-note">Follow the full example, revisit one decision, or design differently. Your model and feature history remain yours.</div>
       <div class="footer-actions">
         <button id="demo" class="text-button">Open sample example</button>
+        <button id="extractDraft" class="text-button" title="Authoring: export the open design's timeline as an example draft (see docs/EXAMPLE_FORMAT.md)">Extract example draft…</button>
         <span id="packageStatus" class="package-note"></span>
       </div>
       <div class="status" id="status" role="status" aria-live="polite"></div>

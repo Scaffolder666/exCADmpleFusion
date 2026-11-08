@@ -6,6 +6,17 @@
 
 另一个固定分支 [`blender`](https://github.com/Scaffolder666/exCADmpleFusion/tree/blender) 是同一研究问题的 Blender 原型；[`main`](https://github.com/Scaffolder666/exCADmpleFusion) 用于项目总体介绍。
 
+## 案例文件（v2）：如何从真实设计过程做出一个案例
+
+案例来自一次真实的设计过程：设计师在 Fusion 中建模，**边建模边说出想法**（think-aloud），同时录屏、录音。完整规范见 [`docs/EXAMPLE_FORMAT.md`](docs/EXAMPLE_FORMAT.md)。
+
+1. **提取**：在 Fusion 中打开设计师的 `.f3d`，点左侧面板底部的 **Extract example draft…**，脚本逐项回滚时间轴，导出每个特征完成后的几何、参数，以及它用到的草图和特征（`*.extract.json`）。
+2. **转写**：把录音转成带时间戳的文字稿（`.srt`、`.vtt` 或 JSON）。
+3. **标注**：研究者编写 `annotation.json`，内容包括设计目标（brief），以及每一步的标题、包含哪些特征、对应的录制时间段、推理摘要；决策、适用范围和依赖为可选。
+4. **合成**：`python tools/build_package.py draft.extract.json annotation.json transcript.srt --media session.m4a -o example.excadmple`。
+
+播放器会展示设计目标，每一步的推理标为 *Think-aloud while modeling*，并按时间段播放对应的录音和录屏片段、显示文字稿。每个选择会标明是通用做法还是只适合原设计师的目标，以及它依赖哪些步骤：设计师自己说出的依赖与从 CAD 时间轴推导出的依赖分开显示。
+
 ## v0.7 完整版：Design Reasoning Reuse
 
 本版本把 HiM 复现用于 `main` 分支的研究目标：**用户在设计自己的模型时，复用其他设计师在案例中表达的推理。**案例数据视为已经存在（预先制作），软件负责“找到 → 对照 → 迁移”。

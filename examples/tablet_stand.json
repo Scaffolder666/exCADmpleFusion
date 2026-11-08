@@ -1,9 +1,8 @@
 {
  "format": "excadmple",
- "version": 1,
+ "version": 2,
  "id": "tablet-stand",
  "title": "Tablet Stand — Heavier Device, Different Trade-offs",
- "author": "Illustrative example (exCADmple team)",
  "description": "Synthetic contrasting example: it answers the same design questions as the phone stand, sometimes differently. Not a recording of a real session.",
  "reference_offset_cm": [
   14,
@@ -304,6 +303,10 @@
      "value": "120 mm",
      "kind": "length"
     }
+   },
+   "scope": {
+    "kind": "goal_specific",
+    "note": "A 700 g tablet that is also drawn on"
    }
   },
   {
@@ -873,7 +876,14 @@
      "value": "60 deg",
      "kind": "angle"
     }
-   }
+   },
+   "scope": {
+    "kind": "goal_specific",
+    "note": "Compromise between watching and sketching"
+   },
+   "depends_on": [
+    "base"
+   ]
   },
   {
    "id": "lip",
@@ -1584,7 +1594,14 @@
      "value": "15 mm",
      "kind": "length"
     }
-   }
+   },
+   "scope": {
+    "kind": "goal_specific",
+    "note": "Rugged cases; wide bezel keeps the screen clear"
+   },
+   "depends_on": [
+    "support"
+   ]
   },
   {
    "id": "cork",
@@ -2556,7 +2573,14 @@
      "value": "2 mm",
      "kind": "length"
     }
-   }
+   },
+   "scope": {
+    "kind": "goal_specific",
+    "note": "Works because the stand is heavy"
+   },
+   "depends_on": [
+    "base"
+   ]
   },
   {
    "id": "solid_back",
@@ -3524,7 +3548,29 @@
       "pocket"
      ]
     }
-   }
+   },
+   "scope": {
+    "kind": "goal_specific",
+    "note": "Drawing pushes hard on the screen"
+   },
+   "depends_on": [
+    "support"
+   ]
   }
- ]
+ ],
+ "designer": "Illustrative (exCADmple team)",
+ "date": "2026-11-08",
+ "brief": {
+  "goal": "A stand for a 700 g tablet used for both video and sketching",
+  "users": "Students drawing on tablets",
+  "constraints": [
+   "Stays put under hand pressure",
+   "Fits rugged cases"
+  ]
+ },
+ "provenance": {
+  "geometry": "authored",
+  "reasoning": "illustrative",
+  "source_file": ""
+ }
 }

@@ -23,6 +23,7 @@ from core.spatial import SpatialLinkController
 from core.him_fusion import HiMController
 from core.library import ExampleLibrary
 from core.reuse_fusion import ReuseController
+from core.extract_fusion import extract_with_dialog
 
 PALETTE_ID = "excadmple.fusion.player"
 COMMAND_ID = "excadmple.fusion.open"
@@ -330,6 +331,8 @@ class PaletteHandler(adsk.core.HTMLEventHandler):
                 if _reuse:
                     _reuse.publish({"focus": {"example_id": _library.active_id, "step_id": step["id"],
                                               "topic": (step.get("decision") or {}).get("topic")}})
+            elif command == "extract_draft":
+                _status(extract_with_dialog(_app, _ui))
             elif command == "open_package":
                 _open_dialog()
             elif command == "set_step":

@@ -1,9 +1,8 @@
 {
  "format": "excadmple",
- "version": 1,
+ "version": 2,
  "id": "phone-stand",
  "title": "Phone Stand — Nine Design Decisions",
- "author": "Illustrative example (exCADmple team)",
  "description": "Synthetic nine-step example: geometry, ghost pointer and reasoning are authored, not a recording of a real designer's session.",
  "reference_offset_cm": [
   14,
@@ -304,6 +303,10 @@
      "value": "80 mm",
      "kind": "length"
     }
+   },
+   "scope": {
+    "kind": "goal_specific",
+    "note": "Depth sized for phones up to ~7 inch"
    }
   },
   {
@@ -882,7 +885,14 @@
      "value": "65 deg",
      "kind": "angle"
     }
-   }
+   },
+   "scope": {
+    "kind": "goal_specific",
+    "note": "Angle chosen for reading at a desk"
+   },
+   "depends_on": [
+    "base"
+   ]
   },
   {
    "id": "lip",
@@ -1598,7 +1608,14 @@
      "value": "10 mm",
      "kind": "length"
     }
-   }
+   },
+   "scope": {
+    "kind": "goal_specific",
+    "note": "Height assumes a phone in a case"
+   },
+   "depends_on": [
+    "support"
+   ]
   },
   {
    "id": "base_round",
@@ -4961,7 +4978,14 @@
      "value": "8 mm",
      "kind": "length"
     }
-   }
+   },
+   "scope": {
+    "kind": "general",
+    "note": "Softening edges without losing contact area"
+   },
+   "depends_on": [
+    "base"
+   ]
   },
   {
    "id": "cable",
@@ -8625,7 +8649,14 @@
      "value": "20 mm",
      "kind": "length"
     }
-   }
+   },
+   "scope": {
+    "kind": "general",
+    "note": "Keep charging access whenever a lip is used"
+   },
+   "depends_on": [
+    "lip"
+   ]
   },
   {
    "id": "ribs",
@@ -11372,7 +11403,14 @@
      "value": "6 mm",
      "kind": "length"
     }
-   }
+   },
+   "scope": {
+    "kind": "general",
+    "note": "Stiffen a tilted panel locally instead of thickening it"
+   },
+   "depends_on": [
+    "support"
+   ]
   },
   {
    "id": "pads",
@@ -14716,7 +14754,14 @@
      "value": "12 mm",
      "kind": "length"
     }
-   }
+   },
+   "scope": {
+    "kind": "general",
+    "note": "Friction without enlarging the footprint"
+   },
+   "depends_on": [
+    "base"
+   ]
   },
   {
    "id": "back_window",
@@ -21062,7 +21107,14 @@
      "value": "60 mm",
      "kind": "length"
     }
-   }
+   },
+   "scope": {
+    "kind": "goal_specific",
+    "note": "Acceptable only because of the ribs"
+   },
+   "depends_on": [
+    "ribs"
+   ]
   },
   {
    "id": "fit",
@@ -25549,7 +25601,32 @@
       "check"
      ]
     }
-   }
+   },
+   "scope": {
+    "kind": "general",
+    "note": "Check against a real device size before finalizing"
+   },
+   "depends_on": [
+    "support",
+    "lip",
+    "cable"
+   ]
   }
- ]
+ ],
+ "designer": "Illustrative (exCADmple team)",
+ "date": "2026-11-08",
+ "brief": {
+  "goal": "A printable stand for reading and watching on a phone at a desk",
+  "users": "Office workers with 6–7 inch phones, often in a case",
+  "constraints": [
+   "Stable when the screen is tapped",
+   "Charging while on the stand",
+   "Little material"
+  ]
+ },
+ "provenance": {
+  "geometry": "authored",
+  "reasoning": "illustrative",
+  "source_file": ""
+ }
 }

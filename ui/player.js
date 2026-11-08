@@ -51,6 +51,7 @@ function stopMedia() {
   video.removeAttribute("src"); audio.removeAttribute("src");
   video.load(); audio.load();
 }
+function mediaOffset() { return (step()?.media?.offset_ms || 0) / 1000; }
 function mediaMaster() {
   if (video.getAttribute("src")) return video;
   if (audio.getAttribute("src")) return audio;
@@ -61,7 +62,7 @@ function playMedia() {
   for (const element of [video, audio]) {
     if (element.getAttribute("src")) {
       try {
-        element.currentTime = state.elapsed / 1000;
+        element.currentTime = mediaOffset() + state.elapsed / 1000;
         element.playbackRate = playbackSpeed();
         const promise = element.play();
         if (promise && promise.catch) promise.catch(() => setStatus("Media playback unavailable; the timeline still works.", true));
@@ -128,6 +129,9 @@ function classifyReasoning(current) {
     explainer:"Model geometry alone does not reveal the author's original reasoning.", mock:false};
   if (demo) return {label:"Illustrative only", text:raw, mock:true,
     explainer:"Mockup text — not verified as a statement from the original designer."};
+  if (source === "think_aloud")
+    return {label:"Think-aloud while modeling", text:raw, mock:false,
+      explainer:"Summarized from what the designer said while modeling this step; the synchronized transcript below is verbatim."};
   if (source === "spoken" || source === "voice" || source === "transcript")
     return {label:"Voice / transcript", text:raw, mock:false, explainer:""};
   if (source === "meeting") return {label:"Meeting note", text:raw, mock:false, explainer:""};
@@ -159,8 +163,32 @@ function renderGeometryLink() {
      (state.example?.preview_data_uri ? "Final preview only" : "No step geometry")));
   $("geometryStatus").classList.toggle("none", !current.has_geometry && !link?.available && !current.animation_available);
 }
+function stepTitle(id) {
+  const i = (state.example?.steps || []).findIndex((s) => s.id === id);
+  return i < 0 ? id : "step " + (i + 1) + " (" + state.example.steps[i].title + ")";
+}
+function renderContext(current, scopeEl, depsEl) {
+  const scope = current.scope;
+  scopeEl.hidden = !scope;
+  if (scope) {
+    scopeEl.replaceChildren();
+    const b = document.createElement("b");
+    b.textContent = scope.kind === "general" ? "General practice" : "Specific to this designer's goal";
+    scopeEl.append(b, document.createTextNode(scope.note ? " — " + scope.note : ""));
+  }
+  const said = current.depends_on || [];
+  const derived = (current.depends_on_derived || []).filter((d) => !said.includes(d));
+  const parts = [];
+  if (said.length) parts.push("Builds on " + said.map(stepTitle).join(", ") + " (designer)");
+  if (derived.length) parts.push("Uses geometry from " + derived.map(stepTitle).join(", ") + " (derived from the CAD timeline)");
+  depsEl.hidden = !parts.length;
+  depsEl.textContent = parts.join(". ") + (parts.length ? ". Changing those may change this step." : "");
+}
 function renderDecision(current) {
   const decision = current.decision;
+  $("stepContext").hidden = !!decision || !(current.scope || current.depends_on?.length || current.depends_on_derived?.length);
+  if (!decision) renderContext(current, $("stepScope"), $("stepDeps"));
+  else renderContext(current, $("decisionScope"), $("decisionDeps"));
   $("decisionBox").hidden = !decision;
   if (!decision) return;
   $("decisionTopic").textContent = decision.topic.replace(/_/g, " ");
@@ -309,7 +337,7 @@ function seek(ms) {
   state.startedAt = performance.now() - state.elapsed / playbackSpeed();
   for (const element of [video, audio]) {
     if (element.getAttribute("src")) {
-      try { element.currentTime = state.elapsed / 1000; } catch (_) {}
+      try { element.currentTime = mediaOffset() + state.elapsed / 1000; } catch (_) {}
     }
   }
   renderTime();
@@ -335,7 +363,7 @@ function tick() {
   const master = mediaMaster();
   const mediaReady = master && master.readyState >= 2 && !master.paused;
   if (mediaReady && master.playbackRate !== playbackSpeed()) master.playbackRate = playbackSpeed();
-  state.elapsed = mediaReady ? master.currentTime * 1000 : (performance.now() - state.startedAt) * playbackSpeed();
+  state.elapsed = mediaReady ? (master.currentTime - mediaOffset()) * 1000 : (performance.now() - state.startedAt) * playbackSpeed();
   state.elapsed = Math.max(0, state.elapsed);
   if (state.elapsed >= duration() - 30) {
     if ($("playbackScope").value === "all" && state.index < state.example.steps.length - 1) selectStep(state.index + 1, true);
@@ -365,11 +393,23 @@ function loadExample(data) {
   state.elapsed = 0;
   state.cueIndex = -1;
   $("exampleTitle").textContent = data.title;
+  const brief = data.brief;
+  $("brief").hidden = !brief;
+  if (brief) {
+    $("briefGoal").textContent = brief.goal;
+    $("briefMore").textContent = [brief.users && "For: " + brief.users,
+      (brief.constraints || []).length && "Constraints: " + brief.constraints.join("; "),
+      data.designer && "Designer: " + data.designer + (data.date ? ", " + data.date : "")].filter(Boolean).join(" · ");
+  }
   $("exampleDescription").textContent = data.description || "Explore someone else's design decisions.";
   const containsSnapshots = data.steps.some((item) => item.has_geometry);
   $("exampleType").textContent = containsSnapshots ? "3D steps" :
     (data.preview_data_uri ? "Preview-based example" : "Metadata only");
-  $("packageStatus").textContent = data.source_model_included ? "Source F3D in package" : "";
+  const prov = data.provenance;
+  $("packageStatus").textContent = prov ?
+    (prov.geometry === "extracted" ? "Geometry extracted from " + (prov.source_file || "the designer's file") : "Hand-made example geometry") +
+    " · " + (prov.reasoning === "think_aloud" ? "think-aloud reasoning" : "illustrative reasoning") :
+    (data.source_model_included ? "Source F3D in package" : "");
   renderDetails();
   setStatus(data.steps[0]?.has_geometry ?
     "Example loaded — read-only step geometry is available in Fusion." :
@@ -412,6 +452,7 @@ $("import").addEventListener("click", () => { pause(); bridge("open_package"); }
 $("exampleSwitch").addEventListener("change", (event) => { pause(); bridge("switch_example", {id: event.target.value}); });
 $("closeExample").addEventListener("click", () => { pause(); bridge("close_example", {id: $("exampleSwitch").value}); });
 $("compareDecision").addEventListener("click", () => bridge("compare_decision"));
+$("extractDraft").addEventListener("click", () => { pause(); bridge("extract_draft"); });
 $("demo").addEventListener("click", () => { pause(); bridge("load_demo"); });
 $("play").addEventListener("click", () => state.playing ? pause() : play());
 $("replay").addEventListener("click", () => { if (step()) { pause(); seek(0); play(); } });

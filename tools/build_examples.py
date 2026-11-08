@@ -495,10 +495,57 @@ def tablet_stand():
     }
 
 
+# What the illustrative reasoning texts themselves say about each choice.
+PHONE_CONTEXT = {
+    "base": ("goal_specific", "Depth sized for phones up to ~7 inch", []),
+    "support": ("goal_specific", "Angle chosen for reading at a desk", ["base"]),
+    "lip": ("goal_specific", "Height assumes a phone in a case", ["support"]),
+    "base_round": ("general", "Softening edges without losing contact area", ["base"]),
+    "cable": ("general", "Keep charging access whenever a lip is used", ["lip"]),
+    "ribs": ("general", "Stiffen a tilted panel locally instead of thickening it", ["support"]),
+    "pads": ("general", "Friction without enlarging the footprint", ["base"]),
+    "back_window": ("goal_specific", "Acceptable only because of the ribs", ["ribs"]),
+    "fit": ("general", "Check against a real device size before finalizing", ["support", "lip", "cable"]),
+}
+TABLET_CONTEXT = {
+    "base": ("goal_specific", "A 700 g tablet that is also drawn on", []),
+    "support": ("goal_specific", "Compromise between watching and sketching", ["base"]),
+    "lip": ("goal_specific", "Rugged cases; wide bezel keeps the screen clear", ["support"]),
+    "cork": ("goal_specific", "Works because the stand is heavy", ["base"]),
+    "solid_back": ("goal_specific", "Drawing pushes hard on the screen", ["support"]),
+}
+
+
+def to_v2(example, brief, context):
+    """Upgrade an illustrative example to format version 2."""
+    example.update({
+        "version": 2, "designer": "Illustrative (exCADmple team)", "date": "2026-11-08",
+        "brief": brief,
+        "provenance": {"geometry": "authored", "reasoning": "illustrative", "source_file": ""},
+    })
+    example.pop("author", None)
+    for step in example["steps"]:
+        kind, note, deps = context[step["id"]]
+        step["scope"] = {"kind": kind, "note": note}
+        if deps:
+            step["depends_on"] = deps
+    return example
+
+
 def main():
-    for name, builder in (("phone_stand.json", phone_stand), ("tablet_stand.json", tablet_stand)):
+    phone = to_v2(phone_stand(), {
+        "goal": "A printable stand for reading and watching on a phone at a desk",
+        "users": "Office workers with 6–7 inch phones, often in a case",
+        "constraints": ["Stable when the screen is tapped", "Charging while on the stand", "Little material"],
+    }, PHONE_CONTEXT)
+    tablet = to_v2(tablet_stand(), {
+        "goal": "A stand for a 700 g tablet used for both video and sketching",
+        "users": "Students drawing on tablets",
+        "constraints": ["Stays put under hand pressure", "Fits rugged cases"],
+    }, TABLET_CONTEXT)
+    for name, example in (("phone_stand.json", phone), ("tablet_stand.json", tablet)):
         path = ROOT / "examples" / name
-        path.write_text(json.dumps(builder(), indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
+        path.write_text(json.dumps(example, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
         print("wrote", path.relative_to(ROOT))
 
 

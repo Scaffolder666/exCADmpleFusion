@@ -23,6 +23,8 @@ def validate_animation(data):
     """Validate v1 extrusion preview specification; reject unsupported ops."""
     if not isinstance(data, dict):
         raise AnimationError("Animation must be an object")
+    if data.get("type") == "snapshots":
+        return validate_snapshots(data)
     if data.get("type") == "reveal":
         meshes = data.get("new_meshes")
         if not isinstance(meshes, list) or not 1 <= len(meshes) <= 25:
@@ -296,12 +298,44 @@ def rectangular_pattern_meshes(animation, progress):
     return output
 
 
+MAX_SNAPSHOT_STATES = 40
+MAX_SNAPSHOT_TRIANGLES = 400000
+
+
+def validate_snapshots(data):
+    """Recorded model states of one step: before the step, then after each
+    of its features (extracted from the designer's .f3d timeline)."""
+    states = data.get("states")
+    if not isinstance(states, list) or not 2 <= len(states) <= MAX_SNAPSHOT_STATES:
+        raise AnimationError("Snapshots need 2–40 model states")
+    total = 0
+    for state in states:
+        _validate_mesh_collection(state, "Snapshot state")
+        total += sum(len(m["triangles"]) for m in state)
+    if total > MAX_SNAPSHOT_TRIANGLES:
+        raise AnimationError("Snapshots exceed the triangle budget")
+    return data
+
+
+def snapshot_meshes(animation, progress):
+    """Each state is shown for an equal share of the step; no interpolation
+    is invented between real states."""
+    validate_snapshots(animation)
+    if isinstance(progress, bool) or not isinstance(progress, (int, float)) or not math.isfinite(progress):
+        raise AnimationError("Invalid animation progress")
+    states = animation["states"]
+    t = max(0.0, min(1.0, float(progress)))
+    return states[min(len(states) - 1, int(t * len(states)))]
+
+
 TRANSITION_TYPES = ("fillet", "chamfer", "boolean", "split", "combine", "loft", "shell", "thread", "import", "export")
 
 
 def animation_meshes(animation, progress):
     """All meshes shown at ``progress`` for any supported animation type."""
     typ = animation["type"]
+    if typ == "snapshots":
+        return snapshot_meshes(animation, progress)
     if typ == "reveal":
         return reveal_meshes(animation, progress)
     if typ == "extrude":

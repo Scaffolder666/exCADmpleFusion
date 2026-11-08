@@ -56,9 +56,47 @@ def _validate_mesh(mesh):
             raise PackageError("Invalid triangle indices")
 
 
+PROVENANCE = {"geometry": ("extracted", "authored"), "reasoning": ("think_aloud", "illustrative")}
+SCOPES = ("general", "goal_specific")
+
+
+def _validate_v2_example(data):
+    """Version 2: who designed it, for what goal, and where the data came from."""
+    for key in ("designer", "date"):
+        if not isinstance(data.get(key), str) or not data[key].strip():
+            raise PackageError("Version 2 packages need " + key)
+    brief = data.get("brief")
+    if not isinstance(brief, dict) or not isinstance(brief.get("goal"), str) or not brief["goal"].strip():
+        raise PackageError("Version 2 packages need brief.goal (the designer's design goal)")
+    constraints = brief.get("constraints", [])
+    if not isinstance(constraints, list) or not all(isinstance(c, str) for c in constraints):
+        raise PackageError("brief.constraints must be a list of strings")
+    provenance = data.get("provenance")
+    if not isinstance(provenance, dict):
+        raise PackageError("Version 2 packages need provenance")
+    for key, allowed in PROVENANCE.items():
+        if provenance.get(key) not in allowed:
+            raise PackageError("provenance." + key + " must be one of " + ", ".join(allowed))
+
+
+def _validate_v2_step(step, earlier_ids):
+    scope = step.get("scope")
+    if scope is not None and (not isinstance(scope, dict) or scope.get("kind") not in SCOPES):
+        raise PackageError("scope.kind must be general or goal_specific")
+    for key in ("depends_on", "depends_on_derived"):
+        deps = step.get(key, [])
+        if not isinstance(deps, list) or any(d not in earlier_ids or d == step["id"] for d in deps):
+            raise PackageError(key + " may only name earlier steps")
+    sources = step.get("source_features", [])
+    if not isinstance(sources, list) or not all(isinstance(f, dict) and isinstance(f.get("name"), str) for f in sources):
+        raise PackageError("source_features must list timeline features")
+
+
 def _validate(data):
-    if not isinstance(data, dict) or data.get("format") != "excadmple" or data.get("version") != 1:
-        raise PackageError("Expected exCADmple format version 1")
+    if not isinstance(data, dict) or data.get("format") != "excadmple" or data.get("version") not in (1, 2):
+        raise PackageError("Expected exCADmple format version 1 or 2")
+    if data["version"] == 2:
+        _validate_v2_example(data)
     if not isinstance(data.get("title"), str) or not data["title"].strip():
         raise PackageError("Package title is required")
     for field in ("preview", "source_model"):
@@ -98,6 +136,10 @@ def _validate(data):
             asset = step.get("media", {}).get(kind)
             if asset is not None:
                 _relative_path(asset)
+        offset = step.get("media", {}).get("offset_ms", 0)
+        if isinstance(offset, bool) or not isinstance(offset, (int, float)) or offset < 0:
+            raise PackageError("media.offset_ms must be a non-negative number")
+        _validate_v2_step(step, seen)
         if step.get("pointer") is not None:
             try:
                 validate_pointer(step["pointer"], duration)
@@ -133,6 +175,11 @@ class ExamplePackage:
     def player_data(self):
         """Minimal metadata for HTML. Geometry stays Python-side."""
         result = {
+            "version": self.data.get("version", 1),
+            "designer": self.data.get("designer", ""),
+            "date": self.data.get("date", ""),
+            "brief": self.data.get("brief"),
+            "provenance": self.data.get("provenance"),
             "id": self.data.get("id", ""),
             "author": self.data.get("author", ""),
             "title": self.data["title"],
@@ -164,6 +211,9 @@ class ExamplePackage:
                         raise PackageError("Media path escapes package directory")
                     if path.is_file():
                         media[kind] = path.as_uri()
+            if media and step.get("media", {}).get("offset_ms"):
+                # One long think-aloud recording: this step is a time slice of it.
+                media["offset_ms"] = step["media"]["offset_ms"]
             meta["media"] = media
             result["steps"].append(meta)
         return result
