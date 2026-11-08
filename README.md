@@ -12,6 +12,26 @@
 
 项目概况见 [`main`](https://github.com/Scaffolder666/exCADmpleFusion)；Blender 版本见 [`blender`](https://github.com/Scaffolder666/exCADmpleFusion/tree/blender)。
 
+## 用真实 `fusion.f3d` 自动生成复杂测试教程
+
+打开研究者提供的 **`fusion.f3d`**，在 Fusion 360 的
+**Utilities → Scripts and Add-Ins → Scripts → +** 选择
+`tools/fusion_native_demo` 并运行。
+
+脚本会从 **真实 Fusion Feature Timeline** 自动提取每一步的名称、
+类型、参数和上游依赖，按 Feature 类型给历史卡片区分颜色，并生成
+`~/exCADmple-validation/real-fusion/fusion-native-reasoning.excadmple`。
+在 exCADmple 的 **+ Import** 载入即可测试逐步浏览、原生参数动画、
+几何高亮、跳转及性能。
+
+- **一项 Timeline Feature = 一个步骤**；不伪造 Feature 顺序，不截断前 150 项。
+- 测试用说明由规则自动构造，是**可能的设计考虑，不是原设计师的真实 reasoning**；面板文字会标明模拟解释，不能当作用户研究证据。
+- 只导出私有 `.f3d` 副本，**不生成每一步的 Mesh 快照**，原生动画由 Fusion 内核处理。
+- 不更改普通播放器、语音和鼠标录制；Phone Stand 仅用于轻量 UI 测试。
+- 如果模型没有可用 Timeline、超过 150 个 Feature，或 Fusion API 不支持某个操作，给出错误而不是编造数据。
+
+详细操作与局限见 [真实模型测试流程](docs/REAL_FUSION_MODEL_TEST.md)。
+
 ## 两个界面版本（用于比较）
 
 两个版本播放同样的教程，功能相同，只是教程放的位置不同。两个分支共用同一份代码，由 `config.json` 的 `layout` 选择。
