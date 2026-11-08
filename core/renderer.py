@@ -6,7 +6,7 @@ palette. The model's native history marker and feature parameters are untouched.
 import adsk.core
 import adsk.fusion
 
-from .animation import extrude_mesh
+from .animation import extrude_mesh, reveal_meshes
 
 
 class ReferenceRenderer:
@@ -100,8 +100,9 @@ class ReferenceRenderer:
             return False
         if not self.visible:
             return True
-        mesh = extrude_mesh(step["animation"], progress)
-        context = step["animation"].get("context_meshes", [])
+        animation = step["animation"]
+        meshes = (reveal_meshes(animation, progress) if animation["type"] == "reveal"
+                  else list(animation.get("context_meshes", [])) + [extrude_mesh(animation, progress)])
         # Hide the completed reference mesh before rendering partial geometry.
         if self.group and self.group.isValid:
             self.group.isVisible = False
@@ -109,8 +110,8 @@ class ReferenceRenderer:
         self.animation_group = None
         try:
             self.animation_group = self._create_group(
-                list(context) + [mesh], self._offset(offset),
-                "exCADmple extrusion animation (temporary)"
+                meshes, self._offset(offset),
+                "exCADmple step animation (temporary)"
             )
             self._refresh()
             return True
