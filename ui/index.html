@@ -11,7 +11,7 @@
     <header class="topbar">
       <div class="brand">
         <span class="brand-icon" aria-hidden="true">e</span>
-        <div><strong>exCADmple</strong><small>Design examples in CAD</small></div>
+        <div><strong>exCADmple</strong><small>Design reasoning in your workspace</small></div>
       </div>
       <button id="import" class="btn btn-quiet" title="Open a .json or .excadmple package">+ Import</button>
     </header>
@@ -23,34 +23,27 @@
       <div class="example-meta">
         <span id="exampleSteps">—</span>
         <span aria-hidden="true">·</span>
-        <span>Independent of your Fusion timeline</span>
+        <span>Explore, borrow, or adapt</span>
       </div>
     </section>
 
-    <section class="timeline-panel" aria-label="Design example steps">
-      <div class="section-heading">
-        <span>Design process</span>
-        <span id="stepCount" class="count">0 / 0</span>
-      </div>
-      <div id="stepRail" class="step-rail" aria-label="Select a step"></div>
-      <div class="transport">
-        <div class="controls">
-          <button id="prev" class="icon-button" aria-label="Previous step" title="Previous step">◀◀</button>
-          <button id="play" class="play-button" aria-label="Play">▶ <span>Play</span></button>
-          <button id="next" class="icon-button" aria-label="Next step" title="Next step">▶▶</button>
-          <span class="clock" id="clock">00:00 / 00:00</span>
-        </div>
-        <input id="scrub" class="seek" type="range" min="0" max="1000" value="0" aria-label="Scrub within current step">
-      </div>
-    </section>
-
+    <div class="lesson-scroll">
     <section class="step-detail">
+      <div class="current-step">
       <div class="step-context">
         <div class="overline" id="stepEyebrow">STEP 01</div>
         <div id="geometryStatus" class="reference-label">Reference model</div>
       </div>
       <h2 id="stepTitle">—</h2>
       <p id="stepGoal" class="goal"></p>
+      </div>
+
+      <div class="reasoning-heading section-heading detail-heading">
+        <span>Why this decision?</span>
+        <span id="reasonSource" class="source-tag">Source unknown</span>
+      </div>
+      <blockquote id="reasoning">Reasoning associated with the selected step appears here.</blockquote>
+      <p class="source-explainer" id="sourceExplainer"></p>
 
       <details class="geometry-link" id="geometryLink">
         <summary class="geometry-link__summary">
@@ -102,12 +95,6 @@
         <div id="parameters" class="parameters"></div>
       </div>
 
-      <div class="reasoning-heading section-heading detail-heading">
-        <span>Why this decision?</span>
-        <span id="reasonSource" class="source-tag">Source unknown</span>
-      </div>
-      <blockquote id="reasoning">Reasoning associated with the selected step appears here.</blockquote>
-      <p class="source-explainer" id="sourceExplainer"></p>
     </section>
 
     <footer>
@@ -119,6 +106,24 @@
       </div>
       <div class="status" id="status" role="status" aria-live="polite"></div>
     </footer>
+    </div>
+    <section class="timeline-panel" aria-label="Design example steps">
+      <div class="section-heading">
+        <span>Explore the steps</span>
+        <span id="stepCount" class="count">0 / 0</span>
+      </div>
+      <div id="stepRail" class="step-rail" aria-label="Select a step"></div>
+      <div class="transport">
+        <div class="controls">
+          <button id="prev" class="icon-button" aria-label="Previous step" title="Previous step">◀◀</button>
+          <button id="play" class="play-button" aria-label="Play">▶ <span>Play</span></button>
+          <button id="next" class="icon-button" aria-label="Next step" title="Next step">▶▶</button>
+          <span class="clock" id="clock">00:00 / 00:00</span>
+        </div>
+        <input id="scrub" class="seek" type="range" min="0" max="1000" value="0" aria-label="Scrub within current step">
+      </div>
+    </section>
+
   </main>
   <script src="player.js"></script>
 </body>
