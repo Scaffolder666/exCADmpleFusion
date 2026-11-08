@@ -441,8 +441,8 @@ def _create_palette():
         _palette.deleteMe()          # the layout may have changed
     if ROLE == REFERENCE:
         # Version A: HiM control panel beside the reference instance's canvas.
-        _palette = _ui.palettes.add2(PALETTE_ID, "exCADmple · Tutorial", str(ROOT / "ui" / "reference.html"),
-                                     True, True, True, 400, 820)
+        _palette = _ui.palettes.add2(PALETTE_ID, "exCADmple · History in Motion", str(ROOT / "ui" / "reference.html"),
+                                     True, True, True, 340, 740)
         _palette.dockingState = adsk.core.PaletteDockingStates.PaletteDockStateRight
     else:
         # Version B: a compact tutorial floating over the Fusion canvas.
@@ -515,7 +515,11 @@ def run(_context):
         _renderer = ReferenceRenderer(_app)
         _spatial = SpatialLinkController(_app, _ui)
         if LAYOUT == "reference":
-            _start_link()
+            # HiM-first: display history beside the native Fusion canvas.
+            # A second Fusion process is not needed for example playback.
+            global ROLE, _session
+            ROLE = REFERENCE
+            _session = ReferenceSession(_app, _ui, lambda message: _app.log("exCADmple reference: " + message))
 
         for event, handler in ((_app.documentSaving, BeforeSave()), (_app.documentSaved, AfterSave()),
                                (_app.documentDeactivating, BeforeDeactivate())):
