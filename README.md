@@ -37,12 +37,23 @@
 
 ## 分支
 
-| 分支 | 内容 |
+为了决定论文采用哪种界面，Fusion 上做了**两个功能相同、界面组织不同**的版本：
+
+| 分支 | 职责 |
 |---|---|
-| [`fusion`](https://github.com/Scaffolder666/exCADmpleFusion/tree/fusion) | **主要原型**：Autodesk Fusion 插件。左侧教程面板（Why → 决策 → How，底部步骤条）；参考几何、Ghost Pointer 与用户模型同处一个画布；多案例切换；右侧 Reasoning Reuse 面板（从用户自己的几何出发找到相关决策，基于 *History in Motion* 的特征过滤）；案例提取与合成工具。[说明](https://github.com/Scaffolder666/exCADmpleFusion/blob/fusion/README.md) |
-| [`blender`](https://github.com/Scaffolder666/exCADmpleFusion/tree/blender) | 同一交互的 Blender 原型：单视口 GPU 教程栏、独立的案例播放时钟、多案例切换，读取同一种案例包。[说明](https://github.com/Scaffolder666/exCADmpleFusion/blob/blender/blender/README.md) |
-| [`authoring-plan`](https://github.com/Scaffolder666/exCADmpleFusion/tree/authoring-plan) | 案例标注工具的设计思路 |
-| `main` | 本页：项目概况 |
+| `main` | 本页：项目介绍与共同研究目标 |
+| [`fusion-him`](https://github.com/Scaffolder666/exCADmpleFusion/tree/fusion-him) | **版本 A：独立参考视口**（参考 *History in Motion*）。参考案例在单独窗口的交互式 3D 视口中播放，右侧是纵向历史；点击案例模型可找出制作这部分的步骤并播放。用户在 Fusion 原生画布中继续建模 |
+| [`fusion`](https://github.com/Scaffolder666/exCADmpleFusion/tree/fusion) | **版本 B：Fusion 视口内 Overlay**。参考模型与用户模型同在 Fusion 画布中；教程以浮在画布上的紧凑面板和固定在画布角落的 HUD 文字呈现。[说明](https://github.com/Scaffolder666/exCADmpleFusion/blob/fusion/README.md) |
+| [`blender`](https://github.com/Scaffolder666/exCADmpleFusion/tree/blender) | Blender 原生 Overlay 原型：单视口 GPU 教程栏、独立的案例播放时钟、多案例切换，读取同一种案例包。[说明](https://github.com/Scaffolder666/exCADmpleFusion/blob/blender/blender/README.md) |
+| [`authoring-plan`](https://github.com/Scaffolder666/exCADmpleFusion/tree/authoring-plan) | 所有版本共用的真实案例制作流程（标注工具） |
+
+两个 Fusion 版本使用相同的案例、相同的推理内容和相同的播放能力，共用同一份代码，只由 `config.json` 中的 `layout` 区分。可以比较：
+
+- 独立视口是否更容易专注理解参考设计；
+- 同一视口是否更容易把参考信息与自己的设计联系起来；
+- 两种界面如何影响用户在看教程和继续建模之间的切换。
+
+技术上，Fusion 原生画布不允许插件叠加可交互的 HTML，所以版本 B 用浮动面板加画布内的 Custom Graphics（参考模型、Ghost Pointer、HUD 文字）尽量接近 Overlay；Blender 则可以直接在视口中绘制并接收点击。
 
 ## 当前状态
 
