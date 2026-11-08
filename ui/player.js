@@ -347,6 +347,17 @@ window.fusionJavaScriptHandler = {
         state.filteredIndices = payload.indices || [];
         renderRail();
         if (state.filteredIndices.length) selectStep(state.filteredIndices[0]);
+      } else if (action === "native_history") {
+        const features = payload.features || [];
+        $("nativeHistoryStatus").textContent = features.length ? features.length + " candidate features · newest first" : "No candidate features found for the selected geometry.";
+        const list = $("nativeHistoryList");
+        list.replaceChildren();
+        for (const feature of features) {
+          const row = document.createElement("div");
+          row.className = "step-goal";
+          row.textContent = "#" + feature.timeline_index + " · " + feature.name + " (" + feature.object_type + ")";
+          list.appendChild(row);
+        }
       } else if (action === "geometry_selection") {
         $("selectionStatus").textContent = payload.selected ? payload.kind + " selected in Fusion" : "Select a face, edge or vertex in Fusion.";
         $("entityFilter").value = payload.selected ? (payload.entity_id || "") : "";
