@@ -39,14 +39,22 @@ const steps = () => (S.example ? S.example.steps : []);
 const step = () => steps()[S.index];
 const duration = () => (step() && step().duration_ms) || 8000;
 function kindOf(item) {
-  const tool = (item.tools || []).join(" ").toLowerCase();
+  // Prefer the actual Fusion Feature type when the tutorial came from a
+  // real .f3d Timeline; legacy snapshot examples still use tool labels.
+  const sources = item.source_features || [];
+  const recorded = sources.length ? sources[sources.length - 1].kind || "" : "";
+  const tool = (recorded + " " + (item.tools || []).join(" ")).toLowerCase();
   if (/cut|boolean|hole|window/.test(tool)) return "cut";
   if (/fillet|chamfer|round|bevel/.test(tool)) return "fillet";
   if (/pattern/.test(tool)) return "pattern";
   if (/mirror/.test(tool)) return "mirror";
   if (/revolve|rotate/.test(tool)) return "revolve";
-  if (/move|proxy|insert/.test(tool)) return "move";
+  if (/combine/.test(tool)) return "combine";
+  if (/offset|shell|thicken|draft|sweep|loft/.test(tool)) return "modify";
+  if (/move|proxy|transform/.test(tool)) return "move";
   if (/extrude/.test(tool)) return "extrude";
+  if (/sketch/.test(tool)) return "sketch";
+  if (/base|paste|import/.test(tool)) return "import";
   return "other";
 }
 function secs(ms) {
