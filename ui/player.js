@@ -4,6 +4,23 @@
 const $ = (id) => document.getElementById(id);
 const state = { example: null, index: 0, elapsed: 0, playing: false, startedAt: 0, raf: 0, cueIndex: -1, links: {}, lastAnimationFrame: -Infinity, animationInFlight: false };
 const video = $("video"), audio = $("audio");
+let spokenCue = -1;
+function stopNarration() {
+  spokenCue = -1;
+  if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+}
+function speakCue(index) {
+  if (!$("narrationEnabled").checked || audio.getAttribute("src") || video.getAttribute("src")) return;
+  if (!("speechSynthesis" in window) || index < 0 || index === spokenCue) return;
+  spokenCue = index;
+  window.speechSynthesis.cancel();
+  const text = step()?.cues?.[index]?.label;
+  if (!text) return;
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = "en-US";
+  utterance.rate = 0.95;
+  window.speechSynthesis.speak(utterance);
+}
 
 function bridge(action, payload = {}) {
   if (!window.adsk || typeof window.adsk.fusionSendData !== "function") {
@@ -208,6 +225,7 @@ function renderTime() {
   cues.forEach((cue, i) => { if (cue.at_ms <= state.elapsed) active = i; });
   if (active !== state.cueIndex) {
     state.cueIndex = active;
+    if (state.playing) speakCue(active);
     $("cueText").textContent = active >= 0 ? cues[active].label : (step()?.operation?.instruction || "Inspect the author's actions.");
   }
 }
@@ -223,6 +241,7 @@ function sendAnimationFrame(force = false) {
     .finally(() => { state.animationInFlight = false; });
 }
 function pause() {
+  stopNarration();
   state.playing = false;
   cancelAnimationFrame(state.raf);
   video.pause(); audio.pause();
@@ -263,6 +282,8 @@ function play() {
   $("play").innerHTML = "Ⅱ <span>Pause</span>";
   $("play").setAttribute("aria-label", "Pause");
   playMedia();
+  spokenCue = -1;
+  if (state.cueIndex >= 0) speakCue(state.cueIndex);
   sendAnimationFrame(true);
   tick();
 }
@@ -340,6 +361,13 @@ $("demo").addEventListener("click", () => { pause(); bridge("load_demo"); });
 $("play").addEventListener("click", () => state.playing ? pause() : play());
 $("replay").addEventListener("click", () => { if (step()) { pause(); seek(0); play(); } });
 $("playbackScope").addEventListener("change", () => pause());
+$("captionsEnabled").addEventListener("change", () => {
+  $("cueText").hidden = !$("captionsEnabled").checked;
+});
+$("narrationEnabled").addEventListener("change", () => {
+  stopNarration();
+  if (state.playing && state.cueIndex >= 0) speakCue(state.cueIndex);
+});
 // Keyboard navigation is scoped to the history list, so Fusion shortcuts remain untouched.
 $("stepRail").addEventListener("keydown", (event) => {
   if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
