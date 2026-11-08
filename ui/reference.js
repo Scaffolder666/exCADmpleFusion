@@ -291,9 +291,11 @@ function card(item) {
     for (const p of plan) {
       const live = S.shown && S.shown.step === S.index && S.shown.feature === p.feature ? S.shown : null;
       let text = p.feature + " · ";
-      if (live && live.mode === "instant")
+      if (live && live.mode === "instant") {
         text += "appears immediately · actual Fusion geometry" +
                 (live.wireframe ? " · ghost wireframe context" : "");
+        if (live.fallback) text += " (" + live.fallback + ")";
+      }
       else if (live && live.fallback) text += "visual fallback (" + live.fallback + ")";
       else if (live && live.wireframe && live.mode === "parameter")
         text += "native reconstruction · ghost wireframe · " + (live.parameters || []).join(", ");
