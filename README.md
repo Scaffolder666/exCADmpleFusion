@@ -1,8 +1,8 @@
-# exCADmple — Autodesk Fusion 插件 · 版本 A（HiM 风格独立参考视口）
+# exCADmple — Autodesk Fusion 插件 · 版本 A（History in Motion 式独立参考视口）
 
 **Supporting Design Reasoning Through Shared CAD Models** · 分支 `fusion-him`
 
-> 本分支是**版本 A**：参考案例在独立的交互式 3D 视口中播放（参考 *History in Motion*），用户在 Fusion 原生画布中继续建模。代码与 [`fusion`](https://github.com/Scaffolder666/exCADmpleFusion/tree/fusion)（版本 B：视口内 Overlay）完全相同，只有 `config.json` 中的 `"layout": "reference"` 不同；两个版本的比较见下文"两个界面版本"。功能改动在 `fusion` 上进行，再合并到本分支。
+> 本分支是**版本 A**：按 *History in Motion* 的做法，参考案例在**第二个 Fusion 实例**中、在设计师 `.f3d` 的副本上播放（参数动画，选中几何即可过滤历史）；用户在第一个 Fusion 窗口里继续建模。代码与 [`fusion`](https://github.com/Scaffolder666/exCADmpleFusion/tree/fusion)（版本 B：视口内 Overlay）完全相同，只有 `config.json` 中的 `"layout": "reference"` 不同；两个版本的比较见下文"两个界面版本"。功能改动在 `fusion` 上进行，再合并到本分支。
 
 用户在自己的 Fusion 工作空间中探索其他设计师的设计过程与推理：通过交互式时间轴播放整个过程或重访单个步骤；每一步展示模型如何演变、原设计师如何执行 CAD 操作，并同步播放解释设计选择的语音与文字。用户可以完整跟随，也可以在同一工作空间里发展自己的设计时有选择地借鉴个别步骤——学习**怎么建模**，也学习**怎么设计**。
 

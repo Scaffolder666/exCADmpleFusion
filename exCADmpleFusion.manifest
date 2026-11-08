@@ -7,7 +7,7 @@
     "": "Explore a shared design process while creating your own design in Fusion."
   },
   "version": "0.7.0",
-  "runOnStartup": false,
+  "runOnStartup": true,
   "supportedOS": "windows|mac",
   "editEnabled": true
 }
