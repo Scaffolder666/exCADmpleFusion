@@ -347,6 +347,17 @@ window.fusionJavaScriptHandler = {
         state.filteredIndices = payload.indices || [];
         renderRail();
         if (state.filteredIndices.length) selectStep(state.filteredIndices[0]);
+      } else if (action === "native_provenance") {
+        const features = payload.features || [];
+        $("provenanceStatus").textContent = features.length ? features.length + " direct/adjacent creator feature(s) · incomplete lineage" : (payload.reason || "No direct creator attribution available.");
+        const list = $("provenanceList");
+        list.replaceChildren();
+        for (const feature of features) {
+          const row = document.createElement("div");
+          row.className = "step-goal";
+          row.textContent = (feature.timeline_index == null ? "?" : "#" + feature.timeline_index) + " · " + feature.name + " · " + feature.association;
+          list.appendChild(row);
+        }
       } else if (action === "native_history") {
         const features = payload.features || [];
         $("nativeHistoryStatus").textContent = features.length ? features.length + " candidate features · newest first" : "No candidate features found for the selected geometry.";
