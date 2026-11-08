@@ -273,7 +273,8 @@ class RendererLifecycleTests(unittest.TestCase):
         self.assertTrue(0.4 <= tip[1] <= 1.0)
         self.assertAlmostEqual(tip[2], 1.7)
 
-        self.assertTrue(self.renderer.render_command(self.steps[2]))
+        self.assertTrue(self.renderer.render_command(self.steps[2]),
+                        self.renderer.last_command_error)
         label = self.renderer.command_group.texts[0]
         self.assertEqual(label.text, "Extrude")    # not Sketch + Extrude at once
         self.assertEqual(label.size, 0.32)          # Fusion API uses centimeters
@@ -283,7 +284,8 @@ class RendererLifecycleTests(unittest.TestCase):
         self.assertEqual(label.viewScale[1], 45)
         self.assertEqual(label.billBoarding.billBoardStyle, "screen")
         first = self.renderer.command_group
-        self.assertTrue(self.renderer.render_command(self.steps[2]))
+        self.assertTrue(self.renderer.render_command(self.steps[2]),
+                        self.renderer.last_command_error)
         self.assertIs(self.renderer.command_group, first)  # no per-frame rebuild
         self.assertTrue(self.renderer.render_command(self.steps[1]))
         self.assertEqual(self.renderer.command_group.texts[0].text, "Rotate")
@@ -323,7 +325,8 @@ class RendererLifecycleTests(unittest.TestCase):
 
     def test_clear_and_hide_remove_highlights(self):
         self.renderer.render(self.steps[2], [0, 0, 0], self.previous(2))
-        self.assertTrue(self.renderer.render_command(self.steps[2]))
+        self.assertTrue(self.renderer.render_command(self.steps[2]),
+                        self.renderer.last_command_error)
         self.renderer.set_visible(False)
         self.assertFalse(self.renderer.group.isVisible)
         self.assertFalse(self.renderer.guidance_group.isVisible)
