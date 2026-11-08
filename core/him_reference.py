@@ -37,6 +37,9 @@ class ReferenceSession:
         # Native HiM playback: one opaque Feature in front of a transparent
         # wireframe of actual geometry BEFORE that Feature was modeled.
         self.him.wireframe_context = True
+        # Operations with no editable numeric parameter appear immediately.
+        # They do not grow by an invented fade/scale transformation.
+        self.him.instant_nonparametric = True
         self.document = None
         self.model = None
         self.mapped = []
@@ -139,13 +142,30 @@ class ReferenceSession:
                                 design, self.model.entity(feature), feature.kind)]
                         except Exception:
                             params = []
-                        mode = "parameter" if params else "visual"
+                        mode = "parameter" if params else "instant"
                     elif kind == FADE:
-                        mode = "visual"
+                        mode = "instant"
                 items.append({"feature": feature.name, "kind": feature.kind,
                               "mode": mode, "parameters": params})
             plan.append(items)
         return plan
+
+    # --- whole-model endpoints -----------------------------------------------------------
+    def show_overview(self):
+        """Present the complete designer model, shaded and with no ghost.
+
+        Used before playback begins and after the full sequence finishes.
+        This does not change the user's original .f3d or save the copy.
+        """
+        if not self.live:
+            return
+        self.stop()                # restores parameter expressions and opacity
+        self.model.go(self.model.end_state())
+        self.current = ("overview",)
+        try:
+            self.app.activeViewport.refresh()
+        except Exception:
+            pass
 
     # --- playback -------------------------------------------------------------------------
     def _roll_after(self, feature):
@@ -158,7 +178,13 @@ class ReferenceSession:
             return None
         items = animated(self.mapped[step_index])
         if progress >= 1.0 or not items:
-            # End of the step: real parameter values, the model after it.
+            # The FINAL step returns to the entire shaded model, not a
+            # ghost/partial-timeline state. Intermediate steps preserve the
+            # actual post-step model until the following Feature begins.
+            if step_index == len(self.mapped) - 1:
+                if self.current != ("overview",):
+                    self.show_overview()
+                return {"step": step_index, "feature": None, "mode": "overview"}
             if self.current != (step_index, "result"):
                 self.show_result(step_index)
                 self.current = (step_index, "result")
