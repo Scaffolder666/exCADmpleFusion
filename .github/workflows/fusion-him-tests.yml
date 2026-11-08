@@ -1,0 +1,29 @@
+name: Fusion HiM unit tests
+
+on:
+  push:
+    branches: [fusion-him]
+  pull_request:
+    branches: [fusion-him]
+  workflow_dispatch:
+
+jobs:
+  fusion-him-python-and-js:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Python regression suite (Fusion API stub)
+        run: python -m unittest discover -s tests -v
+      - name: JavaScript syntax checks
+        run: |
+          node --check ui/reference.js
+          node --check ui/him_frame_clock.js
+          node --check ui/player.js
+      - name: HiM frame pacing regression
+        run: node tests/test_him_frame_clock.js
