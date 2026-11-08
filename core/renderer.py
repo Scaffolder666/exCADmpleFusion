@@ -205,7 +205,7 @@ class ReferenceRenderer:
             graphic.viewPlacement = adsk.fusion.CustomGraphicsViewPlacement.create(
                 adsk.core.Point3D.create(0, 0, 0),
                 adsk.fusion.ViewCorners.upperLeftViewCorner,
-                adsk.core.Point2D.create(24, 115))
+                adsk.core.Point2D.create(350, 95))
         except Exception:
             self._delete(group)
             return False
