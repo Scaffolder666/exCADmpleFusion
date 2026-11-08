@@ -33,7 +33,10 @@ distinguishes this specific fixture from another file called `fusion.f3d`.
    Timeline, and creates **one tutorial step for every real Timeline item**.
    It also produces a small, explicitly hypothetical explanation using the
    operation type, extracted parameters, and recorded dependencies.
-4. The generated files are in
+4. The generator uses metadata-only extraction: it avoids repeatedly
+   meshing the entire model and includes NO precomputed snapshots. Native
+   feature playback is performed by Fusion on an imported private copy.
+   The generated files are in
    `~/exCADmple-validation/real-fusion/`; **Import**
    `fusion-native-reasoning.excadmple` in the exCADmple HiM palette.
 5. Inspect the colored Feature cards (Sketch, Extrude, Fillet, Pattern,
@@ -81,6 +84,7 @@ python tools/build_native_validation.py \
   local-validation/fusion.f3d \
   -o local-validation/fusion-validation.excadmple \
   --title "Fusion native HiM test" \
+  --native-only \
   --synthetic-reasoning
 ```
 
