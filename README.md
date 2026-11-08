@@ -39,7 +39,7 @@
 | 分支 | 职责 |
 |---|---|
 | `main` | 本页：项目介绍与共同研究目标 |
-| [`fusion-him`](https://github.com/Scaffolder666/exCADmpleFusion/tree/fusion-him) | **版本 A：独立参考视口**，按 *History in Motion* 的做法：第二个 Fusion 实例打开设计师 `.f3d` 的副本，每一步把时间轴回滚到这一步完成后，用户可以旋转、查看设计师真实的模型；右侧是 HiM 式纵向步骤列表；在参考模型上选中几何，用 HiM 算法找出做出它的步骤并播放。用户在第一个 Fusion 窗口中继续建模，两个窗口通过本机连接互通 |
+| [`fusion-him`](https://github.com/Scaffolder666/exCADmpleFusion/tree/fusion-him) | **版本 A：独立参考视口**，按 *History in Motion* 的做法：第二个 Fusion 实例打开设计师 `.f3d` 的副本，按 HiM 的方式在真实的参数化模型上展示每一步（时间轴回滚到当前特征，参数从约 0 实时增长到实际值，其他 Body 半透明），用户可以随时旋转查看；右侧是 HiM 式纵向步骤列表；在参考模型上选中几何，用 HiM 算法找出做出它的步骤并播放。用户在第一个 Fusion 窗口中继续建模，两个窗口通过本机连接互通 |
 | [`fusion`](https://github.com/Scaffolder666/exCADmpleFusion/tree/fusion) | **版本 B：Fusion 视口内 Overlay**。参考模型与用户模型同在 Fusion 画布中；教程以浮在画布上的紧凑面板和固定在画布角落的 HUD 文字呈现。[说明](https://github.com/Scaffolder666/exCADmpleFusion/blob/fusion/README.md) |
 | [`blender`](https://github.com/Scaffolder666/exCADmpleFusion/tree/blender) | Blender 原生 Overlay 原型：单视口 GPU 教程栏、独立的案例播放时钟、多案例切换，读取同一种案例包。[说明](https://github.com/Scaffolder666/exCADmpleFusion/blob/blender/blender/README.md) |
 | [`authoring-plan`](https://github.com/Scaffolder666/exCADmpleFusion/tree/authoring-plan) | 所有版本共用的真实案例制作流程（标注工具） |
