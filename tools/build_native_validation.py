@@ -18,7 +18,8 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from core.authoring import build_manifest, check_extract, write_package  # noqa: E402
+from core.authoring import build_manifest, check_extract, write_package, LABELS  # noqa: E402
+from core.packages import _validate as validate_package, MAX_STEPS  # noqa: E402
 
 
 
@@ -99,8 +100,51 @@ def make_annotation(extract, title="Native Fusion validation", duration_ms=4000)
     }
 
 
+def native_only_manifest(extract, source, title, synthetic_reasoning=False):
+    """Native real-model test: no snapshots, only genuine timeline references.
+
+    Its replay MUST come from the embedded .f3d and Fusion's native
+    parameter/timeline engine. No precomputed meshes are packaged.
+    """
+    check_extract(extract)
+    features = sorted(extract["features"], key=lambda item: item["index"])
+    if len(features) > MAX_STEPS:
+        raise ValueError("Native validation has {} timeline items, but packages "
+                         "support at most {}; do not silently truncate."
+                         .format(len(features), MAX_STEPS))
+    steps = []
+    for i, feature in enumerate(features):
+        kind = str(feature.get("kind") or "Feature")
+        label = LABELS.get(kind, kind.removesuffix("Feature"))
+        steps.append({
+            "id": "feature-%04d" % i,
+            "title": feature["name"],
+            "duration_ms": 4000,      # synthetic test duration, NOT authoring time
+            "tools": [label],
+            "source_features": [{
+                "index": feature["index"], "name": feature["name"], "kind": kind
+            }],
+            "geometry": {"meshes": []},   # never substitute snapshots for native HiM
+            "cues": ([{"at_ms": 250, "label": hypothetical_reasoning(feature)}]
+                     if synthetic_reasoning else []),
+            "media": {},
+        })
+    manifest = {
+        "format": "excadmple", "version": 2,
+        "id": "native-fusion-validation",
+        "title": title,
+        "description": (
+            "SIMULATED teaching hypotheses; NOT original designer think-aloud."
+            if synthetic_reasoning else "Native feature history only; no recording."),
+        "source_model": "source/" + source.name,
+        "steps": steps,
+    }
+    validate_package(manifest)
+    return manifest
+
+
 def make_package(extract, source, output, title="Native Fusion validation",
-                 synthetic_reasoning=False):
+                 synthetic_reasoning=False, native_only=False):
     source = Path(source)
     output = Path(output)
     if source.suffix.lower() != ".f3d" or not source.is_file():
@@ -109,16 +153,21 @@ def make_package(extract, source, output, title="Native Fusion validation",
         raise ValueError("Output must be an .excadmple file")
     if source.resolve() == output.resolve():
         raise ValueError("Never overwrite the source model")
-    annotation = make_annotation(extract, title)
-    segments = synthetic_reasoning_segments(extract) if synthetic_reasoning else []
-    manifest = build_manifest(extract, annotation, segments, source_model=str(source))
-    if synthetic_reasoning:
-        manifest["description"] = (
-            "SIMULATED, hypothesis-only explanations based on extracted feature "
-            "kinds, parameters, and dependencies; NOT the original designer's words.")
+    if native_only:
+        manifest = native_only_manifest(extract, source, title, synthetic_reasoning)
+        step_count = len(manifest["steps"])
+    else:
+        annotation = make_annotation(extract, title)
+        segments = synthetic_reasoning_segments(extract) if synthetic_reasoning else []
+        manifest = build_manifest(extract, annotation, segments, source_model=str(source))
+        if synthetic_reasoning:
+            manifest["description"] = (
+                "SIMULATED, hypothesis-only explanations based on extracted feature "
+                "kinds, parameters, and dependencies; NOT the original designer's words.")
+        step_count = len(annotation["steps"])
     output.parent.mkdir(parents=True, exist_ok=True)
     write_package(manifest, output, (), str(source))
-    return output, len(annotation["steps"])
+    return output, step_count
 
 
 def main(argv=None):
@@ -128,13 +177,16 @@ def main(argv=None):
     parser.add_argument("source", help="Original .f3d archive; embedded as a read-only reference")
     parser.add_argument("-o", "--output", required=True, help="Output .excadmple test package")
     parser.add_argument("--title", default="Native Fusion validation")
+    parser.add_argument("--native-only", action="store_true",
+                        help="Omit mesh snapshots; animate only original Fusion Feature Timeline")
     parser.add_argument("--synthetic-reasoning", action="store_true",
                         help="Attach explicitly hypothetical explanations to every feature (testing only)")
     args = parser.parse_args(argv)
     try:
         draft = json.loads(Path(args.extract).read_text(encoding="utf-8"))
         output, steps = make_package(draft, args.source, args.output, args.title,
-                                           synthetic_reasoning=args.synthetic_reasoning)
+                                           synthetic_reasoning=args.synthetic_reasoning,
+                                           native_only=args.native_only)
     except (OSError, ValueError) as exc:
         parser.exit(1, "error: %s\n" % exc)
     print("Wrote %s with %d exact-indexed timeline steps and the original .f3d." % (output, steps))
