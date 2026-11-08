@@ -148,9 +148,10 @@ def _set_step(index):
             _session.show_result(index)          # the designer's model after this step
         else:
             _renderer.render(step, [0, 0, 0], _previous_geometry(index))    # recorded geometry only
-        # Current Fusion tool(s), shown in the viewport rather than adding UI controls.
+        # A step selection shows the geometry; the command label appears only
+        # when its animation actually starts, not ahead of the operation.
         _renderer.clear_pointer()
-        _renderer.render_command(step)
+        _renderer.clear_command()
     else:
         if not _renderer.render(step, _package.data.get("reference_offset_cm"), _previous_geometry(index)):
             _status("Open or create a Fusion Design to see the reference model.", True)
@@ -290,6 +291,7 @@ class PaletteHandler(adsk.core.HTMLEventHandler):
                     _step_index = index
                     value = max(0.0, min(1.0, float(value)))
                     step = _package.step(index)
+                    shown = None
                     if _session and _session.live:
                         shown = _session.frame(index, value)
                         if shown and shown != _last_shown:
@@ -297,8 +299,15 @@ class PaletteHandler(adsk.core.HTMLEventHandler):
                             _post("animation", shown)
                     elif step.get("animation"):
                         _renderer.render_animation(step, [0, 0, 0], value, _previous_geometry(index))
-                    # HiM reference playback uses the precise target arrow instead
-                    # of replaying a potentially incomplete ghost mouse trajectory.
+                    # Show exactly the operation being animated; tutorial tool
+                    # lists have no individual activation timestamps.
+                    if value < 1.0 and ((shown and shown.get("mode") in ("parameter", "visual", "timeline"))
+                                        or (not (_session and _session.live) and step.get("animation"))):
+                        _renderer.render_command(step, (shown or {}).get("kind"))
+                    else:
+                        _renderer.clear_command()
+                    # The precise target arrow replaces the unrecorded ghost
+                    # mouse path in reference playback.
             elif command == "show_more":
                 if _session:
                     _filtering = True
