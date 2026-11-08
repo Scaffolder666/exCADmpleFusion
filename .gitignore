@@ -1,2 +1,6 @@
 __pycache__/
 *.pyc
+
+# Local researcher-provided Fusion archives and generated validation packages.
+# Do not publish real CAD geometry as repository test fixtures.
+local-validation/
