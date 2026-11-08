@@ -10,18 +10,10 @@
   <!-- Version A control panel. It runs in the second (reference) Fusion
        instance; that instance's canvas is the interactive reference viewport. -->
   <header class="bar">
-    <div class="brand"><strong>exCADmple</strong><span>Reference example</span></div>
-    <button id="import" class="quiet" type="button" title="Open a .excadmple or .json example">+ Import</button>
+    <div class="brand"><strong>exCADmple</strong><span>Design tutorial</span></div>
+    <button id="import" class="quiet" type="button" title="Open a .excadmple or .json tutorial">+ Import</button>
   </header>
-  <div class="examples">
-    <select id="exampleSwitch" aria-label="Open examples"></select>
-    <button id="closeExample" class="quiet" type="button" title="Close this example">Close</button>
-  </div>
-  <details id="brief" class="brief" hidden>
-    <summary>The designer's goal</summary>
-    <p id="briefGoal"></p>
-    <small id="briefMore"></small>
-  </details>
+  <h1 id="title" class="title">—</h1>
   <p id="source" class="source"></p>
 
   <div class="transport" role="group" aria-label="Playback">
@@ -43,13 +35,13 @@
     <label>Speed <input id="speed" type="range" min="0.5" max="2" step="0.25" value="1"> <output id="speedValue">1×</output></label>
     <div class="options">
       <label><input id="dim" type="checkbox" checked> Other bodies transparent</label>
-      <label><input id="captions" type="checkbox" checked> Captions</label>
-      <label><input id="narration" type="checkbox"> Synthetic narration</label>
+      <label><input id="captions" type="checkbox" checked> Transcript</label>
+      <label><input id="narration" type="checkbox"> Synthetic voice</label>
       <button id="fit" class="link" type="button">Fit view</button>
     </div>
     <div class="authoring">
-      <button id="demo" class="link" type="button">Open sample examples</button>
-      <button id="extractDraft" class="link" type="button" title="Authoring: export the open design's timeline as an example draft">Extract example draft…</button>
+      <button id="demo" class="link" type="button">Open sample tutorial</button>
+      <button id="extractDraft" class="link" type="button" title="Authoring: export the open design's timeline as a tutorial draft">Extract tutorial draft…</button>
     </div>
     <p id="status" class="status" role="status" aria-live="polite"></p>
   </footer>

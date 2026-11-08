@@ -45,9 +45,8 @@ class ExtractTests(unittest.TestCase):
         self.assertEqual(data["features"][1]["inputs"]["sketches"], [0])
         annotation = {
             "format": "excadmple-annotation", "version": 1, "id": "s", "title": "S",
-            "designer": "P1", "date": "2026-11-10", "brief": {"goal": "Test"},
             "steps": [{"id": "all", "title": "All", "features": [0, 1, 2],
-                       "recording": {"start_ms": 0, "end_ms": 5000}, "summary": "Everything."}]}
+                       "recording": {"start_ms": 0, "end_ms": 5000}}]}
         manifest = build_manifest(data, annotation, [])
         self.assertEqual(len(manifest["steps"][0]["animation"]["states"]), 3)
 

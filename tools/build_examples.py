@@ -10,6 +10,7 @@ authored by hand; they are NOT recorded from a real designer's session.
 """
 import json
 import math
+import re
 import sys
 from pathlib import Path
 
@@ -371,7 +372,7 @@ def phone_stand():
                  None, ["MoveFeature", "CombineFeature"], ["phone", "proxy", "fit", "clearance", "check"])))
     return {
         "format": "excadmple", "version": 1, "id": "phone-stand",
-        "title": "Phone Stand — Nine Design Decisions",
+        "title": "Phone Stand",
         "author": "Illustrative example (exCADmple team)",
         "description": "Synthetic nine-step example: geometry, ghost pointer and reasoning are authored, "
                        "not a recording of a real designer's session.",
@@ -487,7 +488,7 @@ def tablet_stand():
                  ["window", "lighten", "cut", "hole", "opening", "pocket"])))
     return {
         "format": "excadmple", "version": 1, "id": "tablet-stand",
-        "title": "Tablet Stand — Heavier Device, Different Trade-offs",
+        "title": "Tablet Stand",
         "author": "Illustrative example (exCADmple team)",
         "description": "Synthetic contrasting example: it answers the same design questions as the phone "
                        "stand, sometimes differently. Not a recording of a real session.",
@@ -495,54 +496,29 @@ def tablet_stand():
     }
 
 
-# What the illustrative reasoning texts themselves say about each choice.
-PHONE_CONTEXT = {
-    "base": ("goal_specific", "Depth sized for phones up to ~7 inch", []),
-    "support": ("goal_specific", "Angle chosen for reading at a desk", ["base"]),
-    "lip": ("goal_specific", "Height assumes a phone in a case", ["support"]),
-    "base_round": ("general", "Softening edges without losing contact area", ["base"]),
-    "cable": ("general", "Keep charging access whenever a lip is used", ["lip"]),
-    "ribs": ("general", "Stiffen a tilted panel locally instead of thickening it", ["support"]),
-    "pads": ("general", "Friction without enlarging the footprint", ["base"]),
-    "back_window": ("goal_specific", "Acceptable only because of the ribs", ["ribs"]),
-    "fit": ("general", "Check against a real device size before finalizing", ["support", "lip", "cable"]),
-}
-TABLET_CONTEXT = {
-    "base": ("goal_specific", "A 700 g tablet that is also drawn on", []),
-    "support": ("goal_specific", "Compromise between watching and sketching", ["base"]),
-    "lip": ("goal_specific", "Rugged cases; wide bezel keeps the screen clear", ["support"]),
-    "cork": ("goal_specific", "Works because the stand is heavy", ["base"]),
-    "solid_back": ("goal_specific", "Drawing pushes hard on the screen", ["support"]),
-}
+def tutorial_step(step):
+    """Keep only what a recorded tutorial has: title, tools used, what the
+    designer said (timed sentence by sentence), geometry and pointer."""
+    said = step["reasoning"]["text"]
+    sentences = [x for x in re.split(r"(?<=[.!?])\s+", said) if x]
+    span = step["duration_ms"] * 0.9
+    cues = [{"at_ms": int(i * span / len(sentences)), "label": text} for i, text in enumerate(sentences)]
+    tools = [t.strip() for t in re.split(r"→|/", step["operation"]["tool"]) if t.strip()]
+    return {"id": step["id"], "title": step["title"], "duration_ms": step["duration_ms"],
+            "tools": tools, "cues": cues, "geometry": step["geometry"], "animation": step["animation"],
+            "pointer": step["pointer"], "media": {}}
 
 
-def to_v2(example, brief, context):
-    """Upgrade an illustrative example to format version 2."""
-    example.update({
-        "version": 2, "designer": "Illustrative (exCADmple team)", "date": "2026-11-08",
-        "brief": brief,
-        "provenance": {"geometry": "authored", "reasoning": "illustrative", "source_file": ""},
-    })
-    example.pop("author", None)
-    for step in example["steps"]:
-        kind, note, deps = context[step["id"]]
-        step["scope"] = {"kind": kind, "note": note}
-        if deps:
-            step["depends_on"] = deps
-    return example
+def tutorial(example):
+    return {"format": "excadmple", "version": 2, "id": example["id"], "title": example["title"],
+            "description": "Illustrative example: geometry, pointer and words are authored, not recorded.",
+            "reference_offset_cm": example["reference_offset_cm"],
+            "steps": [tutorial_step(s) for s in example["steps"]]}
 
 
 def main():
-    phone = to_v2(phone_stand(), {
-        "goal": "A printable stand for reading and watching on a phone at a desk",
-        "users": "Office workers with 6–7 inch phones, often in a case",
-        "constraints": ["Stable when the screen is tapped", "Charging while on the stand", "Little material"],
-    }, PHONE_CONTEXT)
-    tablet = to_v2(tablet_stand(), {
-        "goal": "A stand for a 700 g tablet used for both video and sketching",
-        "users": "Students drawing on tablets",
-        "constraints": ["Stays put under hand pressure", "Fits rugged cases"],
-    }, TABLET_CONTEXT)
+    phone = tutorial(phone_stand())
+    tablet = tutorial(tablet_stand())
     for name, example in (("phone_stand.json", phone), ("tablet_stand.json", tablet)):
         path = ROOT / "examples" / name
         path.write_text(json.dumps(example, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")

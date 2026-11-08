@@ -1,33 +1,10 @@
 import unittest
 from pathlib import Path
 
-from core.library import ExampleLibrary, LibraryError
 from core.packages import open_package
 from core.pointer import sample, validate_pointer, PointerError
 
 ROOT = Path(__file__).resolve().parents[1]
-
-
-class LibraryTests(unittest.TestCase):
-    def test_multiple_examples_keep_their_own_step(self):
-        library = ExampleLibrary()
-        phone = library.add(open_package(ROOT / "examples" / "phone_stand.json"))
-        tablet = library.add(open_package(ROOT / "examples" / "tablet_stand.json"))
-        self.assertEqual(library.active_id, tablet)
-        library.remember_step(3)
-        library.activate(phone)
-        library.remember_step(7)
-        self.assertEqual(library.step_index(tablet), 3)
-        self.assertEqual(library.step_index(phone), 7)
-        self.assertEqual([e["active"] for e in library.listing()], [True, False])
-        library.add(open_package(ROOT / "examples" / "phone_stand.json"))   # reopen replaces
-        self.assertEqual(len(library), 2)
-        library.remove(phone)
-        self.assertEqual(library.active_id, tablet)
-        with self.assertRaises(LibraryError):
-            library.activate("nope")
-        library.close()
-        self.assertEqual(len(library), 0)
 
 
 class PointerTests(unittest.TestCase):
@@ -60,7 +37,6 @@ class PointerTests(unittest.TestCase):
             try:
                 meta = package.player_data()
                 self.assertTrue(all(s["pointer_available"] for s in meta["steps"]))
-                self.assertTrue(all(s["decision"] for s in meta["steps"]))
                 self.assertNotIn("pointer", meta["steps"][0])
             finally:
                 package.close()

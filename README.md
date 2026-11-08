@@ -2,144 +2,86 @@
 
 **Supporting Design Reasoning Through Shared CAD Models** · 分支 `fusion-him`
 
-> 本分支是**版本 A**：按 *History in Motion* 的做法，参考案例在**第二个 Fusion 实例**中、在设计师 `.f3d` 的副本上播放（参数动画，选中几何即可过滤历史）；用户在第一个 Fusion 窗口里继续建模。代码与 [`fusion`](https://github.com/Scaffolder666/exCADmpleFusion/tree/fusion)（版本 B：视口内 Overlay）完全相同，只有 `config.json` 中的 `"layout": "reference"` 不同；两个版本的比较见下文"两个界面版本"。功能改动在 `fusion` 上进行，再合并到本分支。
+> 本分支是**版本 A**：教程在第二个 Fusion 窗口里、在设计师 `.f3d` 的副本上播放（按 *History in Motion* 的做法）；用户在第一个 Fusion 窗口里做自己的设计。代码与 [`fusion`](https://github.com/Scaffolder666/exCADmpleFusion/tree/fusion)（版本 B）相同，只有 `config.json` 的 `"layout": "reference"` 和插件随 Fusion 启动不同。改动在 `fusion` 上进行，再合并到本分支。
 
-用户在自己的 Fusion 工作空间中探索其他设计师的设计过程与推理：通过交互式时间轴播放整个过程或重访单个步骤；每一步展示模型如何演变、原设计师如何执行 CAD 操作，并同步播放解释设计选择的语音与文字。用户可以完整跟随，也可以在同一工作空间里发展自己的设计时有选择地借鉴个别步骤——学习**怎么建模**，也学习**怎么设计**。
+在自己的 Fusion 里播放别的设计师录下来的设计教程：可以播放整个教程，也可以重播某一步、跳到下一步。每一步有模型怎么变化、用了哪些工具、鼠标轨迹，以及设计师当时说的话（think-aloud），可以听原声或用电子音朗读，同时显示文字。用户可以一边看，一边在同一个 Fusion 里做自己的设计。
 
 项目概况见 [`main`](https://github.com/Scaffolder666/exCADmpleFusion)；Blender 版本见 [`blender`](https://github.com/Scaffolder666/exCADmpleFusion/tree/blender)。
 
 ## 两个界面版本（用于比较）
 
-两个版本**功能相同**：相同的案例、推理内容和播放能力（整个过程／单步、速度、字幕、语音、决策、多案例、Reasoning Reuse 面板、案例提取）。区别只在**界面如何组织**，以及用户如何在参考案例和自己的建模之间切换。两个分支共用同一份代码，由 `config.json` 的 `layout` 选择。
+两个版本播放同样的教程，功能相同，只是教程放的位置不同。两个分支共用同一份代码，由 `config.json` 的 `layout` 选择。
 
-| | 版本 A：独立参考视口（本分支，`"layout": "reference"`） | 版本 B：视口内 Overlay（`fusion` 分支，`"layout": "overlay"`） |
+| | 版本 A：独立参考视口（`fusion-him`，`"layout": "reference"`） | 版本 B：视口内 Overlay（`fusion`，`"layout": "overlay"`） |
 |---|---|---|
-| 参考案例在哪里播放 | 按 *History in Motion* 的做法，在**第二个 Fusion 实例**中打开设计师 `.f3d` 的副本；那个窗口的原生画布就是交互式参考视口。用户在第一个 Fusion 窗口里照常建模 | 在用户自己的 **Fusion 画布**中，以只读 Custom Graphics 显示在用户模型旁边 |
-| 动画 | **直接在设计师的参数化模型上**：时间轴回滚到当前特征，把它的参数（距离、角度、半径、阵列间距……）从约 0 逐渐变到实际值，由 Fusion 实时重算；其他 Body 变透明，草图轮廓和边高亮；没有参数的特征淡入。下一帧在上一帧算完后才请求，帧率随模型复杂度自适应 | 播放案例包中记录的几何状态 |
-| 教程信息 | 参考窗口右侧的 HiM 控制面板：顶部播放／暂停／重播／前进／后退，中间是彩色胶囊的纵向历史（当前步骤展开显示 Why、决策、How、同步字幕），底部是速度 | 浮在画布上的紧凑面板（可收起为只剩步骤条），以及固定在画布左上角的 HUD 文字：步骤标题、Why、当前字幕 |
-| 按几何探索历史 | 在参考模型上**选中面、边或顶点** → 运行 HiM 的 Algorithm 1（创建该面的特征 + 前后比较找出修改它的特征）→ 只播放包含这些特征的步骤，从最新的开始；**Show more** 沿草图所在的面继续往前追 | 通过右侧 Reasoning Reuse 面板，作用于用户自己的模型 |
-| 后退 | 倒放当前步骤（HiM 的做法） | 跳到上一步 |
-| 两个窗口之间 | 第一个启动的 Fusion 是用户的工作窗口，第二个（工具栏 **exCADmple Reference window** 启动）自动成为参考窗口；二者通过本机 socket 通信：在工作窗口的 Reuse 面板点 **Watch in example**，参考窗口跳到该步骤播放；在参考窗口点 **Compare with my design**，工作窗口显示对照 | — |
+| 教程在哪里播放 | 按 *History in Motion* 的做法，在**第二个 Fusion 窗口**里打开设计师 `.f3d` 的副本播放；用户在第一个 Fusion 窗口里建模 | 在用户自己的 **Fusion 画布**里，参考模型显示在用户模型旁边 |
+| 模型怎么动 | 在设计师的参数化模型上：时间轴回滚到当前特征，参数从约 0 逐渐变到实际值，其他 Body 半透明 | 播放记录下来的模型状态 |
+| 控制面板 | 参考窗口右侧：播放／暂停／重播／前进／后退，纵向步骤列表，当前步骤展开显示工具和设计师说的话 | 浮在画布上的紧凑面板（可收起为只剩步骤条），画布左上角显示步骤标题和当前这句话 |
+| 额外 | 在参考模型上选中面、边或顶点，只播放做出它的那些步骤（HiM 的过滤方法）；后退时倒放当前步骤 | — |
 
-说明：
+说明：版本 A 需要教程包里带设计师的 `.f3d`；附带的两个手工示例没有，所以在版本 A 里只显示记录的模型，也不能按几何选择。Fusion 原生画布不允许叠加可交互的 HTML，所以版本 B 的"Overlay"是浮动面板加画布内的 Custom Graphics（模型、指针、文字）。
 
-- 版本 A 需要案例包里带有设计师的 `.f3d`（`tools/build_package.py --source`）。没有源模型的案例（例如附带的两个手工示例）在参考窗口中只能显示记录的几何，面板会标明，按几何选择也不可用。
-- 参考窗口打开的是 `.f3d` 的**副本**，从不保存；修改过的参数在每步之后恢复。
-- Fusion 原生画布不允许插件叠加可交互的 HTML，所以版本 B 用"浮动 Palette + 画布内 Custom Graphics（参考模型、Ghost Pointer、HUD 文字）"尽量接近 Overlay；HUD 只能显示，不能点击。
+## 播放
 
-研究上可以比较：独立视口是否更利于专注理解参考设计；同一视口是否更利于把参考信息与自己的设计联系起来；两种界面如何影响用户在看教程和继续建模之间的切换。
+- **整个教程**连续播放，或**只播这一步**；每一步可以重播；上一步／下一步；0.5×–2× 速度。
+- **声音**：播放这一步对应的那段原声（录音或录屏的声音）；没有录音时可以用电子音朗读文字稿。
+- **文字**：这一步设计师说的每一句话，当前这句高亮；点某一句可以跳到那里。
+- **模型和指针**：参考模型随步骤变化，鼠标轨迹显示为橙色的 Ghost Pointer（不会移动真实鼠标）。
+- **关联几何**（可选）：可以把某一步关联到自己模型里的 Body／Face，切换到这一步时高亮它，并把其他 Body 暂时调暗。
 
-## 界面（两个版本共有的部分）
+## 教程文件
 
-插件打开教程窗口和右侧 Reasoning Reuse 面板，用户的模型留在 Fusion 画布中。下面以版本 B 为例；版本 A 的教程内容相同，只是排在参考视口右侧的纵向历史中。
+教程就是录下来的东西：步骤、每一步说了什么、用了哪些工具、模型怎么变、鼠标轨迹。规范见 [`docs/EXAMPLE_FORMAT.md`](docs/EXAMPLE_FORMAT.md)。
 
-### 教程
+1. **录制**：设计师在 Fusion 里建模，边做边说，同时录屏。
+2. **提取**：在 Fusion 里打开设计师的 `.f3d`，点教程面板底部的 **Extract tutorial draft…**，得到时间轴上每个特征之后的模型。
+3. **转写**：把录音转成带时间的文字稿（`.srt` 等）。
+4. **切分步骤**：用标注工具（见 [`authoring-plan`](https://github.com/Scaffolder666/exCADmpleFusion/tree/authoring-plan)）标出每一步的标题、时间段和对应的特征。
+5. **合成**：`python tools/build_package.py draft.extract.json annotation.json transcript.srt --media session.mp4 --source Design.f3d -o tutorial.excadmple`
 
-- **案例**：标题、**原设计师的设计目标**（为谁、在什么约束下）、来源说明；可同时打开多个案例并切换，各自记住进度。
-- **当前步骤**：
-  1. **Why this decision?**：设计师边建模边说出的推理摘要，标明来源（*Think-aloud while modeling* 或 *Illustrative*）；下面是与录音同步的文字稿（可开合成朗读）。
-  2. **The decision**（设计师说到时）：问题、考虑过的因素、各选项及取舍、最终选择；这个选择是**通用做法**还是**只适合原设计师的目标**；它建立在哪些步骤之上（设计师说出的，与从 CAD 时间轴推导出的，分开显示）。
-  3. **How it was modeled**：工具与参数（取自原 `.f3d`）、录屏片段。
-- **底部步骤条**：横向步骤编号、前后跳转、播放／暂停、步骤内进度；**Whole process** 连续播放整个过程，**This step only** 只重访当前步骤；0.5×–2× 速度。
-- **画布中**：参考模型随步骤演变（放在用户模型旁边，只读、不可选中）；有记录时显示 Ghost Pointer（橙色虚拟指针，从不移动真实鼠标）。
-
-### 右侧：Reasoning Reuse
-
-- **From my model**：在**自己的**模型上选中面、边或顶点 → 只读地找出生成它的特征（*History in Motion* 的过滤算法，分析后恢复时间轴标记）→ 列出所有打开的案例中相关的决策，说明为什么推荐（特征类型、名称中的作者标签、参数类型），并把**用户自己的参数值**与案例的选项并列（只作参考，不判断对错）。**Watch in example** 跳到案例中对应的步骤播放。
-- **Across examples**：同一个设计问题在不同案例中的回答并排比较。
-- **History in Motion · inspect**（默认关闭）：论文中的原位参数动画，勾选后才会临时修改用户模型的参数，结束后恢复。
-
-## 案例从哪里来
-
-每个案例来自一次**真实的设计过程**：设计师在 Fusion 中建模，**边建模边说**（think-aloud），同时录屏、录音。完整规范见 [`docs/EXAMPLE_FORMAT.md`](docs/EXAMPLE_FORMAT.md)；标注工具的设计见 [`authoring-plan`](https://github.com/Scaffolder666/exCADmpleFusion/tree/authoring-plan) 分支。
-
-| 步骤 | 工具 | 产出 |
-|---|---|---|
-| 1. 录制 | Fusion + 任意录屏软件 | 设计师的 `.f3d`、录屏、录音 |
-| 2. 提取 | 教程窗口底部的 **Extract example draft…**：逐项回滚时间轴，记录每个特征之后的几何、参数，以及它使用的草图和特征 | `*.extract.json` |
-| 3. 转写 | 任意转写工具 | 带时间戳的文字稿（`.srt` / `.vtt` / `.json`） |
-| 4. 标注 | **案例标注工具**：边看录像边切分步骤、勾选对应特征、整理推理摘要；可选填写决策、适用范围、依赖 | `annotation.json` |
-| 5. 合成 | `python tools/build_package.py draft.extract.json annotation.json transcript.srt --media session.m4a -o example.excadmple` | `.excadmple` 案例包 |
-
-原则：推理只来自设计师说过的话，工具不生成推理；设计目标必填；自动提取的数据与研究者的标注分开保存，重新提取不会覆盖标注。
-
-案例包是 ZIP：`manifest.json`（format `excadmple`，version 2）加上录音／录屏。每一步包含：几何状态序列（`snapshots`：这一步之前、以及每个特征之后的模型）、操作与参数、对应的 `.f3d` 特征、文字稿片段、录制时间切片（`media.offset_ms`）、推理摘要，以及可选的决策、适用范围和依赖。version 1 的旧包仍可读取。
-
-### 附带示例
-
-`examples/phone_stand.json`（九步）与 `examples/tablet_stand.json`（对照案例）是**人工编写的示例**（`provenance: authored / illustrative`），用于演示交互：几何、Ghost Pointer 与推理都不是真实录制，界面中标为 *Illustrative*。由 `python tools/build_examples.py` 生成。
+附带的 `examples/phone_stand.json`（九步）和 `examples/tablet_stand.json` 是手工编写的示例，不是真实录制。由 `python tools/build_examples.py` 生成。
 
 ## 安装
 
-1. 下载本分支 ZIP 并解压，保持整个 `exCADmpleFusion` 文件夹完整（含 `exCADmpleFusion.py` 与 `exCADmpleFusion.manifest`）。
+1. 下载本分支 ZIP 并解压，保持整个 `exCADmpleFusion` 文件夹完整。
 2. Fusion 中打开或新建一个 **Design**。
-3. **Utilities → Scripts and Add-Ins → Add-Ins**，点 **+**，选中整个文件夹并运行。
-4. 出现教程窗口（版本 B 浮在画布上；版本 A 为带参考视口的独立窗口）和右侧 Reasoning Reuse；示例自动打开。**Import** 打开 `.excadmple` / `.json` 案例包。关闭面板后可从工具栏的 **exCADmple Player** / **Reasoning Reuse** 按钮重新打开。
+3. **Utilities → Scripts and Add-Ins → Add-Ins**，点 **+**，选中文件夹并运行。
+4. 版本 B：教程面板浮在画布上，示例自动打开；**Import** 打开别的教程。版本 A：工具栏点 **exCADmple Reference window** 打开第二个 Fusion（需要在 Add-Ins 里勾选 **Run on Startup**，该分支默认已开启）；如果没有自动启动，手动再开一个 Fusion 运行插件即可，它会自动连接。
 
-**版本 A（`fusion-him`）额外步骤**：在 Add-Ins 对话框中勾选本插件的 **Run on Startup**（该分支的 manifest 默认已开启），以便第二个 Fusion 启动时自动运行。打开 Fusion 后，用工具栏 **exCADmple Reference window** 启动第二个 Fusion（macOS 用 `open -n`，Windows 启动同一安装目录下的 Fusion）；如果没有自动启动，手动再开一个 Fusion 并运行插件即可，它会自动连接并成为参考窗口。
+## 不会改动用户的模型
 
-环境：Fusion Desktop（Windows／macOS），Fusion Python API；界面为本地 HTML/CSS/JS，无服务器、无外部前端库。
-
-## 用户模型的安全边界
-
-- 参考模型与 Ghost Pointer 是临时 **Custom Graphics**：不是可编辑的 Solid，不进入用户的时间轴；保存前清除、保存后恢复。播放案例**不会**调用 `timeline.play()` 或移动用户的时间轴标记。
-- Reuse 面板的特征分析会临时回滚时间轴，结束（包括出错）后恢复原标记位置。
-- **Linked CAD geometry / Focus Mode**（可选）：把案例步骤关联到当前文档中的 Body／Face／Occurrence，切换步骤时高亮并把无关 Body 暂时调暗到 24%。修改透明度前记录原值，并在切换步骤、替换案例、停止插件、切换文档以及**保存前**恢复；保存前恢复失败会取消保存。崩溃或其他插件同时修改外观时，可能需要手动恢复，请在模型副本上测试。
-- **HiM inspect** 默认关闭；开启后修改的参数表达式在每个特征播放后、选中新几何时、保存前、切换文档和停止插件时恢复。Fusion 可能记录撤销步骤。
+- 版本 B 的参考模型、指针和文字都是临时 Custom Graphics，不进入用户的时间轴；保存前清除、保存后恢复。
+- 版本 A 在第二个窗口里打开的是 `.f3d` 的副本，从不保存；改过的参数在每一步之后恢复。
+- 关联几何时调暗的透明度会在切换步骤、保存前、切换文档和停止插件时恢复；保存前恢复失败会取消保存。
 
 ## 测试
 
 ```bash
-python -m unittest discover -s tests -v     # 纯 Python 与模拟 Fusion 接口
-node --check ui/player.js && node --check ui/him.js
+python -m unittest discover -s tests -v
+node --check ui/player.js && node --check ui/reference.js
 ```
 
-**桌面端冒烟测试**（尚未完成，需要真实 Fusion）：
-
-1. 启动插件，切换 Phone Stand 与 Tablet Stand，确认各自进度保留；播放第 4、5、8 步，确认几何逐步变化、Ghost Pointer 移动。
-2. 自己建一个带 Fillet 的零件，选中圆角面，确认右侧出现相关决策与参数对照；点 **Watch in example** 跳转播放。
-3. 确认未开启 inspect 时，自己的参数与时间轴不变；保存、关闭、重开，确认没有残留图形。
-4. 用一个真实 `.f3d` 运行 **Extract example draft…**，检查装配体坐标与耗时；用 `tools/build_package.py` 合成后导入播放。
+尚未在 Fusion 桌面端实测。需要确认：两个版本的面板显示、画布左上角文字（版本 B）、两个 Fusion 能否同时运行并连接（版本 A）、用真实 `.f3d` 提取并播放。
 
 ## 代码结构
 
 ```text
-exCADmpleFusion.py        入口：两个面板、HTML 桥接、选择事件、保存安全、动画计时
-core/packages.py          案例包校验与安全读取（v1 / v2）
-core/animation.py         几何动画（snapshots、extrude、transition、pattern 等）
-core/renderer.py          画布中的临时参考几何与 Ghost Pointer
-core/pointer.py           Ghost Pointer 路径校验与采样
-core/library.py           多案例与各自进度
-core/reuse.py             决策匹配、参数对照、跨案例比较
-core/reuse_fusion.py      Reuse 面板与 Fusion 的连接
-core/him_filter.py        HiM 特征过滤算法（纯 Python）
-core/him_motion.py        HiM 动画模型（20 种特征、计时、播放状态）
-core/him_fusion.py        HiM 的 Fusion 适配与 inspect 动画
-core/extract_fusion.py    从 .f3d 提取案例草稿
-core/authoring.py         草稿 + 标注 + 文字稿 → 案例包
-core/transcript.py        读取 .srt / .vtt / .json 文字稿
-core/spatial.py, focus.py, geometry_links.py   关联几何与 Focus Mode
+exCADmpleFusion.py        入口：教程面板、播放、保存安全；版本 A 的两个窗口
 config.json               选择界面版本（overlay = B，reference = A）
-ui/index.html|player.*    版本 B 的教程面板
-ui/reference.*            版本 A 参考窗口里的 HiM 控制面板
-core/link.py              版本 A 两个 Fusion 实例之间的本机连接
-core/him_reference.py     版本 A 参考窗口：打开设计师 .f3d 副本，HiM 参数动画与按几何过滤
-core/reference_plan.py    步骤与设计师时间轴特征的对应（纯 Python）
-ui/him.*                  右侧 Reasoning Reuse
-tools/build_package.py    合成案例包
-tools/build_examples.py   生成附带示例
-docs/EXAMPLE_FORMAT.md    案例文件规范
+core/packages.py          教程包读取与校验
+core/animation.py         模型状态动画
+core/renderer.py          画布中的参考模型、Ghost Pointer、文字
+core/pointer.py           鼠标轨迹
+core/link.py              版本 A：两个 Fusion 之间的本机连接
+core/him_reference.py     版本 A：在设计师模型副本上播放（HiM 参数动画、按几何过滤）
+core/reference_plan.py    版本 A：步骤与时间轴特征的对应
+core/him_filter.py, him_motion.py, him_fusion.py   History in Motion 的过滤算法与参数动画
+core/extract_fusion.py    从 .f3d 提取教程草稿
+core/authoring.py, transcript.py   合成教程包、读取文字稿
+core/spatial.py, focus.py, geometry_links.py      关联几何
+ui/index.html, player.*   版本 B 的面板
+ui/reference.*            版本 A 的控制面板
+tools/                    build_package.py（合成）、build_examples.py（示例）
 ```
 
-## 已知限制
-
-- 尚未在 Fusion 桌面端完成人工测试；提取尚未用真实 `.f3d` 验证。
-- 录屏、录音使用本地文件 URL 播放，编解码兼容性取决于 Fusion WebView。
-- 匹配用户特征与案例决策采用透明的规则（特征类型、作者标签、参数类型），不做语义理解。
-- 参考几何为网格；`snapshots` 只显示录制到的状态，不在状态之间编造过渡。
-- 主要面向单个活动文档。
-
-## 参考
-
-- *History in Motion*，Veuskens et al., SCF 2023（[DOI](https://doi.org/10.1145/3623263.3623358)）：按几何过滤特征与建模历史动画的思路来源。
-- Fusion API：[Palettes](https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/Palettes_UM.htm) · [Custom Graphics](https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/CustomGraphics_UM.htm) · [Document events](https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/core_Application_documentSaving.htm)
+*History in Motion*：Veuskens et al., SCF 2023（[DOI](https://doi.org/10.1145/3623263.3623358)）。

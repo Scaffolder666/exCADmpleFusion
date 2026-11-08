@@ -1,5 +1,5 @@
 /* Version A — History in Motion control panel (reference instance).
-   Same examples, reasoning and playback abilities as version B; different
+   Same tutorials and playback abilities as version B; different
    organisation: the example plays on the designer's own Fusion model in a
    second Fusion instance, whose canvas is the reference viewport.
 
@@ -39,7 +39,7 @@ const steps = () => (S.example ? S.example.steps : []);
 const step = () => steps()[S.index];
 const duration = () => (step() && step().duration_ms) || 8000;
 function kindOf(item) {
-  const tool = ((item.operation && item.operation.tool) || "").toLowerCase();
+  const tool = (item.tools || []).join(" ").toLowerCase();
   if (/cut|boolean|hole|window/.test(tool)) return "cut";
   if (/fillet|chamfer|round|bevel/.test(tool)) return "fillet";
   if (/pattern/.test(tool)) return "pattern";
@@ -192,27 +192,27 @@ function showAll() {
 }
 
 /* ---------- rendering ---------- */
-function reasoningSource(item) {
-  const src = String((item.reasoning || {}).source || "").toLowerCase();
-  if (src === "think_aloud") return "Think-aloud while modeling";
-  if (src === "mockup" || src === "demo" || src === "illustrative") return "Illustrative only";
-  return src ? src : "Source not stated";
-}
-function stepName(id) {
-  const i = steps().findIndex((s) => s.id === id);
-  return i < 0 ? id : (i + 1) + " " + steps()[i].title;
-}
 function card(item) {
   const box = el("div", { class: "card" });
-  if (item.goal) box.appendChild(el("div", {}, item.goal));
-  const why = el("h4");
-  why.append(el("span", {}, "Why this decision?"), el("span", { class: "src" }, reasoningSource(item)));
-  box.appendChild(why);
-  box.appendChild(el("blockquote", {}, (item.reasoning && item.reasoning.text) || "No reasoning recorded for this step."));
+  if ((item.tools || []).length) {
+    const tools = el("div", { class: "params" });
+    for (const name of item.tools) tools.appendChild(el("span", {}, name));
+    box.appendChild(tools);
+  }
+  box.appendChild(el("h4", {}, "What the designer said"));
   const cues = item.cues || [];
   let active = -1;
   cues.forEach((c, i) => { if (c.at_ms <= S.elapsed) active = i; });
-  if ($("captions").checked && active >= 0) box.appendChild(el("p", { class: "cue" }, "“" + cues[active].label + "”"));
+  if ($("captions").checked) {
+    const list = el("ol", { class: "said" });
+    cues.forEach((c, i) => {
+      const li = el("li", { class: i === active ? "current" : (i < active ? "before" : "") }, c.label);
+      li.addEventListener("click", (e) => { e.stopPropagation(); S.elapsed = c.at_ms; S.fresh = false; syncAudio(true); render(); });
+      list.appendChild(li);
+    });
+    if (!cues.length) list.appendChild(el("li", {}, "Nothing was said in this step."));
+    box.appendChild(list);
+  }
   if (active !== S.cue) {
     S.cue = active;
     if (S.playing && active >= 0 && $("narration").checked && !(item.media && item.media.audio) && "speechSynthesis" in window) {
@@ -221,45 +221,6 @@ function card(item) {
       u.rate = Math.min(2, Math.max(0.5, S.speed));
       speechSynthesis.speak(u);
     }
-  }
-  const d = item.decision;
-  if (d) {
-    box.appendChild(el("h4", {}, "The decision"));
-    box.appendChild(el("p", { class: "question" }, d.question));
-    const ol = el("ol");
-    for (const o of d.options || []) {
-      const li = el("li", { class: o.chosen ? "chosen" : "" }, (o.chosen ? "✓ " : "") + o.label + (o.value ? " · " + o.value : ""));
-      if (o.note) li.appendChild(el("small", {}, o.note));
-      ol.appendChild(li);
-    }
-    box.appendChild(ol);
-  }
-  if (item.scope) {
-    const p = el("p", { class: "scope" });
-    p.append(el("b", {}, item.scope.kind === "general" ? "General practice" : "Specific to this designer's goal"),
-             document.createTextNode(item.scope.note ? " — " + item.scope.note : ""));
-    box.appendChild(p);
-  }
-  const said = item.depends_on || [];
-  const derived = (item.depends_on_derived || []).filter((x) => !said.includes(x));
-  if (said.length || derived.length) {
-    const parts = [];
-    if (said.length) parts.push("Builds on " + said.map(stepName).join(", ") + " (designer)");
-    if (derived.length) parts.push("uses geometry from " + derived.map(stepName).join(", ") + " (CAD timeline)");
-    box.appendChild(el("p", { class: "deps" }, parts.join("; ") + "."));
-  }
-  const op = item.operation || {};
-  box.appendChild(el("h4", {}, "How it was modeled"));
-  box.appendChild(el("div", {}, [op.tool, op.instruction].filter(Boolean).join(" — ")));
-  if ((op.parameters || []).length) {
-    const params = el("div", { class: "params" });
-    for (const p of op.parameters) params.appendChild(el("span", {}, p.name + " " + p.value));
-    box.appendChild(params);
-  }
-  if (d) {
-    const compare = el("button", { class: "compare", type: "button" }, "Compare with my design & other examples →");
-    compare.addEventListener("click", (e) => { e.stopPropagation(); bridge("compare_decision"); });
-    box.appendChild(compare);
   }
   return box;
 }
@@ -277,7 +238,7 @@ function render() {
   mode.classList.toggle("filtered", S.filtered);
   $("modeText").textContent = S.filtered
     ? S.clip.length + " step(s) made or changed the selected geometry · newest first"
-    : "Whole design process · " + steps().length + " steps";
+    : "Whole tutorial · " + steps().length + " steps";
   $("showMore").hidden = !S.filtered || !S.canMore;
   $("showAll").hidden = !S.filtered;
   const rail = $("rail");
@@ -288,7 +249,7 @@ function render() {
     const button = el("button", { class: "capsule", type: "button" });
     const name = el("span", { class: "name" }, (i + 1) + "  " + item.title);
     if (S.filtered) name.appendChild(el("span", { class: "tag" }, S.tags[i] || "changed here"));
-    button.append(name, el("span", { class: "meta" }, (item.operation && item.operation.tool) || ""));
+    button.append(name, el("span", { class: "meta" }, (item.tools || []).join(" · ")));
     button.addEventListener("click", () => selectStep(i));
     li.appendChild(button);
     const bar = el("div", { class: "progress" });
@@ -312,14 +273,7 @@ function loadExample(data) {
   S.elapsed = 0;
   S.direction = 1;
   setClip(false);
-  const brief = data.brief;
-  $("brief").hidden = !brief;
-  if (brief) {
-    $("briefGoal").textContent = brief.goal;
-    $("briefMore").textContent = [brief.users && "For " + brief.users,
-      (brief.constraints || []).length && brief.constraints.join(" · "),
-      data.designer && "Designer: " + data.designer].filter(Boolean).join(" — ");
-  }
+  $("title").textContent = data.title;
   render();
 }
 window.fusionJavaScriptHandler = {
@@ -335,15 +289,6 @@ window.fusionJavaScriptHandler = {
           ? "Playing on the designer's model " + payload.file + (payload.unmatched && payload.unmatched.length
               ? " · not found in the model: " + payload.unmatched.join(", ") : "")
           : "No source model in this example: showing its recorded geometry. HiM selection needs the designer's .f3d.";
-      } else if (action === "library") {
-        const select = $("exampleSwitch");
-        select.replaceChildren();
-        for (const item of payload.examples || []) {
-          const o = el("option", { value: item.id }, item.title);
-          if (item.active) o.selected = true;
-          select.appendChild(o);
-        }
-        $("closeExample").disabled = (payload.examples || []).length <= 1;
       } else if (action === "step") {
         const i = payload.index;
         if (typeof i === "number" && i >= 0 && i < steps().length) {
@@ -370,8 +315,6 @@ $("speed").addEventListener("input", () => { S.speed = Number($("speed").value);
 $("dim").addEventListener("change", () => bridge("him_dim", { enabled: $("dim").checked }));
 $("captions").addEventListener("change", render);
 $("narration").addEventListener("change", () => { if ("speechSynthesis" in window) speechSynthesis.cancel(); });
-$("exampleSwitch").addEventListener("change", (e) => { pause(); bridge("switch_example", { id: e.target.value }); });
-$("closeExample").addEventListener("click", () => { pause(); bridge("close_example", { id: $("exampleSwitch").value }); });
 $("import").addEventListener("click", () => { pause(); bridge("open_package"); });
 $("demo").addEventListener("click", () => { pause(); bridge("load_demo"); });
 $("extractDraft").addEventListener("click", () => { pause(); bridge("extract_draft"); });
