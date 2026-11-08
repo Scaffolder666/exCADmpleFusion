@@ -5,9 +5,9 @@ from the example package and plays the tutorial on that real parametric
 model, the way HiM does:
 
 * rolling the timeline to the feature being shown and growing its
-  parameters from ~0 to their value (distance, angle, radius, pattern
-  spacing...), with other bodies made transparent and the profile / edges
-  highlighted; parameter-less features fade in;
+  genuine numeric parameters from ~0 to their value (distance, angle,
+  radius, pattern spacing...), using a ghost of the previous geometry
+  when reliable; features with no suitable parameter appear instantly;
 * selecting a face, edge or vertex runs HiM's Algorithm 1 on the model and
   filters the tutorial to the steps containing those features; "show more"
   follows the supporting sketches' faces.
@@ -126,8 +126,9 @@ class ReferenceSession:
     # --- how each step is shown -------------------------------------------------------
     def animation_plan(self):
         """Per step: [{feature, kind, mode, parameters}] where mode is
-        "parameter" (native parameter animation), "visual" (fade/scale
-        fallback) or "timeline" (shown by rolling the timeline only)."""
+        "parameter" (native Fusion parameter interpolation), "instant"
+        (actual feature visible immediately), or "timeline" (unsupported
+        feature kinds, shown without fabricated animation)."""
         plan = []
         design = self.model.design if self.model else None
         for features in self.mapped:
