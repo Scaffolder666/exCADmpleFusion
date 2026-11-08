@@ -19,6 +19,7 @@ const S = { plan: [], shown: null,
   example: null, geometry: [], index: 0, clip: [], pos: 0, elapsed: 0, playing: false,
   direction: 1, continuous: true, speed: 1, filtered: false, changed: [], more: [], picked: null,
   last: 0, cue: -1, fresh: true, tags: {}, inFlight: false,
+  frameClock: null, nextFrameAt: 0, epoch: 0, manualFrame: false,
 };
 
 function bridge(action, payload = {}) {
@@ -76,6 +77,10 @@ function setClip(keepIndex) {
 function setIndex(i) {
   if (i === S.index && S.example) return;
   S.index = i;
+  S.epoch++;              // stale native frame replies cannot move a new step
+  S.frameClock = null;
+  S.nextFrameAt = 0;
+  S.manualFrame = false;
   S.cue = -1;
   stopSpeech();
   S.fresh = true;     // selected but not played yet: show the step's result
@@ -102,6 +107,12 @@ function syncAudio(force) {
   audio.playbackRate = S.speed;
   if (audio.paused) audio.play().catch(() => {});
 }
+function resetNativeClock() {
+  const travelled = S.direction > 0 ? S.elapsed : duration() - S.elapsed;
+  S.frameClock = new HiMTiming.HiMFrameClock(duration(), travelled);
+  S.nextFrameAt = 0;
+  S.epoch++;
+}
 function play(continuous = true) {
   if (!S.clip.length) return;
   if (S.direction > 0 && S.elapsed >= duration() && S.pos >= S.clip.length - 1) { replay(); return; }
@@ -109,12 +120,17 @@ function play(continuous = true) {
   S.cue = -1;
   S.fresh = false;
   S.continuous = continuous;
+  resetNativeClock();
   S.last = performance.now();
   syncAudio(true);
   render();
 }
 function pause() {
   S.playing = false;
+  S.epoch++;
+  // If pause interrupted an in-flight native frame, restore the requested
+  // progress after its reply so the canvas does not run ahead of the rail.
+  S.manualFrame = !S.fresh;
   stopAudio();
   stopSpeech();
   render();
@@ -158,29 +174,30 @@ function selectStep(i) {
   S.direction = 1;
   play(false);
 }
+function finishNativeStep() {
+  if (S.direction > 0 && S.continuous && S.pos < S.clip.length - 1) {
+    S.pos++;
+    setIndex(S.clip[S.pos]);
+    S.elapsed = 0;
+    S.direction = 1;
+    resetNativeClock();
+    S.fresh = false;
+    S.last = performance.now();
+    syncAudio(true);
+  } else {
+    S.playing = false;
+    S.direction = 1;
+    stopAudio();
+    stopSpeech();
+  }
+}
 function tick(now) {
   if (S.playing) {
-    const dt = Math.max(0, now - S.last) * S.speed;
+    const dt = Math.max(0, now - S.last);
     S.last = now;
-    S.elapsed += dt * S.direction;
-    if (S.direction > 0 && S.elapsed >= duration()) {
-      if (S.continuous && S.pos < S.clip.length - 1) {
-        S.pos++;
-        setIndex(S.clip[S.pos]);
-        S.elapsed = 0;
-        syncAudio(true);
-      } else {
-        S.elapsed = duration();
-        S.playing = false;
-        stopAudio();
-      }
-    } else if (S.direction < 0 && S.elapsed <= 0) {
-      S.elapsed = 0;
-      S.playing = false;
-      S.direction = 1;
-    } else {
-      syncAudio(false);
-    }
+    // Wall-time is accounted for while Fusion recomputes a frame, but
+    // progress is advanced ONLY when that frame has finished rendering.
+    if (S.frameClock) S.frameClock.tick(dt, S.speed);
     render();
   }
   requestAnimationFrame(tick);
@@ -244,7 +261,7 @@ function card(item) {
     const list = el("ol", { class: "said" });
     cues.forEach((c, i) => {
       const li = el("li", { class: i === active ? "current" : (i < active ? "before" : "") }, c.label);
-      li.addEventListener("click", (e) => { e.stopPropagation(); S.elapsed = c.at_ms; S.fresh = false; syncAudio(true); render(); });
+      li.addEventListener("click", (e) => { e.stopPropagation(); S.elapsed = c.at_ms; S.fresh = false; S.epoch++; S.manualFrame = true; resetNativeClock(); syncAudio(true); render(); });
       list.appendChild(li);
     });
     if (!cues.length) list.appendChild(el("li", {}, "Nothing was said in this step."));
@@ -259,9 +276,31 @@ function card(item) {
 function render() {
   if (!S.example) return;
   const progress = Math.max(0, Math.min(1, S.elapsed / duration()));
-  if (!S.fresh && !S.inFlight) {
+  const due = (S.playing && performance.now() >= S.nextFrameAt) || S.manualFrame;
+  if (!S.fresh && !S.inFlight && due) {
+    const index = S.index, epoch = S.epoch;
+    const sentProgress = progress, direction = S.direction;
+    const sentAt = performance.now();
     S.inFlight = true;
-    bridge("ref_frame", { index: S.index, progress, elapsed: S.elapsed }).finally(() => { S.inFlight = false; });
+    S.manualFrame = false;
+    bridge("ref_frame", { index, progress: sentProgress, elapsed: S.elapsed }).finally(() => {
+      const renderedAt = performance.now();
+      S.inFlight = false;
+      if (epoch === S.epoch && index === S.index && S.playing && S.frameClock) {
+        const atEnd = direction > 0 ? sentProgress >= 1 : sentProgress <= 0;
+        if (atEnd) {
+          // The final native frame is acknowledged before step transitions.
+          finishNativeStep();
+        } else {
+          const travelled = S.frameClock.completed(renderedAt - sentAt, S.speed);
+          S.elapsed = direction > 0 ? travelled : duration() - travelled;
+          S.nextFrameAt = sentAt + S.frameClock.interval(S.speed);
+        }
+      }
+      // Paused/manual scrubbing and rapid step changes need a fresh frame,
+      // but never dispatch overlapping expensive Fusion recomputations.
+      if (S.manualFrame || S.playing) render();
+    });
   }
   $("play").innerHTML = S.playing ? "&#10074;&#10074;" : "&#9654;";
   $("play").setAttribute("aria-label", S.playing ? "Pause" : "Play");
@@ -301,6 +340,8 @@ function loadExample(data) {
   pause();
   S.example = data;
   S.filtered = false; S.changed = []; S.more = []; S.picked = null;
+  S.epoch++;
+  S.frameClock = null;
   S.index = -1;
   S.elapsed = 0;
   S.direction = 1;
