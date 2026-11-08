@@ -12,6 +12,31 @@
 
 项目概况见 [`main`](https://github.com/Scaffolder666/exCADmpleFusion)；Blender 版本见 [`blender`](https://github.com/Scaffolder666/exCADmpleFusion/tree/blender)。
 
+## HiM 式逐 Feature 重建：背景灰线框 + 当前几何实体
+
+`fusion-him` 现在增加了 **Ghost Wireframe** 显示模式，仅用于独立的
+Fusion 参考副本（不改动自己的 CAD 工作区）：
+
+- 每次进入一个 Feature 之前，临时回滚真实 Fusion Timeline，读取已建模
+  Body 的 **BRep Edge 几何曲线**，画成静态、淡灰色线框。
+- 当前 Feature 仍由 **真实 Fusion ModelParameter** 驱动，随进度条逐帧
+  递增；Fusion 重新计算的 **Feature-owned Faces** 以清晰青绿色实体高亮，
+  而不是简单放大整个 Body 或切换到预存 Mesh 帧。
+- 为避免当前实体被已有模型表面遮挡，参考副本中原生的带阴影 Body 表面
+  临时设为几乎不可见；切换、结束或中断时恢复原透明度和参数。
+- 对无法分离真实修改面的 Fillet / Combine / Cut 等操作，明确回退到
+  原有半透明视觉效果，不错误地把整个 Body 解释为当前 Feature。
+- 复杂模型中如果线框超过 2,000 条边或 200 个 Body，会完整回退而不是
+  显示缺失的几何。单个 Feature 的线框仅捕获一次，不每帧重新生成。
+- 面板会标记 **native reconstruction · ghost wireframe** 或
+  **translucent context (exact isolation unavailable)**，方便实机验收。
+
+**验证状态**：新增 Python 单元测试和 GitHub Actions 配置。真实
+`tests/fixtures/real_fusion/fusion.f3d` 在 Autodesk Fusion Desktop
+中的图形重算、临时透明度恢复和高亮尚待实测，不应视为已获 HiM
+像素级或功能级完全一致性认证。详见
+[HiM 机制与显示验收标准](docs/HIM_NATIVE_PARITY.md)。
+
 ## 默认 Example 加载：一个 JSON + 一个 Fusion .f3d
 
 **新流程：** 把 `fusion_example.json` 和 `fusion.f3d` 放到同一个文件夹。启动本分支的 exCADmple 后，直接点击 **+ Import** 并选择 JSON。插件会自动打开与 JSON 配对的 `.f3d` 副本、读取真实的 Feature Timeline、按 Feature 类型显示彩色历史卡片、播放原生 HiM 动画。**不需要先制作 `.excadmple` ZIP**。
