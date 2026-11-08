@@ -18,7 +18,7 @@ function speakCue(index) {
   if (!text) return;
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = "en-US";
-  utterance.rate = 0.95;
+  utterance.rate = Math.max(0.5, Math.min(2, playbackSpeed()));
   window.speechSynthesis.speak(utterance);
 }
 
@@ -45,6 +45,7 @@ function secs(ms) {
 }
 function step() { return state.example?.steps[state.index] || null; }
 function duration() { return step()?.duration_ms || 8000; }
+function playbackSpeed() { return Number($("playbackSpeed").value) || 1; }
 function stopMedia() {
   video.pause(); audio.pause();
   video.removeAttribute("src"); audio.removeAttribute("src");
@@ -61,6 +62,7 @@ function playMedia() {
     if (element.getAttribute("src")) {
       try {
         element.currentTime = state.elapsed / 1000;
+        element.playbackRate = playbackSpeed();
         const promise = element.play();
         if (promise && promise.catch) promise.catch(() => setStatus("Media playback unavailable; the timeline still works.", true));
       } catch (_) { /* Metadata may not have loaded yet. */ }
@@ -198,12 +200,12 @@ function renderDetails() {
   else $("previewImage").removeAttribute("src");
   $("noVideo").hidden = !!media.video || !!preview;
   $("mediaEvidence").textContent = [
-    current.animation_available && "3D Extrude animation",
+    current.animation_available && "3D operation animation",
     media.video && "Video", media.audio && "Audio"
   ].filter(Boolean).join(" + ") || "Step metadata";
   if (!media.video && !preview) {
     $("noVideo").querySelector("strong").textContent = current.animation_available ?
-      "3D Extrude animation in Fusion" : hasStepGeometry ?
+      "3D operation animation in Fusion" : hasStepGeometry ?
       "3D reference in Fusion" : "No recorded visuals for this step";
     $("noVideo").querySelector("span").textContent = current.animation_available ?
       "Press Play or scrub to animate the reference geometry." : hasStepGeometry ?
@@ -262,7 +264,7 @@ function selectStep(index, keepPlaying = false) {
 }
 function seek(ms) {
   state.elapsed = Math.max(0, Math.min(duration(), ms));
-  state.startedAt = performance.now() - state.elapsed;
+  state.startedAt = performance.now() - state.elapsed / playbackSpeed();
   for (const element of [video, audio]) {
     if (element.getAttribute("src")) {
       try { element.currentTime = state.elapsed / 1000; } catch (_) {}
@@ -275,7 +277,7 @@ function play() {
   if (!step()) return;
   if (state.elapsed >= duration()) seek(0);
   state.playing = true;
-  state.startedAt = performance.now() - state.elapsed;
+  state.startedAt = performance.now() - state.elapsed / playbackSpeed();
   $("play").innerHTML = "Ⅱ <span>Pause</span>";
   $("play").setAttribute("aria-label", "Pause");
   playMedia();
@@ -290,7 +292,7 @@ function tick() {
   // monotonic wall clock. Geometry only changes between steps, not at 60 fps.
   const master = mediaMaster();
   const mediaReady = master && master.readyState >= 2 && !master.paused;
-  state.elapsed = mediaReady ? master.currentTime * 1000 : performance.now() - state.startedAt;
+  state.elapsed = mediaReady ? master.currentTime * 1000 : (performance.now() - state.startedAt) * playbackSpeed();
   state.elapsed = Math.max(0, state.elapsed);
   if (state.elapsed >= duration() - 30) {
     if ($("playbackScope").value === "all" && state.index < state.example.steps.length - 1) selectStep(state.index + 1, true);
@@ -358,6 +360,14 @@ $("demo").addEventListener("click", () => { pause(); bridge("load_demo"); });
 $("play").addEventListener("click", () => state.playing ? pause() : play());
 $("replay").addEventListener("click", () => { if (step()) { pause(); seek(0); play(); } });
 $("playbackScope").addEventListener("change", () => pause());
+$("playbackSpeed").addEventListener("change", () => {
+  state.startedAt = performance.now() - state.elapsed / playbackSpeed();
+  for (const element of [video, audio]) element.playbackRate = playbackSpeed();
+  if (state.playing && $("narrationEnabled").checked) {
+    stopNarration();
+    if (state.cueIndex >= 0) speakCue(state.cueIndex);
+  }
+});
 $("captionsEnabled").addEventListener("change", () => {
   $("cueText").hidden = !$("captionsEnabled").checked;
 });
