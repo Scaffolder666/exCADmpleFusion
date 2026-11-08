@@ -198,6 +198,7 @@ function renderTime() {
   const total = duration();
   $("clock").textContent = secs(state.elapsed) + " / " + secs(total);
   $("scrub").value = String(Math.floor(1000 * state.elapsed / total));
+  $("scrub").setAttribute("aria-valuetext", secs(state.elapsed) + " of " + secs(total));
   const cues = step()?.cues || [];
   let active = -1;
   cues.forEach((cue, i) => { if (cue.at_ms <= state.elapsed) active = i; });
@@ -248,7 +249,11 @@ function seek(ms) {
 }
 function play() {
   if (!step()) return;
-  if (state.elapsed >= duration()) seek(0);
+  if (state.elapsed >= duration()) {
+    if ($("playbackScope").value === "all" && state.index === state.example.steps.length - 1) {
+      selectStep(0);
+    } else seek(0);
+  }
   state.playing = true;
   state.startedAt = performance.now() - state.elapsed;
   $("play").innerHTML = "Ⅱ <span>Pause</span>";
@@ -264,6 +269,7 @@ function tick() {
   const master = mediaMaster();
   const mediaReady = master && master.readyState >= 2 && !master.paused;
   state.elapsed = mediaReady ? master.currentTime * 1000 : performance.now() - state.startedAt;
+  state.elapsed = Math.max(0, state.elapsed);
   if (state.elapsed >= duration() - 30) {
     if ($("playbackScope").value === "all" && state.index < state.example.steps.length - 1) selectStep(state.index + 1, true);
     else {
@@ -330,6 +336,16 @@ $("demo").addEventListener("click", () => { pause(); bridge("load_demo"); });
 $("play").addEventListener("click", () => state.playing ? pause() : play());
 $("replay").addEventListener("click", () => { if (step()) { pause(); seek(0); play(); } });
 $("playbackScope").addEventListener("change", () => pause());
+// Keyboard navigation is scoped to the history list, so Fusion shortcuts remain untouched.
+$("stepRail").addEventListener("keydown", (event) => {
+  if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
+  if (!state.example) return;
+  event.preventDefault();
+  const target = event.key === "Home" ? 0 : event.key === "End" ? state.example.steps.length - 1 :
+    Math.max(0, Math.min(state.example.steps.length - 1, state.index + (event.key === "ArrowDown" ? 1 : -1)));
+  selectStep(target);
+  $("stepRail").children[target]?.focus();
+});
 $("prev").addEventListener("click", () => selectStep(state.index - 1));
 $("next").addEventListener("click", () => selectStep(state.index + 1));
 $("scrub").addEventListener("input", (e) => seek(duration() * Number(e.target.value) / 1000));
