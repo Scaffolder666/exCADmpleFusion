@@ -228,15 +228,7 @@ function card(item) {
     if (!cues.length) list.appendChild(el("li", {}, "Nothing was said in this step."));
     box.appendChild(list);
   }
-  if (active !== S.cue) {
-    S.cue = active;
-    if (false) {
-      speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(cues[active].label);
-      u.rate = Math.min(2, Math.max(0.5, S.speed));
-      speechSynthesis.speak(u);
-    }
-  }
+  S.cue = active;
   return box;
 }
 function render() {
