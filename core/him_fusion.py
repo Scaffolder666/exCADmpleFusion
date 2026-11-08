@@ -359,30 +359,39 @@ class FusionTimelineModel:
 
 
 def _model_parameters(design, feature_entity, object_type):
-    """ModelParameters to animate: the registry paths first, then every
-    length/angle ModelParameter created by the feature."""
+    """ModelParameters to animate: only the registry paths of this feature
+    kind (core.him_motion.FEATURES). Paths that do not lead to a
+    ModelParameter for this extent type are skipped, as are parameters whose
+    value is zero (nothing to grow). There is deliberately no generic
+    "every length parameter" fallback: it could animate a parameter that
+    does not drive this operation."""
     params, seen = [], set()
-
-    def add(param):
-        param = adsk.fusion.ModelParameter.cast(param)
-        if not param:
-            return
-        name = param.name
-        if name not in seen:
-            seen.add(name)
-            params.append(param)
-
     for path in parameter_paths(object_type):
         for value in _get_path(feature_entity, path):
-            add(value)
-    if not params:
-        for param in all_feature_parameters(design, feature_entity):
-            unit = (param.unit or "").lower()
-            if unit and unit not in ("", "no units"):
-                add(param)
-            if len(params) >= 3:
-                break
+            param = adsk.fusion.ModelParameter.cast(value)
+            if not param:
+                continue
+            try:
+                name, number = param.name, float(param.value)
+            except Exception:
+                continue
+            if name in seen or number == 0 or number != number:
+                continue
+            seen.add(name)
+            params.append(param)
     return params
+
+
+def _feature_failed(entity):
+    """True when Fusion reports the feature in an error state."""
+    states = getattr(adsk.fusion, "FeatureHealthStates", None)
+    error = getattr(states, "ErrorFeatureHealthState", None) if states else None
+    if error is None:
+        return False
+    try:
+        return entity.healthState == error
+    except Exception:
+        return False
 
 
 def all_feature_parameters(design, feature_entity):
@@ -406,8 +415,11 @@ def all_feature_parameters(design, feature_entity):
 class HiMController:
     """Owns one filtering result and its animation."""
 
-    def __init__(self, app, ui, post, log=None):
+    def __init__(self, app, ui, post, log=None, design_provider=None):
         self.app, self.ui, self.post = app, ui, post
+        # Version A passes the reference copy's design here, so animation
+        # never touches whatever document happens to be active.
+        self._design_provider = design_provider
         self.log = log or (lambda *_: None)
         self.result = None
         self.clip = []
@@ -431,6 +443,8 @@ class HiMController:
 
     # --- helpers --------------------------------------------------------------
     def design(self):
+        if self._design_provider is not None:
+            return self._design_provider()
         return adsk.fusion.Design.cast(self.app.activeProduct)
 
     def _document_key(self):
@@ -550,31 +564,40 @@ class HiMController:
         feature = self.clip[position]
         entity = self._feature_entity(feature)
         mode = animation_mode(feature.kind)
-        prepared = {"feature": feature, "mode": mode, "params": [], "bodies": []}
+        prepared = {"feature": feature, "mode": mode, "params": [], "bodies": [],
+                    "entity": entity, "fallback": ""}
         design = self.design()
-        if entity is not None and mode == PARAMETRIC:
+        if entity is None:
+            prepared["mode"] = NONE
+            prepared["fallback"] = "feature not found in the model"
+        elif mode == PARAMETRIC:
             for param in _model_parameters(design, entity, feature.kind):
                 key = param.name
                 self.journal.capture(key, param)
                 prepared["params"].append((key, param, param.value))
             if not prepared["params"]:
                 prepared["mode"] = FADE
+                prepared["fallback"] = "no animatable parameter for this extent type"
         try:
             prepared["bodies"] = [b for b in _items(getattr(entity, "bodies", None)) if b]
         except Exception:
             prepared["bodies"] = []
-        self._apply_focus(prepared["bodies"])
+        self._apply_focus(prepared["bodies"], hide_result=prepared["mode"] == FADE)
         self._draw_overlay(prepared, 0.0)
         self.active_position = position
         self.active = prepared
 
-    def _apply_focus(self, bodies):
+    def _apply_focus(self, bodies, hide_result=False):
+        """Dim the other bodies. For the visual fallback the resulting bodies
+        are dimmed too, so the fading overlay reads as the result appearing."""
         if not self.dim_others:
             return
         design = self.design()
         protected = {_token(b) for b in bodies if _token(b)}
         if not protected:
             return
+        if hide_result:
+            protected = {"\0none"}
         from .spatial import _model_bodies
         try:
             self.focus.apply(self._document_key(), _model_bodies(design), protected, dim_opacity=0.2)
@@ -636,14 +659,47 @@ class HiMController:
             self._prepare(frame.position)
         prepared = self.active
         if prepared["mode"] == PARAMETRIC:
+            failure = None
             for key, param, target in prepared["params"]:
                 try:
                     param.value = interpolate(target, frame.progress)
                 except Exception as error:
-                    self.log("HiM: cannot set {}: {}".format(key, error))
-        elif prepared["mode"] == FADE:
+                    failure = "Fusion rejected {} = {:.4g}: {}".format(
+                        key, interpolate(target, frame.progress), error)
+                    break
+            if failure is None and _feature_failed(prepared["entity"]):
+                failure = "the feature failed to compute at this parameter value"
+            if failure is not None:
+                self._fallback(prepared, failure)
+        if prepared["mode"] == FADE:
             self._draw_overlay(prepared, frame.progress)
         self._refresh()
+
+    def _fallback(self, prepared, reason):
+        """A parameter frame failed: put the real values back and show this
+        feature with the visual effect instead (never a half-computed model)."""
+        self.log("HiM: {}: {}; using the visual effect".format(prepared["feature"].name, reason))
+        try:
+            self.journal.restore([key for key, _, _ in prepared["params"]])
+        except Exception as error:
+            self.log("HiM restore: " + str(error))
+        prepared["mode"] = FADE
+        prepared["fallback"] = reason
+        try:
+            self.focus.restore()
+        except Exception:
+            pass
+        self._apply_focus(prepared["bodies"], hide_result=True)
+
+    def status(self):
+        """What the active feature is doing: parameter animation or visual."""
+        prepared = self.active
+        if not prepared:
+            return None
+        return {"feature": prepared["feature"].name, "kind": prepared["feature"].kind,
+                "mode": {PARAMETRIC: "parameter", FADE: "visual"}.get(prepared["mode"], "timeline"),
+                "parameters": [key for key, _, _ in prepared["params"]] if prepared["mode"] == PARAMETRIC else [],
+                "fallback": prepared.get("fallback", "")}
 
     def _finish_feature(self):
         """Restore parameters, opacity and overlay of the active feature."""

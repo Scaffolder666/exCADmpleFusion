@@ -18,7 +18,7 @@ class ReferencePlanTests(unittest.TestCase):
         mapped, missing = map_steps(STEPS, F)
         self.assertEqual([[f.name for f in m] for m in mapped],
                          [["Sketch1", "Extrude1", "Fillet1"], ["Sketch2", "Extrude2"], []])
-        self.assertEqual(missing, ["step ?: Gone (index 9)"])
+        self.assertEqual(missing, ["step ?: Gone (index 9) - not in the model"])
 
     def test_duplicate_feature_names_require_exact_index(self):
         features = [FeatureInfo(1, "Extrude", "ExtrudeFeature"),
@@ -28,7 +28,37 @@ class ReferencePlanTests(unittest.TestCase):
         mapped, missing = map_steps(steps, features)
         self.assertEqual(mapped[0], [])
         self.assertEqual([f.index for f in mapped[1]], [2])
-        self.assertEqual(missing, ["step ambiguous: Extrude (index 9)"])
+        self.assertEqual(missing, ["step ambiguous: Extrude (index 9) - 2 timeline items share this name"])
+
+    def test_shifted_index_accepts_a_unique_name_of_the_same_kind(self):
+        steps = [{"id": "s", "source_features": [{"name": "Fillet1", "index": 7, "kind": "FilletFeature"}]}]
+        mapped, missing = map_steps(steps, F)
+        self.assertEqual([f.index for f in mapped[0]], [2])
+        self.assertEqual(missing, [])
+
+    def test_kind_mismatch_is_reported_not_animated(self):
+        steps = [{"id": "a", "source_features": [{"name": "Extrude1", "index": 1, "kind": "RevolveFeature"}]},
+                 {"id": "b", "source_features": [{"name": "Fillet1", "index": 5, "kind": "ChamferFeature"}]}]
+        mapped, missing = map_steps(steps, F)
+        self.assertEqual(mapped, [[], []])
+        self.assertEqual(len(missing), 2)
+        self.assertIn("ExtrudeFeature", missing[0])
+        self.assertIn("ChamferFeature", missing[1])
+
+    def test_a_timeline_item_belongs_to_one_step_only(self):
+        steps = [{"id": "a", "source_features": [{"name": "Extrude1", "index": 1}]},
+                 {"id": "b", "source_features": [{"name": "Extrude1", "index": 1}]}]
+        mapped, missing = map_steps(steps, F)
+        self.assertEqual([[f.index for f in m] for m in mapped], [[1], []])
+        self.assertEqual(missing, ["step b: Extrude1 (index 1) - already used by step a"])
+
+    def test_duplicate_names_with_exact_indices_map_to_their_own_items(self):
+        features = [FeatureInfo(1, "Extrude", "ExtrudeFeature"), FeatureInfo(2, "Extrude", "ExtrudeFeature")]
+        steps = [{"id": "a", "source_features": [{"name": "Extrude", "index": 1}]},
+                 {"id": "b", "source_features": [{"name": "Extrude", "index": 2}]}]
+        mapped, missing = map_steps(steps, features)
+        self.assertEqual([[f.index for f in m] for m in mapped], [[1], [2]])
+        self.assertEqual(missing, [])
 
     def test_frame_target_splits_time_between_animated_features(self):
         mapped, _ = map_steps(STEPS, F)

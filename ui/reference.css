@@ -81,3 +81,8 @@ body { display:flex; flex-direction:column; }
 .said li { padding:5px 8px; border-radius:6px; background:white; color:var(--muted); cursor:pointer; }
 .said li.before { color:var(--ink); }
 .said li.current { color:var(--ink); background:#e6effc; border-left:3px solid var(--blue); }
+.anim { margin:4px 0 6px; padding:0; list-style:none; font-size:11px; color:var(--muted); }
+.anim li.parameter::before { content:"● "; color:#2563eb; }
+.anim li.visual::before { content:"◐ "; color:#b45309; }
+.anim li.timeline::before { content:"○ "; }
+.anim li.live { color:inherit; font-weight:600; }

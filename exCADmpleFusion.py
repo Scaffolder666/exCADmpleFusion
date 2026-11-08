@@ -63,6 +63,7 @@ _step_index = 0
 _link = None
 _link_event = None
 _session = None
+_last_shown = None           # version A: what the last frame showed (parameter / visual)
 _filtering = False
 _saving_document = False
 _handlers = []
@@ -96,7 +97,7 @@ def _post_links():
 def _post_source():
     if ROLE == REFERENCE and _session:
         _post("source", {"live": _session.live, "file": _session.source_name,
-                         "unmatched": _session.unmatched})
+                         "unmatched": _session.unmatched, "plan": _session.plan})
 
 
 # --- the tutorial ----------------------------------------------------------------------------
@@ -227,7 +228,7 @@ class ActiveGeometrySelection(adsk.core.ActiveSelectionEventHandler):
 
 class PaletteHandler(adsk.core.HTMLEventHandler):
     def notify(self, args):
-        global _step_index, _filtering
+        global _step_index, _filtering, _last_shown
         try:
             command = args.action
             body = json.loads(args.data or "{}")
@@ -273,7 +274,10 @@ class PaletteHandler(adsk.core.HTMLEventHandler):
                     value = max(0.0, min(1.0, float(value)))
                     step = _package.step(index)
                     if _session and _session.live:
-                        _session.frame(index, value)
+                        shown = _session.frame(index, value)
+                        if shown and shown != _last_shown:
+                            _last_shown = shown
+                            _post("animation", shown)
                     elif step.get("animation"):
                         _renderer.render_animation(step, [0, 0, 0], value)
                     if step.get("pointer"):

@@ -23,13 +23,19 @@ NONE = "none"
 
 # Feature kind -> attribute paths of the ModelParameters to animate from ~0 to
 # their actual value. Paths are evaluated by the Fusion adapter; a missing
-# path is skipped. "*" means "every edge/extent set". Features without
+# path, or one that is not a ModelParameter (e.g. an extrude "to object"
+# extent has no distance), is skipped. Only these paths are animated: a
+# parametric feature with none of them falls back to the visual effect. "*" means "every edge/extent set". Features without
 # parameters use a custom fade/scale effect, like the paper does for import,
 # export, split, mirror and combine.
 FEATURES = {
     "ExtrudeFeature":            (PARAMETRIC, ("extentOne.distance", "extentTwo.distance")),
     "RevolveFeature":            (PARAMETRIC, ("extentDefinition.angle", "extentDefinition.angleOne", "extentDefinition.angleTwo")),
-    "FilletFeature":             (PARAMETRIC, ("edgeSets*.radius",)),
+    # Constant, variable (start/end) and chord-length fillet edge sets.
+    "FilletFeature":             (PARAMETRIC, ("edgeSets*.radius", "edgeSets*.startRadius",
+                                               "edgeSets*.endRadius", "edgeSets*.chordLength")),
+    # Equal distance, two distances and distance-and-angle chamfers; the
+    # angle itself is not grown from zero.
     "ChamferFeature":            (PARAMETRIC, ("edgeSets*.distance", "edgeSets*.distanceOne", "edgeSets*.distanceTwo")),
     "HoleFeature":               (PARAMETRIC, ("extentDefinition.distance", "holeDiameter")),
     "ShellFeature":              (PARAMETRIC, ("insideThickness", "outsideThickness")),

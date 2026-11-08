@@ -1,0 +1,8 @@
+{
+  "autodeskProduct": "Fusion360",
+  "type": "script",
+  "author": "exCADmple",
+  "description": {"": "Builds the HiM validation model and its .excadmple tutorial"},
+  "supportedOS": "windows|mac",
+  "editEnabled": true
+}

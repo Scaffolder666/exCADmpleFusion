@@ -15,7 +15,7 @@
 "use strict";
 const $ = (id) => document.getElementById(id);
 const audio = $("audio");
-const S = {
+const S = { plan: [], shown: null,
   example: null, geometry: [], index: 0, clip: [], pos: 0, elapsed: 0, playing: false,
   direction: 1, continuous: true, speed: 1, filtered: false, changed: [], more: [], picked: null,
   last: 0, cue: -1, fresh: true, tags: {}, inFlight: false,
@@ -199,6 +199,25 @@ function card(item) {
     for (const name of item.tools) tools.appendChild(el("span", {}, name));
     box.appendChild(tools);
   }
+  const plan = S.plan[S.index] || [];
+  if (plan.length) {
+    // How the designer's model shows this step: native parameter animation,
+    // a visual fallback, or the timeline state only.
+    const line = el("ul", { class: "anim" });
+    for (const p of plan) {
+      const live = S.shown && S.shown.step === S.index && S.shown.feature === p.feature ? S.shown : null;
+      let text = p.feature + " · ";
+      if (live && live.fallback) text += "visual fallback (" + live.fallback + ")";
+      else if (p.mode === "parameter") text += "parameter animation: " + p.parameters.join(", ");
+      else if (p.mode === "visual") text += "visual fade (no parameter to animate)";
+      else text += "timeline state";
+      line.appendChild(el("li", { class: p.mode + (live ? " live" : "") }, text));
+    }
+    box.appendChild(line);
+  }
+  box.appendChild(el("p", { class: "anim" }, item.pointer_available
+    ? "Pointer: recorded selections only; drag paths were not recorded."
+    : "No pointer interactions were recorded for this step."));
   box.appendChild(el("h4", {}, "What the designer said"));
   const cues = item.cues || [];
   let active = -1;
@@ -282,9 +301,11 @@ window.fusionJavaScriptHandler = {
       const payload = JSON.parse(raw || "{}");
       if (action === "example") loadExample(payload);
       else if (action === "filter") applyFilter(payload);
+      else if (action === "animation") { S.shown = payload; render(); }
       else if (action === "source") {
         const line = $("source");
         line.classList.toggle("recorded", !payload.live);
+        S.plan = payload.live ? (payload.plan || []) : [];
         line.textContent = payload.live
           ? "Playing on the designer's model " + payload.file + (payload.unmatched && payload.unmatched.length
               ? " · not found in the model: " + payload.unmatched.join(", ") : "")

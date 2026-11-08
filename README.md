@@ -69,8 +69,42 @@
 ## 不会改动用户的模型
 
 - 版本 B 的参考模型、指针和文字都是临时 Custom Graphics，不进入用户的时间轴；保存前清除、保存后恢复。
-- 版本 A 在第二个窗口里打开的是 `.f3d` 的副本，从不保存；改过的参数在每一步之后恢复。
+- 版本 A 在第二个窗口里打开的是 `.f3d` 的副本，从不保存；动画只作用于这个副本（不看当前活动文档是谁），副本不是活动文档时不做任何修改。临时改过的参数在步骤结束、切换步骤、停止、关闭、保存前以及某一帧出错时写回原表达式；暂停时保持在中间状态。
 - 关联几何时调暗的透明度会在切换步骤、保存前、切换文档和停止插件时恢复；保存前恢复失败会取消保存。
+
+## 版本 A：HiM 原生动画的状态
+
+**参数驱动**（临时改 ModelParameter，由 Fusion 重算；只用下表的参数路径，没有“任意长度参数”的兜底；参数不存在（例如 Extrude 的 To Object 范围）或为 0 时改用视觉效果）：
+
+| Feature | 动画的参数 |
+|---|---|
+| Extrude | `extentOne.distance`、`extentTwo.distance` |
+| Revolve | `extentDefinition.angle`／`angleOne`／`angleTwo` |
+| Fillet | 恒定半径 `radius`；变半径 `startRadius`／`endRadius`；弦长 `chordLength` |
+| Chamfer | `distance`、`distanceOne`、`distanceTwo`（角度不动画） |
+| Hole | `extentDefinition.distance`、`holeDiameter` |
+| Circular／Rectangular Pattern | `totalAngle`；`distanceOne`／`distanceTwo` |
+| Shell、Sweep、Offset Faces、Thicken、Draft、Thread、Coil | 见 `core/him_motion.py` 的 `FEATURES` |
+
+**视觉回退**（高亮的结果 Body 从小到大、从透明到不透明出现，其他 Body 和结果本身临时调暗）：Mirror、Combine、Split Body、Split Face、Loft、Move，以及 Base/Copy-Paste/Import 等；参数动画中 Fusion 拒绝某个值或特征报错时，这一步也改用视觉效果并在面板标明原因。Sketch 和构造平面只按时间轴状态显示。其他 Feature 只滚动时间轴显示结果。
+
+**步骤与时间轴的对应**：按记录的时间轴 index + 名称（+ 类型）匹配；index 变了时只接受唯一的同名同类型特征；重名、类型不符、一个特征被两步占用都报告为 “not found in the model”，不会动画别的操作。
+
+**指针**：录制器只记录工具启动和离散的选择位置，没有 Manipulator 拖拽路径；面板在每一步写明“只有记录的选择”或“没有记录指针”，不会补造鼠标轨迹。
+
+| | 已实现 | 单元测试（模拟 `adsk`） | Fusion Desktop 实测 |
+|---|---|---|---|
+| 步骤 ↔ 时间轴映射（重名、类型、占用、index 偏移） | ✓ | ✓ | 未测 |
+| 参数从约 0 增长到原值、最后一帧等于原值 | ✓ | ✓ | 未测 |
+| 结束／切换步骤／停止／关闭／出错时恢复参数、透明度、叠加图形 | ✓ | ✓ | 未测 |
+| 时间轴回滚与恢复 | ✓ | ✓ | 未测 |
+| 视觉回退及清理；参数被拒绝时回退 | ✓ | ✓ | 未测 |
+| 只修改参考副本 | ✓ | ✓ | 未测 |
+| HiM 几何过滤 | ✓ | ✓ | 未测 |
+| Fusion 是否真的按参数重算、各 Feature 的 API 路径是否正确、帧率 | — | 无法用单元测试证明 | 未测 |
+| 两个 Fusion 同时运行并连接 | ✓ | 连接协议 ✓ | 未测 |
+
+**最终验收待 Fusion Desktop 实测。** 验收模型和步骤：`tools/fusion_demo`（在 Fusion 里运行，生成 Sketch → Extrude → Fillet → Sketch → Extrude → 构造平面 → Mirror 的真实 `.f3d` 和教程包），按 [`docs/FUSION_DESKTOP_TEST.md`](docs/FUSION_DESKTOP_TEST.md) 逐项检查。该脚本本身也尚未在 Fusion 里运行过。
 
 ## 测试
 
@@ -79,7 +113,7 @@ python -m unittest discover -s tests -v
 node --check ui/player.js && node --check ui/reference.js
 ```
 
-尚未在 Fusion 桌面端实测。需要确认：两个版本的面板显示、画布左上角文字（版本 B）、两个 Fusion 能否同时运行并连接（版本 A）、用真实 `.f3d` 提取并播放。
+尚未在 Fusion 桌面端实测。单元测试通过不等于 Fusion API 已验证；版本 A 的验收步骤见 [`docs/FUSION_DESKTOP_TEST.md`](docs/FUSION_DESKTOP_TEST.md)。
 
 ## 代码结构
 
@@ -102,6 +136,7 @@ ui/reference.*            版本 A 的控制面板
 core/session_log.py, session_recorder.py   制作：录制时记录工具、特征时间、选中位置
 core/ai_segment.py        制作：把录制切成步骤（Claude 提议 + 规则兜底 + 检查）
 ui/author.html            制作：在浏览器里对着视频检查、调整步骤
+tools/fusion_demo/        Fusion 脚本：生成版本 A 的验收模型和教程包（tools/demo_tutorial.py）
 tools/                    author.py（切分步骤）、transcribe.py（本地转写）、build_package.py（合成）、build_examples.py（示例）
 ```
 
