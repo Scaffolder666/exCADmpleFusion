@@ -149,6 +149,11 @@ def param(entities, token):
 
 
 class ParameterDiscoveryTests(unittest.TestCase):
+    def test_reference_uses_him_transparency_by_default(self):
+        design, _, _ = build()
+        session = ReferenceSession(FakeApp(design), None)
+        self.assertTrue(session.him.dim_others)
+
     def test_registry_paths_only(self):
         design, entities, _ = build()
         self.assertEqual([p.name for p in _model_parameters(design, entities["ex1"], "ExtrudeFeature")], ["d1"])
