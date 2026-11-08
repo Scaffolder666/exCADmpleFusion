@@ -1,0 +1,8 @@
+{
+  "autodeskProduct": "Fusion360",
+  "type": "script",
+  "author": "exCADmple",
+  "description": {"": "Builds a multi-step HiM native validation tutorial from the currently open .f3d with simulated (clearly labeled) reasoning"},
+  "supportedOS": "windows|mac",
+  "editEnabled": true
+}
