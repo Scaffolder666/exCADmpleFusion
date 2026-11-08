@@ -70,10 +70,12 @@ function renderRail() {
     label.className = "label";
     label.textContent = item.title;
     labels.appendChild(label);
-    if (item.goal) {
+    if (item.operation?.tool || item.goal) {
       const sub = document.createElement("span");
       sub.className = "step-goal";
-      sub.textContent = item.goal;
+      const values = (item.operation?.parameters || []).slice(0, 2)
+        .map((p) => p.name + ": " + p.value).join(" · ");
+      sub.textContent = [item.operation?.tool, values].filter(Boolean).join(" · ") || item.goal;
       labels.appendChild(sub);
     }
     const indicator = document.createElement("span");
@@ -85,11 +87,11 @@ function renderRail() {
   });
   const active = rail.children[state.index];
   if (active) {
-    // Scroll only the horizontal rail, never the lesson or whole palette.
-    const left = active.offsetLeft - rail.offsetLeft;
-    if (left < rail.scrollLeft) rail.scrollLeft = left;
-    else if (left + active.offsetWidth > rail.scrollLeft + rail.clientWidth)
-      rail.scrollLeft = left + active.offsetWidth - rail.clientWidth;
+    // Keep the active history card visible without scrolling the details pane.
+    const top = active.offsetTop - rail.offsetTop;
+    if (top < rail.scrollTop) rail.scrollTop = top;
+    else if (top + active.offsetHeight > rail.scrollTop + rail.clientHeight)
+      rail.scrollTop = top + active.offsetHeight - rail.clientHeight;
   }
 }
 function classifyReasoning(current) {
@@ -263,7 +265,7 @@ function tick() {
   const mediaReady = master && master.readyState >= 2 && !master.paused;
   state.elapsed = mediaReady ? master.currentTime * 1000 : performance.now() - state.startedAt;
   if (state.elapsed >= duration() - 30) {
-    if (state.index < state.example.steps.length - 1) selectStep(state.index + 1, true);
+    if ($("playbackScope").value === "all" && state.index < state.example.steps.length - 1) selectStep(state.index + 1, true);
     else {
       state.elapsed = duration();
       renderTime();
@@ -326,6 +328,8 @@ $("removeGeometry").addEventListener("click", () => bridge("unlink_step"));
 $("import").addEventListener("click", () => { pause(); bridge("open_package"); });
 $("demo").addEventListener("click", () => { pause(); bridge("load_demo"); });
 $("play").addEventListener("click", () => state.playing ? pause() : play());
+$("replay").addEventListener("click", () => { if (step()) { pause(); seek(0); play(); } });
+$("playbackScope").addEventListener("change", () => pause());
 $("prev").addEventListener("click", () => selectStep(state.index - 1));
 $("next").addEventListener("click", () => selectStep(state.index + 1));
 $("scrub").addEventListener("input", (e) => seek(duration() * Number(e.target.value) / 1000));
