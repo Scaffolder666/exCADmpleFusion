@@ -19,7 +19,7 @@ implementation identity with the authors' undisclosed source code.
 | Start at approximately zero but not invalid zero | `core/him_motion.interpolate` (2% initial value) | Unit-tested |
 | Pre-feature ghost wireframe, only active Feature opaque | `ReferenceSession` captures genuine BRep edges before the Feature; `core/him_wireframe.py` budgets exact curves; `HiMController._start_ghost_context` draws gray edge graphics and suppresses source Body shading while exact affected faces are drawn opaque. When isolation is not trustworthy, it explicitly falls back to translucent shading | New stub regression tests; Fusion Desktop required |
 | Highlight relevant input profile/edge | `FusionTimelineModel.input_geometries` and custom graphics curves | Stub-tested; Fusion required |
-| Feature without animation-friendly numeric parameter uses fade/scale | `HiMController._render`, `_fallback`, `_draw_overlay` | Stub-tested; Fusion required |
+| Feature without animation-friendly numeric parameter appears instantly in exCADmple reference mode (legacy HiM inspect retains fade/scale) | `HiMController.instant_nonparametric`, `_draw_overlay` | Stub tests added; Fusion required |
 | Selecting face/edge/vertex filters to relevant historical features | `him_filter`, `ReferenceSession.filter` | Unit-tested algorithm, Fusion integration required |
 | Play result in separate viewport preserving original model | Separate reference Fusion instance; unsaved document copy | Integration testing required |
 | Restore original expressions on stop/step change/error | `RestoreJournal`, `ReferenceSession.stop`, `HiMController._finish_feature` | Unit-tested; Fusion required |
@@ -58,6 +58,40 @@ than displaying an incomplete ghost.
 This wireframe presentation is an **exCADmple design choice** built atop
 HiM-style native parametric animation; it should not be described as a
 pixel-perfect recreation of the original HiM user interface.
+
+## exCADmple presentation lifecycle — full → isolate → full
+
+This is an intentional presentation change requested for reasoning reuse;
+it is NOT a claim that the original HiM prototype made the same choice.
+
+1. **Before interaction:** loading a JSON+`.f3d` example or selecting a
+   step shows the final **fully shaded** native source model in the
+   reference Fusion window. No parameter is changed, and no ghost
+   wireframe or feature overlay is present.
+2. **During playback:** the first native frame rolls to the selected
+   real Feature. Other geometry becomes a pale, pre-feature BRep wireframe
+   when accurate edge data and feature-owned face isolation are possible.
+   A numeric feature changes its genuine Fusion `ModelParameter.value`
+   with the current progress and recalculates the geometry. The side
+   panel shows the matching transcript/reasoning cue.
+3. **No suitable animatable parameter:** Mirror, Combine, imported bodies,
+   and 'to object' Extrudes are **instant** at their native geometry and
+   scale. They remain visible while a narration cue plays; there is no
+   fabricated fade, geometric growth, or scale animation. The existing
+   fade/scale code remains for legacy inspect mode, not reference playback.
+4. **After the entire clip:** even when face-filtering ends on an
+   intermediate source feature, the reference window returns to the
+   full, shaded final model, removes both Custom Graphics overlays, and
+   restores all parameter expressions and body opacities.
+5. **Transitions / reverse / interruption:** the focused context is
+   restricted to an actively playing native step. Merely selecting a
+   step must return to overview until Play is pressed. Pause leaves
+   the present Feature in focus; completion restores overview.
+
+**Meaningful difference from HiM:** the instant display of nonnumeric
+features and the full–focus–full presentation are exCADmple-specific
+interaction choices, while the numeric Feature animation continues
+to be driven by genuine Fusion parameters.
 
 ## Intentional differences / limitations
 
