@@ -215,14 +215,10 @@ function card(item) {
     }
     box.appendChild(line);
   }
-  box.appendChild(el("p", { class: "anim" }, item.pointer_available
-    ? "Pointer: recorded selections only; drag paths were not recorded."
-    : "No pointer interactions were recorded for this step."));
-  box.appendChild(el("h4", {}, "What the designer said"));
   const cues = item.cues || [];
   let active = -1;
   cues.forEach((c, i) => { if (c.at_ms <= S.elapsed) active = i; });
-  if ($("captions").checked) {
+  {
     const list = el("ol", { class: "said" });
     cues.forEach((c, i) => {
       const li = el("li", { class: i === active ? "current" : (i < active ? "before" : "") }, c.label);
@@ -234,7 +230,7 @@ function card(item) {
   }
   if (active !== S.cue) {
     S.cue = active;
-    if (S.playing && active >= 0 && $("narration").checked && !(item.media && item.media.audio) && "speechSynthesis" in window) {
+    if (false) {
       speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(cues[active].label);
       u.rate = Math.min(2, Math.max(0.5, S.speed));
@@ -333,9 +329,6 @@ $("showMore").addEventListener("click", () => bridge("show_more"));
 $("showAll").addEventListener("click", showAll);
 $("fit").addEventListener("click", () => bridge("fit_view"));
 $("speed").addEventListener("input", () => { S.speed = Number($("speed").value); $("speedValue").textContent = S.speed + "×"; syncAudio(true); });
-$("dim").addEventListener("change", () => bridge("him_dim", { enabled: $("dim").checked }));
-$("captions").addEventListener("change", render);
-$("narration").addEventListener("change", () => { if ("speechSynthesis" in window) speechSynthesis.cancel(); });
 $("import").addEventListener("click", () => { pause(); bridge("open_package"); });
 $("demo").addEventListener("click", () => { pause(); bridge("load_demo"); });
 $("extractDraft").addEventListener("click", () => { pause(); bridge("extract_draft"); });
