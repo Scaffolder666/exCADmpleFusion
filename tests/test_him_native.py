@@ -215,6 +215,25 @@ class WireframePlaybackTests(unittest.TestCase):
         session.stop()
         self.assertEqual(entities["body0"].opacity, 0.6)
 
+    def test_unavailable_precise_face_copy_reverts_to_translucent_context(self):
+        design, entities, groups = build()
+        for token in ("body0", "body1", "body2"):
+            entities[token].edges = Coll([types.SimpleNamespace(geometry="edge-" + token)])
+        entities["ex1"].faces = Coll([types.SimpleNamespace(boundingBox=box())])
+        adsk.fusion.TemporaryBRepManager = types.SimpleNamespace(
+            get=lambda: types.SimpleNamespace(copy=lambda face: None))
+        _, session = session_for(design, dim=True)
+        shown = session.frame(0, 0.4)
+        self.assertEqual(shown["mode"], "parameter")  # still real CAD parameter
+        self.assertFalse(shown["wireframe"])           # but never ghost-only
+        self.assertIn("changed feature faces", shown["context_fallback"])
+        self.assertIsNone(session.him.ghost_group)
+        self.assertEqual(entities["body1"].opacity, 1.0)
+        self.assertEqual(entities["body0"].opacity, 0.2)
+        session.stop()
+        self.assertEqual(entities["body0"].opacity, 0.6)
+        self.assertTrue(all(not group.isValid for group in groups))
+
     def test_rejected_native_parameter_restores_ghost_and_original_opacity(self):
         design, entities, groups = build(fillet_minimum=0.1)
         for token in ("body0", "body1", "body2"):
