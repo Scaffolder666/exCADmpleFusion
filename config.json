@@ -1,4 +1,4 @@
 {
-  "layout": "overlay",
-  "_comment": "overlay = version B (tutorial over the Fusion canvas); reference = version A (History in Motion style separate reference viewport)"
+  "layout": "reference",
+  "_comment": "reference = version A (History in Motion style separate reference viewport); overlay = version B (tutorial over the Fusion canvas)"
 }

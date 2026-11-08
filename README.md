@@ -1,6 +1,8 @@
-# exCADmple — Autodesk Fusion 插件
+# exCADmple — Autodesk Fusion 插件 · 版本 A（HiM 风格独立参考视口）
 
-**Supporting Design Reasoning Through Shared CAD Models** · 固定开发分支 `fusion`
+**Supporting Design Reasoning Through Shared CAD Models** · 分支 `fusion-him`
+
+> 本分支是**版本 A**：参考案例在独立的交互式 3D 视口中播放（参考 *History in Motion*），用户在 Fusion 原生画布中继续建模。代码与 [`fusion`](https://github.com/Scaffolder666/exCADmpleFusion/tree/fusion)（版本 B：视口内 Overlay）完全相同，只有 `config.json` 中的 `"layout": "reference"` 不同；两个版本的比较见下文"两个界面版本"。功能改动在 `fusion` 上进行，再合并到本分支。
 
 用户在自己的 Fusion 工作空间中探索其他设计师的设计过程与推理：通过交互式时间轴播放整个过程或重访单个步骤；每一步展示模型如何演变、原设计师如何执行 CAD 操作，并同步播放解释设计选择的语音与文字。用户可以完整跟随，也可以在同一工作空间里发展自己的设计时有选择地借鉴个别步骤——学习**怎么建模**，也学习**怎么设计**。
 
@@ -10,7 +12,7 @@
 
 两个版本**功能相同**：相同的案例、推理内容和播放能力（整个过程／单步、速度、字幕、语音、决策、多案例、Reasoning Reuse 面板、案例提取）。区别只在**界面如何组织**，以及用户如何在参考案例和自己的建模之间切换。两个分支共用同一份代码，由 `config.json` 的 `layout` 选择：
 
-| | 版本 A：独立参考视口（`fusion-him` 分支，`"layout": "reference"`） | 版本 B：视口内 Overlay（本分支，`"layout": "overlay"`） |
+| | 版本 A：独立参考视口（本分支，`"layout": "reference"`） | 版本 B：视口内 Overlay（`fusion` 分支，`"layout": "overlay"`） |
 |---|---|---|
 | 参考案例在哪里播放 | 单独窗口中的**交互式 3D 参考视口**（可旋转、平移、缩放）；Fusion 画布里只有用户自己的模型 | 直接在 **Fusion 画布**中，作为只读的 Custom Graphics，放在用户模型旁边 |
 | 教程信息 | 窗口右侧的**纵向历史面板**（参考 *History in Motion*）：彩色胶囊步骤，当前步骤展开显示 Why、决策、How、同步字幕 | 浮在画布上的紧凑面板（可收起为只剩步骤条），以及固定在画布左上角的 HUD 文字：步骤标题、Why、当前字幕 |
