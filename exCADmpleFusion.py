@@ -19,13 +19,14 @@ import adsk.fusion
 from core.packages import open_package, PackageError
 from core.renderer import ReferenceRenderer
 from core.history import history_step_indices, HistoryError
-from core.fusion_history import scan_candidate_features, trace_direct_creators, trace_feature_inputs
 from core.spatial import SpatialLinkController
 from core.him_fusion import HiMController
+from core.library import ExampleLibrary
+from core.reuse_fusion import ReuseController
 
 PALETTE_ID = "excadmple.fusion.player"
 COMMAND_ID = "excadmple.fusion.open"
-HIM_PALETTE_ID = "excadmple.fusion.him"
+HIM_PALETTE_ID = "excadmple.fusion.reuse"
 HIM_COMMAND_ID = "excadmple.fusion.him.open"
 HIM_TICK_EVENT = "excadmple.fusion.him.tick"
 _him = None
@@ -39,8 +40,10 @@ _ui = None
 _palette = None
 _renderer = None
 _spatial = None
-_package = None
+_package = None          # active example (kept in sync with _library)
 _step_index = 0
+_library = ExampleLibrary()
+_reuse = None
 _handlers = []
 _command_def = None
 _command_control = None
@@ -105,8 +108,11 @@ def _him_explain(entity):
     if not (_him_palette and _him_palette.isValid and _him_palette.isVisible):
         return
     try:
-        _him_status("Analysing the modeling history…")
-        _him.explain(entity)
+        _him_status("Analysing how this geometry was modeled…")
+        if _reuse:
+            _reuse.explain(entity)
+        else:
+            _him.explain(entity)
     except Exception as error:
         _him_status(str(error), True)
         _log_error()
@@ -120,10 +126,22 @@ class HiMPaletteHandler(adsk.core.HTMLEventHandler):
             if command == "him_ready":
                 if _him and _him.result:
                     _post_him("him_result", _him.describe())
-                else:
+                if _reuse:
+                    _reuse.publish()
+                if not (_him and _him.result):
                     entity = _selected_native_entity()
                     if entity:
                         _him_explain(entity)
+            elif command == "reuse_record":
+                _him_status(_reuse.record(body))
+            elif command == "reuse_remove":
+                _reuse.remove(str(body.get("id", "")))
+            elif command == "reuse_watch":
+                _reuse.watch(str(body.get("example_id")), str(body.get("step_id")))
+            elif command == "reuse_export":
+                _him_status(_reuse.export("csv" if body.get("format") == "csv" else "json"))
+            elif command == "reuse_import":
+                _open_dialog()
             elif command == "him_command":
                 _him.command(body.get("name"), body.get("value"))
             elif command == "him_show_more":
@@ -158,6 +176,7 @@ def _set_step(index, announce=False):
     if not isinstance(index, int) or index < 0 or index >= len(_package.data["steps"]):
         raise PackageError("Step out of range")
     _step_index = index
+    _library.remember_step(index)
     step = _package.step(index)
     success = _renderer.render(step, _package.data.get("reference_offset_cm"))
     if _spatial:
@@ -179,23 +198,44 @@ def _set_step(index, announce=False):
     _post("step", {"index": index})
 
 
-def _load(filename):
+def _post_library():
+    _post("library", {"examples": _library.listing()})
+    if _reuse:
+        _reuse.publish()
+
+
+def _activate(example_id, step_index=None, play=False):
+    """Make an open example the active one, keeping its own step position."""
     global _package
-    new_package = open_package(filename)
-    try:
-        data = new_package.player_data()
-    except Exception:
-        new_package.close()
-        raise
+    if _package and _library.active_id:
+        _library.remember_step(_step_index)
+    _library.activate(example_id)
     _renderer.clear()
     if _spatial:
         _spatial.reset_example()
-    old = _package
-    _package = new_package
-    if old:
-        old.close()
-    _post("example", data)
-    _set_step(0, True)
+    _package = _library.package()
+    _post("example", _package.player_data())
+    index = _library.step_index() if step_index is None else int(step_index)
+    _set_step(index, True)
+    if play:
+        _post("step", {"index": index, "play": True})
+    _post_library()
+    if _palette and _palette.isValid:
+        _palette.isVisible = True
+
+
+def _load(filename):
+    """Open an example package and add it to the library of open examples."""
+    new_package = open_package(filename)
+    try:
+        new_package.player_data()
+    except Exception:
+        new_package.close()
+        raise
+    if _package and _library.active_id:
+        _library.remember_step(_step_index)
+    example_id = _library.add(new_package)
+    _activate(example_id, 0)
 
 
 def _open_dialog():
@@ -247,14 +287,6 @@ class ActiveGeometrySelection(adsk.core.ActiveSelectionEventHandler):
             _post("geometry_selection", selected)
             if selected["selected"]:
                 _him_explain(_selected_native_entity())
-            if selected["selected"]:
-                design = adsk.fusion.Design.cast(_app.activeProduct)
-                candidates = scan_candidate_features(design, _selected_native_entity())
-                _post("native_history", {"features": candidates, "complete": False})
-                _post("native_provenance", trace_feature_inputs(design, _selected_native_entity()))
-            else:
-                _post("native_history", {"features": [], "complete": False})
-                _post("native_provenance", {"features": [], "complete": False})
         except Exception:
             _log_error()
 
@@ -269,10 +301,8 @@ class PaletteHandler(adsk.core.HTMLEventHandler):
                     _post("example", _package.player_data())
                     _post("step", {"index": _step_index})
                     _post_links()
+                _post_library()
                 _post("geometry_selection", _selected_geometry_from_ui())
-                design = adsk.fusion.Design.cast(_app.activeProduct)
-                _post("native_history", {"features": scan_candidate_features(design, _selected_native_entity()), "complete": False})
-                _post("native_provenance", trace_direct_creators(design, _selected_native_entity()))
             elif command == "filter_history":
                 if not _package:
                     raise ValueError("Load a model history example first")
@@ -287,6 +317,25 @@ class PaletteHandler(adsk.core.HTMLEventHandler):
                 _status(str(len(indices)) + " related history steps (authored provenance).")
             elif command == "load_demo":
                 _load(str(ROOT / "examples" / "phone_stand.json"))
+            elif command == "switch_example":
+                _activate(str(body.get("id")))
+            elif command == "close_example":
+                example_id = str(body.get("id"))
+                if len(_library) <= 1:
+                    raise ValueError("Keep at least one example open")
+                was_active = example_id == _library.active_id
+                _library.remove(example_id)
+                if was_active:
+                    _activate(_library.active_id)
+                else:
+                    _post_library()
+            elif command == "compare_decision":
+                if _him_palette and _him_palette.isValid:
+                    _him_palette.isVisible = True
+                step = _package.step(_step_index)
+                if _reuse:
+                    _reuse.publish({"focus": {"example_id": _library.active_id, "step_id": step["id"],
+                                              "topic": (step.get("decision") or {}).get("topic")}})
             elif command == "open_package":
                 _open_dialog()
             elif command == "set_step":
@@ -295,14 +344,19 @@ class PaletteHandler(adsk.core.HTMLEventHandler):
                 if _package:
                     step = _package.step(_step_index)
                     # Ignore stale asynchronous HTML frames after a step switch.
-                    if step["id"] == body.get("step_id") and step.get("animation"):
+                    if step["id"] == body.get("step_id") and (step.get("animation") or step.get("pointer")):
                         value = body.get("progress")
                         if isinstance(value, bool) or not isinstance(value, (float, int)) or not 0 <= value <= 1:
                             raise ValueError("Animation progress must be in [0,1]")
-                        _renderer.render_animation(step, _package.data.get("reference_offset_cm"), value)
+                        offset = _package.data.get("reference_offset_cm")
+                        if step.get("animation"):
+                            _renderer.render_animation(step, offset, value)
+                        if step.get("pointer"):
+                            _renderer.render_pointer(step, offset, value)
             elif command == "animation_end":
                 if _package and _package.step(_step_index)["id"] == body.get("step_id"):
                     _renderer.finish_animation()
+                    _renderer.clear_pointer()
             elif command == "link_selected":
                 if not _package or not _spatial:
                     raise ValueError("Load an example before linking geometry")
@@ -409,6 +463,15 @@ class BeforeDeactivate(adsk.core.DocumentEventHandler):
             _log_error()
 
 
+class AfterActivate(adsk.core.DocumentEventHandler):
+    def notify(self, args):
+        try:
+            if _reuse:
+                _reuse.document_changed()
+        except Exception:
+            _log_error()
+
+
 class AfterSave(adsk.core.DocumentEventHandler):
     def notify(self, args):
         global _saving_document
@@ -432,12 +495,15 @@ def _log_error():
 
 def _start_him():
     global _him, _him_palette, _him_event, _him_ticker, _him_command_def, _him_command_control
+    global _reuse
     _him = HiMController(_app, _ui, _post_him, lambda message: _app.log("exCADmple HiM: " + message))
+    _reuse = ReuseController(_app, _ui, _him, _library, _post_him,
+                             lambda example_id, index: _activate(example_id, index, play=True))
     _him_palette = _ui.palettes.itemById(HIM_PALETTE_ID)
     if not _him_palette:
         _him_palette = _ui.palettes.add2(
-            HIM_PALETTE_ID, "History in Motion", str(ROOT / "ui" / "him.html"),
-            True, True, True, 340, 760)
+            HIM_PALETTE_ID, "exCADmple · Reasoning Reuse", str(ROOT / "ui" / "him.html"),
+            True, True, True, 380, 800)
     _him_palette.dockingState = adsk.core.PaletteDockingStates.PaletteDockStateRight
     handler = HiMPaletteHandler()
     _him_palette.incomingFromHTML.add(handler)
@@ -456,8 +522,8 @@ def _start_him():
     _him_command_def = _ui.commandDefinitions.itemById(HIM_COMMAND_ID)
     if not _him_command_def:
         _him_command_def = _ui.commandDefinitions.addButtonDefinition(
-            HIM_COMMAND_ID, "History in Motion",
-            "Explain how the selected face, edge or vertex was modeled")
+            HIM_COMMAND_ID, "Reasoning Reuse",
+            "Find example design reasoning for the selected face, edge or vertex of your model")
     created = ShowHiMCreated()
     _him_command_def.commandCreated.add(created)
     _handlers.append(created)
@@ -469,7 +535,8 @@ def _start_him():
 
 
 def _stop_him():
-    global _him, _him_palette, _him_ticker, _him_event
+    global _him, _him_palette, _him_ticker, _him_event, _reuse
+    _reuse = None
     if _him_ticker:
         _him_ticker.stopped.set()
         _him_ticker = None
@@ -545,14 +612,17 @@ def run(_context):
         _app.documentSaving.add(before)
         _app.documentSaved.add(after)
         _app.documentDeactivating.add(deactivating)
-        _handlers.extend((before, after, deactivating))
+        activated = AfterActivate()
+        _app.documentActivated.add(activated)
+        _handlers.extend((before, after, deactivating, activated))
         selection_handler = ActiveGeometrySelection()
         _ui.activeSelectionChanged.add(selection_handler)
         _handlers.append(selection_handler)
         _post("geometry_selection", _selected_geometry_from_ui())
         _start_him()
 
-        # A deterministic, clearly labeled illustrative example.
+        # Deterministic, clearly labeled illustrative examples.
+        _load(str(ROOT / "examples" / "tablet_stand.json"))
         _load(str(ROOT / "examples" / "phone_stand.json"))
     except Exception:
         _log_error()
@@ -576,16 +646,15 @@ def stop(_context):
                     except Exception:
                         pass
         if _app:
-            for event_name, handler_type in (("documentSaving", BeforeSave), ("documentSaved", AfterSave), ("documentDeactivating", BeforeDeactivate)):
+            for event_name, handler_type in (("documentSaving", BeforeSave), ("documentSaved", AfterSave), ("documentDeactivating", BeforeDeactivate), ("documentActivated", AfterActivate)):
                 for handler in _handlers:
                     if isinstance(handler, handler_type):
                         try:
                             getattr(_app, event_name).remove(handler)
                         except Exception:
                             pass
-        if _package:
-            _package.close()
-            _package = None
+        _library.close()
+        _package = None
         if _palette and _palette.isValid:
             _palette.deleteMe()
         _palette = None

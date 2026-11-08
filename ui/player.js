@@ -159,6 +159,45 @@ function renderGeometryLink() {
      (state.example?.preview_data_uri ? "Final preview only" : "No step geometry")));
   $("geometryStatus").classList.toggle("none", !current.has_geometry && !link?.available && !current.animation_available);
 }
+function renderDecision(current) {
+  const decision = current.decision;
+  $("decisionBox").hidden = !decision;
+  if (!decision) return;
+  $("decisionTopic").textContent = decision.topic.replace(/_/g, " ");
+  $("decisionQuestion").textContent = decision.question;
+  const criteria = $("decisionCriteria");
+  criteria.replaceChildren();
+  for (const text of decision.criteria || []) {
+    const li = document.createElement("li");
+    li.textContent = text;
+    criteria.appendChild(li);
+  }
+  const options = $("decisionOptions");
+  options.replaceChildren();
+  for (const option of decision.options || []) {
+    const li = document.createElement("li");
+    li.className = option.chosen ? "chosen" : "";
+    li.textContent = (option.chosen ? "✓ " : "") + option.label + (option.value ? " · " + option.value : "");
+    if (option.note) {
+      const note = document.createElement("small");
+      note.textContent = option.note;
+      li.appendChild(note);
+    }
+    options.appendChild(li);
+  }
+}
+function renderLibrary(examples) {
+  const select = $("exampleSwitch");
+  select.replaceChildren();
+  for (const item of examples) {
+    const option = document.createElement("option");
+    option.value = item.id;
+    option.textContent = item.title + " · step " + (item.step_index + 1) + "/" + item.steps;
+    option.selected = !!item.active;
+    select.appendChild(option);
+  }
+  $("closeExample").disabled = examples.length <= 1;
+}
 function renderDetails() {
   const current = step();
   if (!current) return;
@@ -174,6 +213,7 @@ function renderDetails() {
   $("reasonSource").textContent = rationale.label;
   $("reasonSource").classList.toggle("mock", rationale.mock);
   $("sourceExplainer").textContent = rationale.explainer;
+  renderDecision(current);
   const hasStepGeometry = !!current.has_geometry;
   renderGeometryLink();
   $("showReference").disabled = !hasStepGeometry;
@@ -236,7 +276,7 @@ function renderTime() {
 }
 function sendAnimationFrame(force = false) {
   const current = step();
-  if (!current?.animation_available) return;
+  if (!current?.animation_available && !current?.pointer_available) return;
   const now = performance.now();
   if (state.animationInFlight || (!force && now - state.lastAnimationFrame < 145)) return;
   state.lastAnimationFrame = now;
@@ -303,7 +343,7 @@ function tick() {
       state.elapsed = duration();
       renderTime();
       pause();
-      if (step()?.animation_available)
+      if (step()?.animation_available || step()?.pointer_available)
         bridge("animation_end", {step_id: step().id});
     }
     return;
@@ -347,33 +387,14 @@ window.fusionJavaScriptHandler = {
         state.filteredIndices = payload.indices || [];
         renderRail();
         if (state.filteredIndices.length) selectStep(state.filteredIndices[0]);
-      } else if (action === "native_provenance") {
-        const features = payload.features || [];
-        $("provenanceStatus").textContent = features.length ? features.length + " linked feature(s) · " + (payload.edges || []).length + " explicit dependency edge(s) · incomplete lineage" : (payload.reason || "No direct creator attribution available.");
-        const list = $("provenanceList");
-        list.replaceChildren();
-        for (const feature of features) {
-          const row = document.createElement("div");
-          row.className = "step-goal";
-          row.textContent = (feature.timeline_index == null ? "?" : "#" + feature.timeline_index) + " · " + feature.name + " · " + feature.association;
-          list.appendChild(row);
-        }
-      } else if (action === "native_history") {
-        const features = payload.features || [];
-        $("nativeHistoryStatus").textContent = features.length ? features.length + " candidate features · newest first" : "No candidate features found for the selected geometry.";
-        const list = $("nativeHistoryList");
-        list.replaceChildren();
-        for (const feature of features) {
-          const row = document.createElement("div");
-          row.className = "step-goal";
-          row.textContent = "#" + feature.timeline_index + " · " + feature.name + " (" + feature.object_type + ")";
-          list.appendChild(row);
-        }
       } else if (action === "geometry_selection") {
         $("selectionStatus").textContent = payload.selected ? payload.kind + " selected in Fusion" : "Select a face, edge or vertex in Fusion.";
         $("entityFilter").value = payload.selected ? (payload.entity_id || "") : "";
+      } else if (action === "library") {
+        renderLibrary(payload.examples || []);
       } else if (action === "step") {
-        if (payload.index !== state.index && state.example) selectStep(payload.index);
+        if (payload.play && state.example) selectStep(payload.index, true);
+        else if (payload.index !== state.index && state.example) selectStep(payload.index);
       } else if (action === "status") setStatus(payload.message, payload.error);
       return "OK";
     } catch (error) {
@@ -400,6 +421,9 @@ $("bindGeometry").addEventListener("click", () => bridge("link_selected"));
 $("locateGeometry").addEventListener("click", () => bridge("locate_linked"));
 $("removeGeometry").addEventListener("click", () => bridge("unlink_step"));
 $("import").addEventListener("click", () => { pause(); bridge("open_package"); });
+$("exampleSwitch").addEventListener("change", (event) => { pause(); bridge("switch_example", {id: event.target.value}); });
+$("closeExample").addEventListener("click", () => { pause(); bridge("close_example", {id: $("exampleSwitch").value}); });
+$("compareDecision").addEventListener("click", () => bridge("compare_decision"));
 $("demo").addEventListener("click", () => { pause(); bridge("load_demo"); });
 $("play").addEventListener("click", () => state.playing ? pause() : play());
 $("replay").addEventListener("click", () => { if (step()) { pause(); seek(0); play(); } });

@@ -11,6 +11,8 @@ import shutil
 import tempfile
 import zipfile
 from .animation import validate_animation, AnimationError
+from .pointer import validate_pointer, PointerError
+from .reuse import validate_decision, ReuseError
 from pathlib import Path, PurePosixPath
 
 MAX_ARCHIVE_BYTES = 80 * 1024 * 1024
@@ -96,6 +98,16 @@ def _validate(data):
             asset = step.get("media", {}).get(kind)
             if asset is not None:
                 _relative_path(asset)
+        if step.get("pointer") is not None:
+            try:
+                validate_pointer(step["pointer"], duration)
+            except PointerError as exc:
+                raise PackageError(str(exc)) from exc
+        if step.get("decision") is not None:
+            try:
+                validate_decision(step["decision"])
+            except ReuseError as exc:
+                raise PackageError("Step " + step["id"] + ": " + str(exc)) from exc
         cues = step.get("cues", [])
         if not isinstance(cues, list):
             raise PackageError("Cues must be an array")
@@ -121,6 +133,8 @@ class ExamplePackage:
     def player_data(self):
         """Minimal metadata for HTML. Geometry stays Python-side."""
         result = {
+            "id": self.data.get("id", ""),
+            "author": self.data.get("author", ""),
             "title": self.data["title"],
             "description": self.data.get("description", ""),
             "preview_data_uri": None,
@@ -135,7 +149,8 @@ class ExamplePackage:
                     raise PackageError("Preview PNG too large")
                 result["preview_data_uri"] = "data:image/png;base64," + base64.b64encode(path.read_bytes()).decode("ascii")
         for step in self.data["steps"]:
-            meta = {k: v for k, v in step.items() if k not in ("geometry", "media", "animation")}
+            meta = {k: v for k, v in step.items() if k not in ("geometry", "media", "animation", "pointer")}
+            meta["pointer_available"] = bool(step.get("pointer"))
             # UI can indicate whether a real per-step 3D snapshot exists,
             # distinct from the package's static final-model preview.
             meta["has_geometry"] = bool(step.get("geometry", {}).get("meshes"))

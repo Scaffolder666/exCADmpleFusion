@@ -25,6 +25,11 @@
         <span aria-hidden="true">·</span>
         <span>Explore, borrow, or adapt</span>
       </div>
+      <div class="example-switch">
+        <label for="exampleSwitch">Open examples</label>
+        <select id="exampleSwitch" aria-label="Switch between open design examples"></select>
+        <button id="closeExample" type="button" class="text-button" title="Close this example">Close</button>
+      </div>
     </section>
 
     <section class="timeline-panel" aria-label="Design example steps">
@@ -40,18 +45,6 @@
         <button id="showMoreHistory" type="button" class="text-button">Show more</button>
         <button id="clearHistory" type="button" class="text-button">All steps</button>
       </div>
-      <details class="geometry-link" open>
-        <summary>Direct geometry provenance (where available)</summary>
-        <div id="provenanceStatus">Select a face, edge or vertex.</div>
-        <div id="provenanceList"></div>
-        <small>Direct creator attribution does not reconstruct full topology-changing history.</small>
-      </details>
-      <details class="geometry-link">
-        <summary>Native Fusion feature candidates (read-only)</summary>
-        <div id="nativeHistoryStatus">Select a face, edge or vertex.</div>
-        <div id="nativeHistoryList"></div>
-        <small>Candidate result-body matches are not a complete dependency history.</small>
-      </details>
       <div id="stepRail" class="step-rail" aria-label="Select a step"></div>
       <div class="playback-options">
         <label for="playbackScope">Playback</label>
@@ -93,6 +86,19 @@
       </div>
       <blockquote id="reasoning">Reasoning associated with the selected step appears here.</blockquote>
       <p class="source-explainer" id="sourceExplainer"></p>
+
+      <section id="decisionBox" class="decision-box" hidden aria-label="The design decision in this step">
+        <div class="section-heading detail-heading">
+          <span>The decision</span>
+          <span id="decisionTopic" class="source-tag"></span>
+        </div>
+        <p id="decisionQuestion" class="decision-question"></p>
+        <div class="decision-label">Considered</div>
+        <ul id="decisionCriteria" class="criteria"></ul>
+        <div class="decision-label">Options</div>
+        <ol id="decisionOptions" class="decision-options"></ol>
+        <button id="compareDecision" class="geometry-btn primary" type="button">Compare with my design &amp; other examples →</button>
+      </section>
 
       <details class="geometry-link" id="geometryLink">
         <summary class="geometry-link__summary">

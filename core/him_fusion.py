@@ -422,6 +422,9 @@ class HiMController:
         self.active = {}            # prepared data of the feature being animated
         self.last_frame_seconds = None
         self.dim_others = True
+        # Inspect mode animates the *user's own* features in place (paper
+        # behaviour). Off by default: the user's model is the main line.
+        self.inspect = False
         self.auto_play = True
         self.busy = False
         self.model_highlights = {}
@@ -493,7 +496,7 @@ class HiMController:
         self.result = result
         self._plan()
         self.post("him_result", self.describe(time.time() - started))
-        if self.auto_play and self.clip:
+        if self.inspect and self.auto_play and self.clip:
             self.command("play")
 
     def show_more(self):
@@ -528,13 +531,14 @@ class HiMController:
             if entity is not None and design:
                 for param in all_feature_parameters(design, entity):
                     item["parameters"].append({"name": param.name, "expression": param.expression,
-                                               "unit": param.unit})
+                                               "unit": param.unit, "value": param.value})
             try:
                 item["suppressed"] = bool(entity.isSuppressed)
             except Exception:
                 item["suppressed"] = False
         data["selection"] = self.selection_label
         data["playback"] = self.playback.as_dict()
+        data["inspect"] = self.inspect
         if seconds is not None:
             data["analysis_seconds"] = round(seconds, 2)
         return data
@@ -674,8 +678,16 @@ class HiMController:
         self.post("him_playback", self.playback.as_dict())
         return self.playback.playing
 
+    ANIMATING = ("play", "replay", "forward", "backward", "select")
+
     def command(self, name, value=None):
-        if name == "play":
+        if name in self.ANIMATING and not self.inspect:
+            raise ValueError("Turn on Inspect mode to animate your own model's features")
+        if name == "inspect":
+            self.inspect = bool(value)
+            if not self.inspect:
+                self.stop()
+        elif name == "play":
             self.playback.play()
         elif name == "pause":
             self.playback.pause()

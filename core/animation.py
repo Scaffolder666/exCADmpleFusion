@@ -294,3 +294,20 @@ def rectangular_pattern_meshes(animation, progress):
                     for p in mesh["vertices"]
                 ], "triangles": mesh["triangles"]})
     return output
+
+
+TRANSITION_TYPES = ("fillet", "chamfer", "boolean", "split", "combine", "loft", "shell", "thread", "import", "export")
+
+
+def animation_meshes(animation, progress):
+    """All meshes shown at ``progress`` for any supported animation type."""
+    typ = animation["type"]
+    if typ == "reveal":
+        return reveal_meshes(animation, progress)
+    if typ == "extrude":
+        return list(animation.get("context_meshes", [])) + [extrude_mesh(animation, progress)]
+    if typ == "rectangular_pattern":
+        return rectangular_pattern_meshes(animation, progress)
+    if typ in TRANSITION_TYPES:
+        return transition_meshes(animation, progress)
+    return operation_meshes(animation, progress)

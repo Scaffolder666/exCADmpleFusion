@@ -5,9 +5,21 @@ Run: python -m unittest discover -s tests -v
 import unittest
 from pathlib import Path
 from core.packages import open_package
-from core.animation import reveal_meshes
+from core.animation import animation_meshes
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def _close(left, right, tol=1e-4):
+    if len(left) != len(right):
+        return False
+    for a, b in zip(left, right):
+        if a["triangles"] != b["triangles"] or len(a["vertices"]) != len(b["vertices"]):
+            return False
+        for p, q in zip(a["vertices"], b["vertices"]):
+            if any(abs(x - y) > tol for x, y in zip(p, q)):
+                return False
+    return True
 
 
 class HiMPlaybackContractTests(unittest.TestCase):
@@ -25,18 +37,18 @@ class HiMPlaybackContractTests(unittest.TestCase):
         finally:
             package.close()
 
-    def test_reveal_preserves_context_and_reaches_target(self):
-        package = open_package(ROOT / "examples" / "phone_stand.json")
-        try:
-            for step in package.data["steps"][1:]:
-                anim = step["animation"]
-                start = reveal_meshes(anim, 0)
-                end = reveal_meshes(anim, 1)
-                self.assertEqual(start[:len(anim["context_meshes"])], anim["context_meshes"])
-                self.assertEqual(end, step["geometry"]["meshes"])
-                self.assertNotEqual(start, end)
-        finally:
-            package.close()
+    def test_every_animation_ends_at_the_step_geometry(self):
+        for name in ("phone_stand.json", "tablet_stand.json"):
+            package = open_package(ROOT / "examples" / name)
+            try:
+                for step in package.data["steps"]:
+                    anim = step["animation"]
+                    start = animation_meshes(anim, 0)
+                    end = animation_meshes(anim, 1)
+                    self.assertTrue(_close(end, step["geometry"]["meshes"]), step["id"])
+                    self.assertNotEqual(start, end, step["id"])
+            finally:
+                package.close()
 
     def test_all_demo_steps_have_timed_captions_and_reasoning(self):
         package = open_package(ROOT / "examples" / "phone_stand.json")
