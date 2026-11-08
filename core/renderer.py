@@ -19,6 +19,95 @@ CHANGE_COLOR = (20, 184, 166, 255)
 FRAME_BUDGET = 6000      # triangles compared per animation frame
 TRAIL_COLOR = (250, 190, 90, 255)
 
+ARROW_COLOR = (235, 109, 35, 255)  # orange locator, distinct from teal surface highlight
+
+
+def mesh_target_bounds(meshes):
+    """Bounds of the *changed* geometry, never of the whole CAD example."""
+    lo, hi = [float("inf")] * 3, [float("-inf")] * 3
+    found = False
+    for mesh in meshes or ():
+        for point in mesh.get("vertices", ()):
+            if len(point) != 3 or not all(math.isfinite(float(v)) for v in point):
+                continue
+            found = True
+            for axis in range(3):
+                lo[axis] = min(lo[axis], float(point[axis]))
+                hi[axis] = max(hi[axis], float(point[axis]))
+    return (lo, hi) if found else None
+
+
+def body_target_bounds(bodies):
+    """Bounds of trustworthy native feature geometry (faces if available)."""
+    lo, hi = [float("inf")] * 3, [float("-inf")] * 3
+    found = False
+    for body in bodies or ():
+        try:
+            box = body.boundingBox
+            a, b = box.minPoint, box.maxPoint
+            values = ((a.x, a.y, a.z), (b.x, b.y, b.z))
+            if not all(math.isfinite(float(v)) for point in values for v in point):
+                continue
+            found = True
+            for axis in range(3):
+                lo[axis] = min(lo[axis], values[0][axis])
+                hi[axis] = max(hi[axis], values[1][axis])
+        except Exception:
+            continue
+    return (lo, hi) if found else None
+
+
+def arrow_geometry(bounds, offset=(0, 0, 0)):
+    """Four points and three line segments, arrowhead touching target bounds.
+
+    This is a locator, not a reconstruction of the original designer's mouse
+    movement. The tip is placed at the top-center of the detected change.
+    """
+    if not bounds:
+        return None
+    lo, hi = bounds
+    if not all(math.isfinite(float(x)) for x in lo + hi + list(offset)):
+        return None
+    span = max(hi[i] - lo[i] for i in range(3))
+    distance = max(0.55, min(2.0, 0.36 * span))
+    tip = [(lo[0] + hi[0]) / 2 + offset[0],
+           (lo[1] + hi[1]) / 2 + offset[1], hi[2] + offset[2]]
+    tail = [tip[0] + distance * 0.8,
+            tip[1] - distance * 0.7,
+            tip[2] + distance * 0.95]
+    delta = [tail[i] - tip[i] for i in range(3)]
+    length = math.sqrt(sum(x * x for x in delta))
+    if length <= 1e-9:
+        return None
+    unit = [x / length for x in delta]
+    perpendicular = [-unit[1], unit[0], 0.0]
+    norm = math.hypot(perpendicular[0], perpendicular[1])
+    perpendicular = [x / norm for x in perpendicular] if norm > 1e-9 else [1, 0, 0]
+    head = max(0.14, min(0.35, distance * 0.22))
+    base = [tip[i] + head * unit[i] for i in range(3)]
+    left = [base[i] + head * 0.45 * perpendicular[i] for i in range(3)]
+    right = [base[i] - head * 0.45 * perpendicular[i] for i in range(3)]
+    return (tail, tip, left, right), (0, 1, 2, 1, 3, 1)
+
+
+def add_target_arrow(group, bounds, offset=(0, 0, 0)):
+    """Attach a nonselectable 3D arrow to an existing temporary graphics group."""
+    if not hasattr(group, "addLines"):
+        return False
+    shape = arrow_geometry(bounds, offset)
+    if shape is None:
+        return False
+    vertices, indices = shape
+    flat = [v for xyz in vertices for v in xyz]
+    arrow = group.addLines(adsk.fusion.CustomGraphicsCoordinates.create(flat), list(indices), False)
+    if not arrow:
+        return False
+    arrow.color = adsk.fusion.CustomGraphicsSolidColorEffect.create(adsk.core.Color.create(*ARROW_COLOR))
+    arrow.weight = 4
+    arrow.depthPriority = 2
+    arrow.isSelectable = False
+    return True
+
 
 class ReferenceRenderer:
     def __init__(self, app):
@@ -27,6 +116,8 @@ class ReferenceRenderer:
         self.animation_group = None
         self.pointer_group = None
         self.hud_group = None
+        self.command_group = None
+        self.guidance_group = None
         self.visible = True
         self.last_step = None
         self.last_offset = None
@@ -83,7 +174,70 @@ class ReferenceRenderer:
         self._refresh()
         return True
 
+    def clear_guidance(self):
+        self._delete(self.guidance_group)
+        self.guidance_group = None
+        self._delete(self.command_group)
+        self.command_group = None
+
+    def render_command(self, step):
+        """One short Fusion-tool label within the CAD viewport, not in the panel."""
+        self._delete(self.command_group)
+        self.command_group = None
+        tools = [str(tool).strip() for tool in (step.get("tools") or []) if str(tool).strip()]
+        if not tools or not self.visible:
+            return False
+        design = adsk.fusion.Design.cast(self.app.activeProduct)
+        if not design:
+            return False
+        group = design.rootComponent.customGraphicsGroups.add()
+        group.isSelectable = False
+        group.isChildrenSelectable = False
+        try:
+            label = "FUSION  ·  " + "  →  ".join(tools[:4])
+            if len(tools) > 4:
+                label += "  …"
+            graphic = group.addText(label, "Arial", 15, adsk.core.Matrix3D.create())
+            graphic.color = adsk.fusion.CustomGraphicsSolidColorEffect.create(
+                adsk.core.Color.create(*ARROW_COLOR))
+            graphic.isSelectable = False
+            graphic.depthPriority = 3
+            graphic.viewPlacement = adsk.fusion.CustomGraphicsViewPlacement.create(
+                adsk.core.Point3D.create(0, 0, 0),
+                adsk.fusion.ViewCorners.upperLeftViewCorner,
+                adsk.core.Point2D.create(24, 115))
+        except Exception:
+            self._delete(group)
+            return False
+        self.command_group = group
+        self._refresh()
+        return True
+
+    def render_target_arrow(self, changed, offset):
+        """Highlight locator persists independently of changing animation meshes."""
+        self._delete(self.guidance_group)
+        self.guidance_group = None
+        bounds = mesh_target_bounds(changed)
+        if not bounds or not self.visible:
+            return False
+        design = adsk.fusion.Design.cast(self.app.activeProduct)
+        if not design:
+            return False
+        group = design.rootComponent.customGraphicsGroups.add()
+        group.isSelectable = False
+        group.isChildrenSelectable = False
+        try:
+            if not add_target_arrow(group, bounds, offset):
+                group.deleteMe()
+                return False
+        except Exception:
+            self._delete(group)
+            return False
+        self.guidance_group = group
+        return True
+
     def clear(self):
+        self.clear_guidance()
         self.clear_hud()
         self.clear_pointer()
         self._delete(self.animation_group)
@@ -197,6 +351,7 @@ class ReferenceRenderer:
         if meshes:
             plain, changed = self.guided(step, meshes, previous)
             self.group = self._create_group(plain, self._offset(offset), "exCADmple reference (read-only)", changed)
+            self.render_target_arrow(changed, self._offset(offset))
         self._refresh()
         return True
 
@@ -284,14 +439,23 @@ class ReferenceRenderer:
         if not self.visible:
             self.clear_pointer()
             self.clear_hud()
+            for overlay in (self.guidance_group, self.command_group):
+                if overlay and overlay.isValid:
+                    overlay.isVisible = False
             if self.group and self.group.isValid:
                 self.group.isVisible = False
             if self.animation_group and self.animation_group.isValid:
                 self.animation_group.isVisible = False
         elif self.animation_group and self.animation_group.isValid:
             self.animation_group.isVisible = True
+            for overlay in (self.guidance_group, self.command_group):
+                if overlay and overlay.isValid:
+                    overlay.isVisible = True
         elif self.group and self.group.isValid:
             self.group.isVisible = True
+            for overlay in (self.guidance_group, self.command_group):
+                if overlay and overlay.isValid:
+                    overlay.isVisible = True
         elif self.visible and self.last_step:
             self.render(self.last_step, self.last_offset, self.last_previous)
             return
