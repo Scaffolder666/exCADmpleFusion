@@ -21,8 +21,15 @@ import traceback
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
+if str(ROOT) in sys.path:
+    sys.path.remove(str(ROOT))
+sys.path.insert(0, str(ROOT))
+# Fusion keeps imported modules across Stop/Run of an add-in, so after an
+# update the new entry file would run against the old ``core`` modules
+# (e.g. "render() takes from 2 to 3 positional arguments"). Always import
+# this add-in's current ``core`` package from ROOT.
+for _name in [n for n in sys.modules if n == "core" or n.startswith("core.")]:
+    del sys.modules[_name]
 
 import adsk.core
 import adsk.fusion
