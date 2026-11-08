@@ -7,7 +7,7 @@ fusion_example.json    # committed
 fusion.f3d             # binary, upload separately if permitted
 ```
 
-The repo is **public**. The designer's actual binary `fusion.f3d` is **not in the repo yet**. Do not commit a fake model, alter the JSON checksum, or claim a full end-to-end test until the exact file is present.
+The repo is **public**. `fusion.f3d` is the researcher's original model, added with their permission; its size and SHA-256 match the values below (checked by `tests/test_real_fusion_fixture.py`). Do not replace it with another model or alter the JSON checksum.
 
 File metadata for the originally supplied model:
 
