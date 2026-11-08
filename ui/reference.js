@@ -20,6 +20,7 @@ const S = { plan: [], shown: null,
   direction: 1, continuous: true, speed: 1, filtered: false, changed: [], more: [], picked: null,
   last: 0, cue: -1, fresh: true, tags: {}, inFlight: false,
   frameClock: null, nextFrameAt: 0, epoch: 0, manualFrame: false,
+  stepPending: false, stepRequest: 0,
 };
 
 function bridge(action, payload = {}) {
@@ -77,6 +78,7 @@ function setClip(keepIndex) {
 function setIndex(i) {
   if (i === S.index && S.example) return;
   S.index = i;
+  S.shown = null;
   S.epoch++;              // stale native frame replies cannot move a new step
   S.frameClock = null;
   S.nextFrameAt = 0;
@@ -84,7 +86,13 @@ function setIndex(i) {
   S.cue = -1;
   stopSpeech();
   S.fresh = true;     // selected but not played yet: show the step's result
-  bridge("set_step", { index: i });
+  S.stepPending = true;
+  const request = ++S.stepRequest;
+  bridge("set_step", { index: i }).finally(() => {
+    if (request !== S.stepRequest) return;
+    S.stepPending = false;
+    if (S.playing || S.manualFrame) render();
+  });
 }
 function stopAudio() { audio.pause(); }
 function stopSpeech() { if ("speechSynthesis" in window) speechSynthesis.cancel(); }
@@ -277,7 +285,7 @@ function render() {
   if (!S.example) return;
   const progress = Math.max(0, Math.min(1, S.elapsed / duration()));
   const due = (S.playing && performance.now() >= S.nextFrameAt) || S.manualFrame;
-  if (!S.fresh && !S.inFlight && due) {
+  if (!S.fresh && !S.inFlight && !S.stepPending && due) {
     const index = S.index, epoch = S.epoch;
     const sentProgress = progress, direction = S.direction;
     const sentAt = performance.now();
@@ -342,6 +350,8 @@ function loadExample(data) {
   S.filtered = false; S.changed = []; S.more = []; S.picked = null;
   S.epoch++;
   S.frameClock = null;
+  S.shown = null;
+  S.plan = [];
   S.index = -1;
   S.elapsed = 0;
   S.direction = 1;
