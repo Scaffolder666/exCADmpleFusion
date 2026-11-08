@@ -2,7 +2,8 @@
    instance's canvas: transport on top, vertical history, speed below. */
 :root { color-scheme:light; --ink:#1f2a37; --muted:#6b7785; --line:#e3e7ec; --panel:#f6f7f9; --white:#fff;
   --blue:#2563eb; --green:#2a8558; --extrude:#2f7d5b; --revolve:#7c4dce; --fillet:#c26a12; --pattern:#0e7490;
-  --mirror:#b4236a; --cut:#b42318; --move:#4b5563; --other:#64748b; }
+  --mirror:#b4236a; --cut:#b42318; --move:#4b5563; --other:#64748b;
+  --combine:#9a5b18; --modify:#0f766e; --sketch:#4f74a5; --import:#64748b; }
 * { box-sizing:border-box; }
 html, body { margin:0; height:100%; background:var(--white); color:var(--ink);
   font:13px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }
@@ -62,7 +63,8 @@ button { cursor:pointer; }
 .status.error { color:var(--cut); }
 [data-kind=extrude]{--kind:var(--extrude)} [data-kind=revolve]{--kind:var(--revolve)} [data-kind=fillet]{--kind:var(--fillet)}
 [data-kind=pattern]{--kind:var(--pattern)} [data-kind=mirror]{--kind:var(--mirror)} [data-kind=cut]{--kind:var(--cut)}
-[data-kind=move]{--kind:var(--move)}
+[data-kind=move]{--kind:var(--move)} [data-kind=combine]{--kind:var(--combine)} [data-kind=modify]{--kind:var(--modify)}
+[data-kind=sketch]{--kind:var(--sketch)} [data-kind=import]{--kind:var(--import)}
 
 body { display:flex; flex-direction:column; }
 .examples { display:flex; gap:6px; padding:6px 12px; }
