@@ -170,3 +170,20 @@ blockquote { background:#f0f6ff; border-left-color:var(--blue); font-size:13px; 
   .intro h1 { font-size:15px; }
   .timeline-panel { padding-top:6px; padding-bottom:6px; }
 }
+
+/* HiM-inspired branch: history cards lead, details follow the selected operation. */
+.timeline-panel { box-shadow:none; background:#f7f9fc; border-bottom:1px solid var(--line); }
+.step-rail { flex-direction:column; overflow-y:auto; overflow-x:hidden; max-height:180px; padding:8px 2px; }
+.step-card { width:100%; min-height:48px; justify-content:flex-start; padding:8px 10px; border-left:3px solid #b5c8df; }
+.step-card .num { width:24px; flex:none; }
+.step-card .step-labels, .step-card .step-indicator { display:block; }
+.step-card.active { background:#e2efff; border-color:#98bce8; border-left:4px solid var(--blue); }
+.step-card.active .num { color:var(--blue); }
+.step-card .step-goal { white-space:normal; font-size:10px; }
+.step-card .step-indicator { font-size:9px; }
+.playback-options { display:flex; align-items:center; gap:8px; margin:2px 0 8px; color:var(--muted); font-size:11px; }
+.playback-options select { flex:1; min-width:0; padding:5px; border:1px solid #c6d1df; border-radius:5px; background:white; color:var(--ink); font:inherit; }
+.playback-options select:focus-visible { outline:2px solid var(--blue); }
+.current-step { border-radius:0 0 8px 8px; }
+@media(max-height:650px) { .step-rail { max-height:110px; } }
+@media(max-height:480px) { .step-rail { max-height:64px; } .intro { padding-top:4px; padding-bottom:4px; } }
