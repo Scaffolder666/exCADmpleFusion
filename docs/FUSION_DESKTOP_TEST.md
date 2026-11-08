@@ -1,5 +1,8 @@
 # 版本 A：Fusion Desktop 验收步骤（HiM 原生参数动画）
 
+> **当前首要验收标准（2026-11-08）：** 使用研究者提供的复杂 `fusion.f3d` 作为主要真实模型测试基准，见 [REAL_FUSION_MODEL_TEST.md](REAL_FUSION_MODEL_TEST.md)。本文中 `tools/fusion_demo` 是用于特定 Feature 的补充小模型，Phone Stand 是快照/UI smoke test，均不能代替真实模型上完整的原生 HiM 测试。测试 `.f3d` 保存在本地，未提交到仓库。
+
+
 单元测试只用模拟的 `adsk` 接口检查插件自己的逻辑（参数选择、进度、恢复、映射、回退、清理）。**它们不能证明 Fusion 真的按参数重算了几何。** 下面的步骤需要在 Autodesk Fusion 桌面端手动完成；全部通过之前，版本 A 的 HiM 动画不算验收。
 
 记录方式：每一项写 通过 / 失败 / 备注，以及 Fusion 版本号、操作系统。
