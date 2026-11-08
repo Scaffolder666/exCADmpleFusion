@@ -65,7 +65,7 @@ class ReferenceSession:
             # A JSON+.f3d pair discovers the ACTUAL timeline after importing
             # a disposable document copy; no guessed feature indices.
             if getattr(package, "needs_populate", False):
-                package.populate_from_features(model.features())
+                package.populate_from_features(model.features(), model=model)
         except Exception:
             try:
                 document.close(False)
