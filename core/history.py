@@ -52,4 +52,9 @@ def relevant_history(features, entity_id, expand=False):
     for feature in features:
         if entity_id in feature.get("affects", []):
             visit(feature["id"])
-    return [feature for feature in reversed(features) if feature["id"] in selected]
+    ordered = [feature for feature in reversed(features) if feature["id"] in selected]
+    if expand:
+        # Sketch-plane provenance is appended as a deeper exploration level.
+        support_ids = {f.get("sketch_plane_feature") for f in ordered if f.get("type", "").lower() == "sketch"}
+        ordered = [f for f in ordered if f["id"] not in support_ids] + [f for f in ordered if f["id"] in support_ids]
+    return ordered
