@@ -59,9 +59,21 @@ class ReferenceSession:
         if document is None:
             raise RuntimeError("Fusion could not open " + path.name)
         document.activate()
-        design = adsk.fusion.Design.cast(document.products.itemByProductType("DesignProductType"))
+        try:
+            design = adsk.fusion.Design.cast(document.products.itemByProductType("DesignProductType"))
+            model = FusionTimelineModel(design)
+            # A JSON+.f3d pair discovers the ACTUAL timeline after importing
+            # a disposable document copy; no guessed feature indices.
+            if getattr(package, "needs_populate", False):
+                package.populate_from_features(model.features())
+        except Exception:
+            try:
+                document.close(False)
+            except Exception:
+                pass
+            raise
         self.document = document
-        self.model = FusionTimelineModel(design)
+        self.model = model
         self.him.model_highlights = self.model.highlights     # blue inputs per feature
         self.mapped, self.unmatched = map_steps(package.data["steps"], self.model.features())
         self.source_name = path.name
