@@ -260,9 +260,9 @@ function render() {
   $("clock").textContent = secs(S.elapsed) + " / " + secs(duration());
   const mode = $("mode");
   mode.classList.toggle("filtered", S.filtered);
+  mode.hidden = !S.filtered;
   $("modeText").textContent = S.filtered
-    ? S.clip.length + " step(s) made or changed the selected geometry · newest first"
-    : "Whole tutorial · " + steps().length + " steps";
+    ? S.clip.length + " relevant steps · newest first" : "";
   $("showMore").hidden = !S.filtered || !S.canMore;
   $("showAll").hidden = !S.filtered;
   const rail = $("rail");
@@ -308,20 +308,16 @@ window.fusionJavaScriptHandler = {
       else if (action === "filter") applyFilter(payload);
       else if (action === "animation") { S.shown = payload; render(); }
       else if (action === "source") {
-        const line = $("source");
-        line.classList.toggle("recorded", !payload.live);
         S.plan = payload.live ? (payload.plan || []) : [];
-        line.textContent = payload.live
-          ? "Playing on the designer's model " + payload.file + (payload.unmatched && payload.unmatched.length
-              ? " · not found in the model: " + payload.unmatched.join(", ") : "")
-          : "No source model in this example: showing its recorded geometry. HiM selection needs the designer's .f3d.";
       } else if (action === "step") {
         const i = payload.index;
         if (typeof i === "number" && i >= 0 && i < steps().length) {
           if (payload.play) selectStep(i);
           else if (i !== S.index) { const at = S.clip.indexOf(i); if (at >= 0) S.pos = at; S.index = i; S.elapsed = 0; S.fresh = true; render(); }
         }
-      } else if (action === "status") status(payload.message, payload.error);
+      } else if (action === "status") {
+        if (!/^unknown action:\s*response$/i.test(String(payload.message || "").trim())) status(payload.message, payload.error);
+      }
     } catch (error) {
       status(String(error), true);
     }
