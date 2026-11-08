@@ -24,8 +24,22 @@ const S = { plan: [], shown: null,
 };
 
 function bridge(action, payload = {}) {
-  if (!window.adsk || typeof window.adsk.fusionSendData !== "function") return Promise.resolve();
-  return Promise.resolve(window.adsk.fusionSendData(action, JSON.stringify(payload))).then((reply) => { if (reply && reply !== "response" && reply !== "OK") { try { const data = JSON.parse(reply); if (data && data.error) status(data.error, true); } catch (_) {} } }).catch((e) => status(String(e), true));
+  if (!window.adsk || typeof window.adsk.fusionSendData !== "function") return Promise.resolve(false);
+  return Promise.resolve(window.adsk.fusionSendData(action, JSON.stringify(payload))).then((reply) => {
+    if (reply && reply !== "response" && reply !== "OK") {
+      try {
+        const data = JSON.parse(reply);
+        if (data && (data.ok === false || data.error)) {
+          status(data.error || (action + " failed"), true);
+          return false;
+        }
+      } catch (_) { /* Some Fusion versions return a plain acknowledgement. */ }
+    }
+    return true;
+  }).catch((error) => {
+    status(String(error), true);
+    return false;
+  });
 }
 function status(message, error = false) {
   $("status").textContent = message || "";
@@ -88,9 +102,15 @@ function setIndex(i) {
   S.fresh = true;     // selected but not played yet: show the step's result
   S.stepPending = true;
   const request = ++S.stepRequest;
-  bridge("set_step", { index: i }).finally(() => {
+  bridge("set_step", { index: i }).then((ok) => {
     if (request !== S.stepRequest) return;
     S.stepPending = false;
+    if (!ok) {
+      S.playing = false;
+      S.fresh = true;
+      stopAudio();
+      stopSpeech();
+    }
     if (S.playing || S.manualFrame) render();
   });
 }
@@ -293,10 +313,16 @@ function render() {
     const sentAt = performance.now();
     S.inFlight = true;
     S.manualFrame = false;
-    bridge("ref_frame", { index, progress: sentProgress, elapsed: S.elapsed }).finally(() => {
+    bridge("ref_frame", { index, progress: sentProgress, elapsed: S.elapsed }).then((ok) => {
       const renderedAt = performance.now();
       S.inFlight = false;
-      if (epoch === S.epoch && index === S.index && S.playing && S.frameClock) {
+      if (!ok && epoch === S.epoch) {
+        S.playing = false;
+        S.manualFrame = false;
+        stopAudio();
+        stopSpeech();
+      }
+      if (ok && epoch === S.epoch && index === S.index && S.playing && S.frameClock) {
         const atEnd = direction > 0 ? sentProgress >= 1 : sentProgress <= 0;
         if (atEnd) {
           // The final native frame is acknowledged before step transitions.
@@ -367,7 +393,18 @@ window.fusionJavaScriptHandler = {
       const payload = JSON.parse(raw || "{}");
       if (action === "example") loadExample(payload);
       else if (action === "filter") applyFilter(payload);
-      else if (action === "animation") { S.shown = payload; render(); }
+      else if (action === "animation") {
+        S.shown = payload;
+        if (payload.mode === "error") {
+          S.playing = false;
+          S.epoch++;
+          S.manualFrame = false;
+          stopAudio();
+          stopSpeech();
+          status("Native HiM frame failed: " + (payload.fallback || "Fusion recomputation error"), true);
+        }
+        render();
+      }
       else if (action === "source") {
         S.plan = payload.live ? (payload.plan || []) : [];
       } else if (action === "step") {
