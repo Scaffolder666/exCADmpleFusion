@@ -20,7 +20,7 @@ const S = { plan: [], shown: null,
   direction: 1, continuous: true, speed: 1, filtered: false, changed: [], more: [], picked: null,
   last: 0, cue: -1, fresh: true, tags: {}, inFlight: false,
   frameClock: null, nextFrameAt: 0, epoch: 0, manualFrame: false,
-  stepPending: false, stepRequest: 0,
+  stepPending: false, stepRequest: 0, overviewPending: false, overviewInFlight: false,
 };
 
 function bridge(action, payload = {}) {
@@ -97,6 +97,7 @@ function setIndex(i) {
   S.frameClock = null;
   S.nextFrameAt = 0;
   S.manualFrame = false;
+  S.overviewPending = false;
   S.cue = -1;
   stopSpeech();
   S.fresh = true;     // selected but not played yet: show the step's result
@@ -111,7 +112,7 @@ function setIndex(i) {
       stopAudio();
       stopSpeech();
     }
-    if (S.playing || S.manualFrame) render();
+    if (S.playing || S.manualFrame || S.overviewPending) render();
   });
 }
 function stopAudio() { audio.pause(); }
@@ -222,9 +223,8 @@ function finishNativeStep() {
     stopSpeech();
     // The final clip item might not be the source model's final feature
     // (e.g. a face-filtered clip). Restore the COMPLETE shaded design.
-    bridge("ref_overview").then((ok) => {
-      if (ok) status("Full model · all geometry visible");
-    });
+    S.overviewPending = true;
+    render();
   }
 }
 function tick(now) {
@@ -331,8 +331,20 @@ function card(item) {
 function render() {
   if (!S.example) return;
   const progress = Math.max(0, Math.min(1, S.elapsed / duration()));
+  $("scrub").value = Math.round(progress * 200) / 2;
+  $("scrubValue").textContent = Math.round(progress * 100) + "%";
+  // A full-model request must not race an unfinished native recompute.
+  if (S.overviewPending && !S.inFlight && !S.stepPending && !S.overviewInFlight) {
+    S.overviewPending = false;
+    S.overviewInFlight = true;
+    bridge("ref_overview").then((ok) => {
+      S.overviewInFlight = false;
+      if (ok && S.fresh) status("Full model · all geometry visible");
+      if (S.overviewPending || S.manualFrame || S.playing) render();
+    });
+  }
   const due = (S.playing && performance.now() >= S.nextFrameAt) || S.manualFrame;
-  if (!S.fresh && !S.inFlight && !S.stepPending && due) {
+  if (!S.fresh && !S.inFlight && !S.stepPending && !S.overviewInFlight && due) {
     const index = S.index, epoch = S.epoch;
     const sentProgress = progress, direction = S.direction;
     const sentAt = performance.now();
@@ -360,7 +372,7 @@ function render() {
       }
       // Paused/manual scrubbing and rapid step changes need a fresh frame,
       // but never dispatch overlapping expensive Fusion recomputations.
-      if (S.manualFrame || S.playing) render();
+      if (S.manualFrame || S.playing || S.overviewPending) render();
     });
   }
   $("play").innerHTML = S.playing ? "&#10074;&#10074;" : "&#9654;";
@@ -458,6 +470,21 @@ window.fusionJavaScriptHandler = {
 };
 
 /* ---------- controls ---------- */
+$("scrub").addEventListener("input", (event) => {
+  if (!S.example || !S.clip.length) return;
+  const pct = Math.max(0, Math.min(100, Number(event.currentTarget.value)));
+  S.playing = false;             // scrubbing takes precedence over autoplay
+  S.epoch++;                     // ignore obsolete native frame replies
+  S.elapsed = duration() * pct / 100;
+  S.frameClock = null;
+  S.cue = -1;
+  S.fresh = pct === 0 || pct === 100;
+  S.manualFrame = !S.fresh;
+  S.overviewPending = S.fresh;   // endpoints always show the COMPLETE model
+  stopAudio();
+  stopSpeech();
+  render();
+});
 $("play").addEventListener("click", () => (S.playing ? pause() : play(true)));
 $("replay").addEventListener("click", replay);
 $("forward").addEventListener("click", forward);
