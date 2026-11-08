@@ -320,7 +320,8 @@ function card(item) {
       else if (p.mode === "instant") text += "instant appearance (no numeric parameter)";
       else if (p.mode === "visual") text += "visual fade (legacy inspect mode)";
       else text += "timeline state";
-      line.appendChild(el("li", { class: p.mode + (live ? " live" : "") }, text));
+      line.appendChild(el("li", { class: p.mode + (live ? " live" : ""), title: text },
+        p.feature + (live ? " · Current" : "")));
     }
     box.appendChild(line);
   }
@@ -329,7 +330,7 @@ function card(item) {
   cues.forEach((c, i) => { if (c.at_ms <= S.elapsed) active = i; });
   {
     const label = el("div", { class: "explanation-label" },
-      "Why this decision? · Reasoning / transcript");
+      "Transcript");
     box.appendChild(label);
     const list = el("ol", { class: "said" });
     cues.forEach((c, i) => {
@@ -393,7 +394,7 @@ function render() {
       if (S.manualFrame || S.playing || S.overviewPending) render();
     });
   }
-  $("play").innerHTML = S.playing ? "&#10074;&#10074;" : "&#9654;";
+  $("play").innerHTML = '<span class="control-icon ' + (S.playing ? "pause-icon" : "play-icon") + '" aria-hidden="true"></span>';
   $("play").setAttribute("aria-label", S.playing ? "Pause" : "Play");
   $("clock").textContent = secs(S.elapsed) + " / " + secs(duration());
   const mode = $("mode");
@@ -408,6 +409,7 @@ function render() {
   S.clip.forEach((i) => {
     const item = steps()[i];
     const li = el("li", { class: "step" + (i === S.index ? " current" : ""), "data-kind": kindOf(item) });
+    li.style.setProperty("--kind", ["#2f7d5b", "#7c4dce", "#0e7490", "#c26a12", "#b4236a"][i % 5]);
     const button = el("button", { class: "capsule", type: "button" });
     const name = el("span", { class: "name" }, (i + 1) + "  " + item.title);
     if (S.filtered) name.appendChild(el("span", { class: "tag" }, S.tags[i] || "changed here"));

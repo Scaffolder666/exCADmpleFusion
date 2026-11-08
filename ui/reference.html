@@ -16,10 +16,10 @@
   <h1 id="title" class="title">—</h1>
 
   <div class="transport" role="group" aria-label="Playback">
-    <button id="back" title="Step backward (plays the step in reverse)" aria-label="Step backward">&#9198;</button>
-    <button id="play" title="Play / pause" aria-label="Play">&#9654;</button>
-    <button id="replay" title="Replay from the start" aria-label="Replay">&#8635;</button>
-    <button id="forward" title="Step forward" aria-label="Step forward">&#9197;</button>
+    <button id="back" title="Step backward (plays the step in reverse)" aria-label="Step backward"><span class="control-icon previous" aria-hidden="true"></span></button>
+    <button id="play" title="Play / pause" aria-label="Play"><span class="control-icon play-icon" aria-hidden="true"></span></button>
+    <button id="replay" title="Replay from the start" aria-label="Replay"><span class="control-icon replay-icon" aria-hidden="true"></span></button>
+    <button id="forward" title="Step forward" aria-label="Step forward"><span class="control-icon next" aria-hidden="true"></span></button>
     <span id="clock" class="clock">00:00</span>
   </div>
   <div class="scrub-row">
@@ -38,11 +38,11 @@
   <footer class="foot">
     <label>Speed <input id="speed" type="range" min="0.5" max="2" step="0.25" value="1"> <output id="speedValue">1×</output></label>
     <div class="options">
-      <button id="fit" class="link" type="button">Fit view</button>
+      <button id="fit" class="link" type="button" title="Adjust the camera so the whole model fits in the viewport">Fit model to view</button>
     </div>
     <div class="authoring">
-      <button id="demo" class="link" type="button">Open sample tutorial</button>
-      <button id="extractDraft" class="link" type="button" title="Authoring: export the open design's timeline as a tutorial draft">Extract tutorial draft…</button>
+      <button id="demo" class="link" type="button">Try example</button>
+      <button id="extractDraft" class="link" type="button" title="Authoring: export the open design's timeline as a tutorial draft">Create tutorial from this model…</button>
     </div>
     <p id="status" class="status" role="status" aria-live="polite"></p>
   </footer>
@@ -51,3 +51,4 @@
   <script src="reference.js"></script>
 </body>
 </html>
+

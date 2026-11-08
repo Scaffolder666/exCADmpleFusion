@@ -95,3 +95,18 @@ body { display:flex; flex-direction:column; }
 .card .explanation-label { margin:9px 0 4px; color:var(--muted); font-size:11px; font-weight:650; }
 .anim li.timeline::before { content:"○ "; }
 .anim li.live { color:inherit; font-weight:600; }
+
+
+/* Minimal monochrome transport glyphs; no platform-dependent emoji. */
+.transport button { display:inline-flex; align-items:center; justify-content:center; border-radius:6px; }
+.control-icon { display:block; position:relative; width:14px; height:14px; color:inherit; }
+.play-icon::before, .next::before, .previous::before { content:""; position:absolute; top:2px; left:3px; border-top:5px solid transparent; border-bottom:5px solid transparent; border-left:8px solid currentColor; }
+.previous { transform:rotate(180deg); }
+.next::after, .previous::after { content:""; position:absolute; top:2px; right:0; width:2px; height:10px; background:currentColor; }
+.pause-icon::before, .pause-icon::after { content:""; position:absolute; top:2px; width:3px; height:10px; background:currentColor; }
+.pause-icon::before { left:2px; } .pause-icon::after { right:2px; }
+.replay-icon { border:1.5px solid currentColor; border-right-color:transparent; border-radius:50%; width:12px; height:12px; }
+.replay-icon::after { content:""; position:absolute; top:-2px; right:-1px; border-top:4px solid transparent; border-bottom:4px solid transparent; border-left:4px solid currentColor; transform:rotate(-35deg); }
+.anim li.parameter::before, .anim li.visual::before, .anim li.instant::before, .anim li.timeline::before { content:""; }
+.anim { border-left:2px solid var(--kind, var(--other)); padding-left:8px; }
+.anim li { padding:2px 0; } .anim li.live { color:var(--kind, var(--other)); }

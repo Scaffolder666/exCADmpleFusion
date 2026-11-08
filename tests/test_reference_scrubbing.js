@@ -12,7 +12,7 @@ const { HiMFrameClock, initialFrames } = require("../ui/him_frame_clock.js");
 class MockElement {
   constructor() {
     this.dataset = {};
-    this.style = {};
+    this.style = { setProperty(name, value) { this[name] = value; } };
     this.classList = { toggle() {} };
     this.children = [];
     this.handlers = {};
