@@ -1,10 +1,7 @@
 """Version A: how a tutorial step maps onto the designer's Fusion timeline.
 
 Pure Python. A step lists its ``source_features`` (from the extracted
-draft). In the reference instance each step is played HiM-style: the
-timeline is rolled to just after the feature being shown and that
-feature's parameters grow from ~0 to their value. A step with several
-features shares its time equally between them, in timeline order.
+draft); the reference instance rolls the timeline to the last of them.
 """
 
 
@@ -33,24 +30,6 @@ def map_steps(steps, timeline_features):
                 found.append(match)
         mapped.append(sorted(found, key=lambda f: f.index))
     return mapped, unmatched
-
-
-def animated(features):
-    """Sketches are shown by rolling the timeline, not animated."""
-    return [f for f in features if not f.is_sketch]
-
-
-def frame_target(features, progress):
-    """(position, local progress) for a step's features at ``progress``."""
-    items = animated(features)
-    if not items:
-        return None, 1.0
-    progress = max(0.0, min(1.0, float(progress)))
-    if progress >= 1.0:
-        return len(items) - 1, 1.0
-    scaled = progress * len(items)
-    position = min(len(items) - 1, int(scaled))
-    return position, scaled - position
 
 
 def steps_for_features(mapped, feature_indices):

@@ -1,5 +1,5 @@
-"""Version A reference session on a stub Fusion design: HiM parameter
-animation per step, timeline roll, restore, and selection -> steps."""
+"""Version A reference session on a stub Fusion design: the timeline is
+rolled to each step, parameters untouched, and selection -> steps (HiM)."""
 import types
 import unittest
 
@@ -31,20 +31,16 @@ class ReferenceSessionTests(unittest.TestCase):
                 deleteMe=lambda: None, isValid=True)))
         app = FakeApp(self.design)
         self.session = ReferenceSession(app, None)
-        self.session.him.dim_others = False
         self.session.model = FusionTimelineModel(self.design)
         self.session.mapped, _ = map_steps(STEPS, self.session.model.features())
 
-    def test_frames_roll_the_timeline_and_grow_the_parameter(self):
-        original = self.radius.expression
-        self.session.frame(1, 0.5)                     # Fillet1 halfway
-        self.assertEqual(self.design.timeline.markerPosition, 3)    # rolled to just after Fillet1
-        self.assertAlmostEqual(self.radius.value, 0.2 * (0.02 + 0.98 * 0.5))
-        self.session.show_result(0)                    # restore + model after step 1
-        self.assertEqual(self.radius.expression, original)
-        self.assertEqual(self.design.timeline.markerPosition, 2)
+    def test_each_step_shows_the_real_model_without_changing_parameters(self):
+        original = (self.radius.value, self.radius.expression)
+        self.session.show_result(0)
+        self.assertEqual(self.design.timeline.markerPosition, 2)    # after Extrude1
         self.session.show_result(1)
         self.assertEqual(self.design.timeline.markerPosition, 3)    # last step: whole model
+        self.assertEqual((self.radius.value, self.radius.expression), original)
 
     def test_selection_filters_to_steps(self):
         result = self.session.filter(self.entities["fillet_face"])
