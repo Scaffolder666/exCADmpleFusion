@@ -148,6 +148,93 @@ def param(entities, token):
     return entity.extentOne.distance
 
 
+class WireframePlaybackTests(unittest.TestCase):
+    """Real pre-feature context edges + opaque changed-face copies on native frames."""
+
+    def test_context_is_pre_feature_and_stays_fixed_while_parameters_grow(self):
+        design, entities, groups = build()
+        # All original bodies have real-style edge collections in this test.
+        curves = []
+        for i, token in enumerate(("body0", "body1", "body2")):
+            edge = types.SimpleNamespace(geometry="actual-edge-" + token)
+            entities[token].edges = Coll([edge])
+            curves.append(edge.geometry)
+        # This Extrude created/changed one Face of the existing base body.
+        face = types.SimpleNamespace(boundingBox=box())
+        entities["ex1"].faces = Coll([face])
+        adsk.fusion.TemporaryBRepManager = types.SimpleNamespace(
+            get=lambda: types.SimpleNamespace(
+                copy=lambda actual_face: types.SimpleNamespace(boundingBox=actual_face.boundingBox)))
+        app, session = session_for(design, dim=True)
+        self.assertTrue(session.him.wireframe_context)
+        original = {name: entities[name].opacity for name in ("body0", "body1", "body2")}
+        seen = session.frame(0, 0.35)
+        self.assertEqual(seen["mode"], "parameter")
+        self.assertTrue(seen["wireframe"])
+        self.assertEqual(seen["ghost_edges"], 3)
+        self.assertEqual(session.him.ghost_group.curves[0].color, ("solid", adsk.core.Color.create(*GHOST_COLOR)))
+        self.assertTrue(all(entities[name].opacity < 0.01
+                            for name in original))   # no shaded source Body
+        self.assertTrue(session.him.group.bodies)
+        self.assertEqual(session.him.group.bodies[0].opacity, 1.0)
+        previous_group = session.him.ghost_group
+        session.frame(0, 0.6)
+        self.assertIs(previous_group, session.him.ghost_group)
+        self.assertAlmostEqual(entities["ex1"].extentOne.distance.value,
+                               interpolate(1.0, 0.6))
+        session.frame(0, 1.0)
+        self.assertTrue(all(entities[name].opacity == original[name]
+                            for name in original))
+        self.assertFalse(previous_group.isValid)
+        self.assertTrue(all(not group.isValid for group in groups
+                            if group is not session.him.group))
+        session.stop()
+
+    def test_no_feature_faces_falls_back_instead_of_fake_whole_body(self):
+        design, entities, _ = build()
+        for token in ("body0", "body1", "body2"):
+            entities[token].edges = Coll([types.SimpleNamespace(geometry="edge-" + token)])
+        _, session = session_for(design, dim=True)
+        shown = session.frame(1, 0.4)   # Fillet edits existing body, no face geometry
+        self.assertEqual(shown["mode"], "parameter")
+        self.assertFalse(shown["wireframe"])
+        self.assertIsNone(session.him.ghost_group)
+        self.assertEqual(entities["body1"].opacity, 1.0)
+        self.assertEqual(entities["body0"].opacity, 0.2)
+        session.stop()
+
+    def test_ghost_capture_over_budget_does_not_hide_native_geometry(self):
+        from core.him_wireframe import capture_before_feature, WireframeOverflow
+        design, entities, _ = build()
+        for token in ("body0", "body1", "body2"):
+            entities[token].edges = Coll([types.SimpleNamespace(geometry="edge-" + token)])
+        with self.assertRaises(WireframeOverflow):
+            capture_before_feature(design, max_edges=2)
+        _, session = session_for(design, dim=True)
+        session.frame(1, 0.4)
+        session.stop()
+        self.assertEqual(entities["body0"].opacity, 0.6)
+
+    def test_rejected_native_parameter_restores_ghost_and_original_opacity(self):
+        design, entities, groups = build(fillet_minimum=0.1)
+        for token in ("body0", "body1", "body2"):
+            entities[token].edges = Coll([types.SimpleNamespace(geometry="edge-" + token)])
+        face = types.SimpleNamespace(boundingBox=box())
+        entities["fi1"].faces = Coll([face])
+        adsk.fusion.TemporaryBRepManager = types.SimpleNamespace(
+            get=lambda: types.SimpleNamespace(copy=lambda face: types.SimpleNamespace(boundingBox=box())))
+        _, session = session_for(design, dim=True)
+        shown = session.frame(1, 0.1)
+        self.assertEqual(shown["mode"], "visual")  # Fusion rejects tiny radius
+        session.stop()
+        self.assertEqual(entities["body0"].opacity, 0.6)
+        self.assertEqual(entities["body1"].opacity, 1.0)
+        self.assertTrue(all(not group.isValid for group in groups))
+
+
+GHOST_COLOR = (155, 164, 175, 255)
+
+
 class ParameterDiscoveryTests(unittest.TestCase):
     def test_reference_uses_him_transparency_by_default(self):
         design, _, _ = build()
