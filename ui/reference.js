@@ -284,7 +284,8 @@ function card(item) {
       else if (live && live.wireframe && live.mode === "visual")
         text += "ghost wireframe · feature fade (no suitable numeric parameter)";
       else if (live && live.mode === "parameter")
-        text += "native reconstruction · translucent context (exact isolation unavailable) · " +
+        text += "native reconstruction · translucent context (" +
+                (live.context_fallback || "exact isolation unavailable") + ") · " +
                 (live.parameters || []).join(", ");
       else if (p.mode === "parameter") text += "parameter animation: " + p.parameters.join(", ");
       else if (p.mode === "visual") text += "visual fade (no parameter to animate)";
