@@ -3,150 +3,85 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>exCADmple · Design examples</title>
+  <title>exCADmple · Tutorial</title>
   <link rel="stylesheet" href="player.css">
 </head>
 <body>
+  <!-- Version B: a compact tutorial floating over the Fusion canvas; the
+       reference model and the pointer are drawn in the canvas itself. -->
   <main class="app">
     <header class="topbar">
       <div class="brand">
         <span class="brand-icon" aria-hidden="true">e</span>
-        <div><strong>exCADmple</strong><small>Design reasoning in your workspace</small></div>
+        <div><strong id="exampleTitle">exCADmple</strong><small>Design tutorial</small></div>
       </div>
       <div class="topbar-actions">
-        <button id="import" class="btn btn-quiet" title="Open a .json or .excadmple package">+ Import</button>
+        <button id="import" class="btn btn-quiet" title="Open a .excadmple or .json tutorial">+ Import</button>
         <button id="collapse" class="btn btn-quiet" type="button" title="Show only the step bar" aria-pressed="false">▾</button>
       </div>
     </header>
 
-
-    <section class="intro">
-      <div class="overline">REFERENCE EXAMPLE <span id="exampleType" class="type-note">Design process</span></div>
-      <h1 id="exampleTitle">Loading example…</h1>
-      <p id="exampleDescription">Explore the original design, then continue with your own.</p>
-      <details id="brief" class="brief" hidden>
-        <summary>The designer's goal</summary>
-        <p id="briefGoal"></p>
-        <p id="briefMore" class="brief-more"></p>
-      </details>
-      <div class="example-meta">
-        <span id="exampleSteps">—</span>
-        <span aria-hidden="true">·</span>
-        <span>Explore, borrow, or adapt</span>
-      </div>
-      <div class="example-switch">
-        <label for="exampleSwitch">Open examples</label>
-        <select id="exampleSwitch" aria-label="Switch between open design examples"></select>
-        <button id="closeExample" type="button" class="text-button" title="Close this example">Close</button>
-      </div>
-    </section>
-
     <div class="lesson-scroll">
-    <section class="step-detail">
-      <div class="current-step">
-      <div class="step-context">
-        <div class="overline" id="stepEyebrow">STEP 01</div>
-        <div id="geometryStatus" class="reference-label">Reference model</div>
-      </div>
-      <h2 id="stepTitle">—</h2>
-      <p id="stepGoal" class="goal"></p>
-      </div>
-
-      <div class="reasoning-heading section-heading detail-heading">
-        <span>Why this decision?</span>
-        <span id="reasonSource" class="source-tag">Source unknown</span>
-      </div>
-      <blockquote id="reasoning">Reasoning associated with the selected step appears here.</blockquote>
-      <p class="source-explainer" id="sourceExplainer"></p>
-      <div class="cue">
-        <div class="cue-track" aria-hidden="true"><span></span></div>
-        <p id="cueText">Select a step to see its recorded operations.</p>
-      </div>
-      <div class="playback-accessibility">
-        <label><input id="captionsEnabled" type="checkbox" checked> Captions</label>
-        <label><input id="narrationEnabled" type="checkbox"> Synthetic cue narration</label>
-      </div>
-
-      <div id="stepContext" class="decision-box" hidden>
-        <p id="stepScope" class="decision-scope" hidden></p>
-        <p id="stepDeps" class="decision-deps" hidden></p>
-      </div>
-      <section id="decisionBox" class="decision-box" hidden aria-label="The design decision in this step">
-        <div class="section-heading detail-heading">
-          <span>The decision</span>
-          <span id="decisionTopic" class="source-tag"></span>
+      <section class="step-detail">
+        <div class="current-step">
+          <div class="step-context">
+            <div class="overline" id="stepEyebrow">STEP 01</div>
+            <div id="tools" class="tools" aria-label="Tools used"></div>
+          </div>
+          <h2 id="stepTitle">—</h2>
         </div>
-        <p id="decisionQuestion" class="decision-question"></p>
-        <div class="decision-label">Considered</div>
-        <ul id="decisionCriteria" class="criteria"></ul>
-        <div class="decision-label">Options</div>
-        <ol id="decisionOptions" class="decision-options"></ol>
-        <p id="decisionScope" class="decision-scope" hidden></p>
-        <p id="decisionDeps" class="decision-deps" hidden></p>
-        <button id="compareDecision" class="geometry-btn primary" type="button">Compare with my design &amp; other examples →</button>
+
+        <div class="section-heading detail-heading"><span>What the designer said</span></div>
+        <ol id="said" class="said" aria-live="polite"></ol>
+        <div class="playback-accessibility">
+          <label><input id="captionsEnabled" type="checkbox" checked> Transcript</label>
+          <label><input id="narrationEnabled" type="checkbox"> Synthetic voice</label>
+        </div>
+
+        <div class="demonstration" id="demonstration">
+          <video id="video" playsinline preload="metadata" hidden></video>
+          <div id="noVideo" class="no-video">
+            <div class="viewport-glyph" aria-hidden="true">◇</div>
+            <strong>Reference model in Fusion</strong>
+            <span>The model and the designer's pointer play beside your design.</span>
+          </div>
+        </div>
+        <audio id="audio" preload="metadata"></audio>
+
+        <details class="geometry-link" id="geometryLink">
+          <summary class="geometry-link__summary">
+            <span class="geometry-link__heading">Linked CAD geometry</span>
+            <span id="linkStatus" class="geometry-link__status">Not linked</span>
+            <span class="geometry-link__chevron" aria-hidden="true">⌄</span>
+          </summary>
+          <div class="geometry-link__body">
+            <p>To link this step to geometry in your own model, select one body, face, or component in Fusion first.</p>
+            <div class="geometry-link__buttons">
+              <button id="bindGeometry" class="geometry-btn primary" type="button">Link selected</button>
+              <button id="locateGeometry" class="geometry-btn" type="button" disabled>Locate in Fusion</button>
+              <button id="removeGeometry" class="geometry-btn minimal" type="button" disabled>Unlink</button>
+            </div>
+            <label class="focus-toggle">
+              <input type="checkbox" id="focusMode" checked>
+              <span><strong>Focus on linked geometry</strong><small>Dim unrelated bodies to 24% opacity while viewing this step</small></span>
+            </label>
+          </div>
+        </details>
       </section>
 
-      <div class="section-heading detail-heading">How it was modeled</div>
-      <div class="operation-box">
-        <div class="tool-row"><span id="toolName" class="tool-tag">—</span><span id="toolInstruction"></span></div>
-        <div id="parameters" class="parameters"></div>
-      </div>
-
-      <div class="demonstration" id="demonstration">
-        <video id="video" playsinline preload="metadata" hidden></video>
-        <figure id="finalPreview" class="final-preview" hidden>
-          <img id="previewImage" alt="Preview of final shared CAD model">
-          <figcaption>FINAL MODEL ONLY — not this step's geometry</figcaption>
-        </figure>
-        <div id="noVideo" class="no-video">
-          <div class="viewport-glyph" aria-hidden="true">◇</div>
-          <strong>Reference in Fusion</strong>
-          <span>Inspect the step geometry directly in the CAD canvas.</span>
+      <footer>
+        <label class="reference-toggle"><input type="checkbox" id="showReference" checked><span>Show the reference model in Fusion</span></label>
+        <div class="footer-actions">
+          <button id="demo" class="text-button">Open sample tutorial</button>
+          <button id="extractDraft" class="text-button" title="Authoring: export the open design's timeline as a tutorial draft">Extract tutorial draft…</button>
         </div>
-      </div>
-      <audio id="audio" preload="metadata"></audio>
-      <div class="evidence-heading">
-        <span>Process evidence</span>
-        <span id="mediaEvidence" class="evidence-tag">Step metadata</span>
-      </div>
-
-      <details class="geometry-link" id="geometryLink">
-        <summary class="geometry-link__summary">
-          <span class="geometry-link__heading">Linked CAD geometry</span>
-          <span id="linkStatus" class="geometry-link__status">Not linked</span>
-          <span class="geometry-link__chevron" aria-hidden="true">⌄</span>
-        </summary>
-        <div class="geometry-link__body">
-          <p>To link this step to the actual source CAD geometry, select one body, face, or component in Fusion first.</p>
-          <div class="geometry-link__buttons">
-            <button id="bindGeometry" class="geometry-btn primary" type="button">Link selected</button>
-            <button id="locateGeometry" class="geometry-btn" type="button" disabled>Locate in Fusion</button>
-            <button id="removeGeometry" class="geometry-btn minimal" type="button" disabled>Unlink</button>
-          </div>
-          <label class="focus-toggle">
-            <input type="checkbox" id="focusMode" checked>
-            <span><strong>Focus on linked geometry</strong><small>Dim unrelated bodies to 24% opacity while viewing this step</small></span>
-          </label>
-          <small>Focus restores original display opacity on step changes, save and exit. Avoid using other appearance-changing add-ins simultaneously.</small>
-        </div>
-      </details>
-    </section>
-
-    <footer>
-      <label class="reference-toggle"><input type="checkbox" id="showReference" checked><span>Show 3D step reference in Fusion</span></label>
-      <div class="workflow-note">Follow the full example, revisit one decision, or design differently. Your model and feature history remain yours.</div>
-      <div class="footer-actions">
-        <button id="demo" class="text-button">Open sample example</button>
-        <button id="extractDraft" class="text-button" title="Authoring: export the open design's timeline as an example draft (see docs/EXAMPLE_FORMAT.md)">Extract example draft…</button>
-        <span id="packageStatus" class="package-note"></span>
-      </div>
-      <div class="status" id="status" role="status" aria-live="polite"></div>
-    </footer>
+        <div class="status" id="status" role="status" aria-live="polite"></div>
+      </footer>
     </div>
 
-    <section class="timeline-panel" aria-label="Design example steps">
+    <section class="timeline-panel" aria-label="Tutorial steps">
       <div class="section-heading">
-        <span>Explore the steps</span>
+        <span>Steps</span>
         <span id="stepCount" class="count">0 / 0</span>
       </div>
       <div id="stepRail" class="step-rail" aria-label="Select a step"></div>
@@ -157,17 +92,16 @@
           <button id="next" class="icon-button" aria-label="Next step" title="Next step">▶▶</button>
           <span class="clock" id="clock">00:00 / 00:00</span>
         </div>
-        <input id="scrub" class="seek" type="range" min="0" max="1000" value="0" aria-label="Scrub within current step">
+        <input id="scrub" class="seek" type="range" min="0" max="1000" value="0" aria-label="Position in this step">
       </div>
       <div class="playback-options">
         <label for="playbackScope">Play</label>
-        <select id="playbackScope"><option value="all" selected>Whole process</option><option value="step">This step only</option></select>
-        <button id="replay" class="text-button" type="button">Replay</button>
+        <select id="playbackScope"><option value="all" selected>Whole tutorial</option><option value="step">This step only</option></select>
+        <button id="replay" class="text-button" type="button">Replay step</button>
         <label for="playbackSpeed">Speed</label>
         <select id="playbackSpeed" aria-label="Playback speed"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="1.5">1.5×</option><option value="2">2×</option></select>
       </div>
     </section>
-
   </main>
   <script src="player.js"></script>
 </body>

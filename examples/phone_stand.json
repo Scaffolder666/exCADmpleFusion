@@ -2,8 +2,8 @@
  "format": "excadmple",
  "version": 2,
  "id": "phone-stand",
- "title": "Phone Stand — Nine Design Decisions",
- "description": "Synthetic nine-step example: geometry, ghost pointer and reasoning are authored, not a recording of a real designer's session.",
+ "title": "Phone Stand",
+ "description": "Illustrative example: geometry, pointer and words are authored, not recorded.",
  "reference_offset_cm": [
   14,
   0,
@@ -13,8 +13,21 @@
   {
    "id": "base",
    "title": "Establish the footprint",
-   "goal": "Set a footprint that stays stable when the screen is tapped.",
    "duration_ms": 9000,
+   "tools": [
+    "Sketch",
+    "Extrude"
+   ],
+   "cues": [
+    {
+     "at_ms": 0,
+     "label": "I choose a wide base first so I can evaluate stability before fixing the viewing angle."
+    },
+    {
+     "at_ms": 4050,
+     "label": "The depth matters more than the width: tapping the screen pushes the phone backwards."
+    }
+   ],
    "geometry": {
     "meshes": [
      {
@@ -125,43 +138,6 @@
      }
     ]
    },
-   "media": {},
-   "operation": {
-    "tool": "Sketch → Extrude",
-    "instruction": "Sketch a 100 × 80 mm rectangle on the XY plane and extrude it 7 mm.",
-    "parameters": [
-     {
-      "name": "Width",
-      "value": "100 mm"
-     },
-     {
-      "name": "Depth",
-      "value": "80 mm"
-     },
-     {
-      "name": "Thickness",
-      "value": "7 mm"
-     }
-    ]
-   },
-   "reasoning": {
-    "text": "I choose a wide base first so I can evaluate stability before fixing the viewing angle. The depth matters more than the width: tapping the screen pushes the phone backwards.",
-    "source": "mockup"
-   },
-   "cues": [
-    {
-     "at_ms": 0,
-     "label": "First, I define a broad footprint for stability."
-    },
-    {
-     "at_ms": 3400,
-     "label": "Now I extrude it, keeping the plate relatively thin."
-    },
-    {
-     "at_ms": 7000,
-     "label": "This dimension is a design choice, not a requirement."
-    }
-   ],
    "animation": {
     "type": "extrude",
     "profile": [
@@ -261,59 +237,23 @@
      "event": "move"
     }
    ],
-   "decision": {
-    "topic": "footprint",
-    "question": "How deep should the base be?",
-    "criteria": [
-     "Resists tipping when the screen is tapped",
-     "Desk space",
-     "Material and print time"
-    ],
-    "options": [
-     {
-      "label": "Compact",
-      "note": "Small, but tips backwards when tapped.",
-      "value": "60 mm"
-     },
-     {
-      "label": "Balanced",
-      "note": "Stable for phones up to ~7 inch.",
-      "value": "80 mm",
-      "chosen": true
-     },
-     {
-      "label": "Generous",
-      "note": "Very stable, takes more desk space.",
-      "value": "100 mm"
-     }
-    ],
-    "applies_to": {
-     "features": [
-      "ExtrudeFeature"
-     ],
-     "tags": [
-      "base",
-      "foot",
-      "plate",
-      "footprint"
-     ]
-    },
-    "parameter": {
-     "name": "Base depth",
-     "value": "80 mm",
-     "kind": "length"
-    }
-   },
-   "scope": {
-    "kind": "goal_specific",
-    "note": "Depth sized for phones up to ~7 inch"
-   }
+   "media": {}
   },
   {
    "id": "support",
    "title": "Choose a viewing angle",
-   "goal": "Hold the screen at a comfortable angle.",
    "duration_ms": 9000,
+   "tools": [
+    "Sketch",
+    "Extrude",
+    "Rotate"
+   ],
+   "cues": [
+    {
+     "at_ms": 0,
+     "label": "The back panel is angled for viewing, but I keep the angle as one parameter so I can change its inclination if the phone or the context changes."
+    }
+   ],
    "geometry": {
     "meshes": [
      {
@@ -530,39 +470,6 @@
      }
     ]
    },
-   "media": {},
-   "operation": {
-    "tool": "Sketch → Extrude → Rotate",
-    "instruction": "Extrude a 6 mm back panel and tilt it 25° back from vertical (65° from the desk).",
-    "parameters": [
-     {
-      "name": "Angle from desk",
-      "value": "65 deg"
-     },
-     {
-      "name": "Panel thickness",
-      "value": "6 mm"
-     }
-    ]
-   },
-   "reasoning": {
-    "text": "The back panel is angled for viewing, but I keep the angle as one parameter so I can change its inclination if the phone or the context changes.",
-    "source": "mockup"
-   },
-   "cues": [
-    {
-     "at_ms": 0,
-     "label": "I introduce a back panel to carry the phone."
-    },
-    {
-     "at_ms": 3200,
-     "label": "I tilt it instead of assuming the first angle is final."
-    },
-    {
-     "at_ms": 6800,
-     "label": "The angle depends on how the stand will be used."
-    }
-   ],
    "animation": {
     "type": "revolve",
     "new_meshes": [
@@ -840,65 +747,26 @@
      "event": "move"
     }
    ],
-   "decision": {
-    "topic": "viewing_angle",
-    "question": "How steep should the phone lean?",
-    "criteria": [
-     "Eye level while sitting at a desk",
-     "Glare from overhead light",
-     "Stability when tapped"
-    ],
-    "options": [
-     {
-      "label": "Shallow",
-      "note": "Easy to tap, but the screen reflects ceiling lights.",
-      "value": "55 deg"
-     },
-     {
-      "label": "Medium",
-      "note": "Readable from a chair; still stable when tapped.",
-      "value": "65 deg",
-      "chosen": true
-     },
-     {
-      "label": "Upright",
-      "note": "Good for video calls, tips more easily.",
-      "value": "75 deg"
-     }
-    ],
-    "applies_to": {
-     "features": [
-      "ExtrudeFeature",
-      "RevolveFeature",
-      "MoveFeature"
-     ],
-     "tags": [
-      "back",
-      "support",
-      "angle",
-      "tilt",
-      "panel"
-     ]
-    },
-    "parameter": {
-     "name": "Angle from desk",
-     "value": "65 deg",
-     "kind": "angle"
-    }
-   },
-   "scope": {
-    "kind": "goal_specific",
-    "note": "Angle chosen for reading at a desk"
-   },
-   "depends_on": [
-    "base"
-   ]
+   "media": {}
   },
   {
    "id": "lip",
    "title": "Prevent the phone from sliding",
-   "goal": "Stop the phone from sliding off the base.",
    "duration_ms": 9000,
+   "tools": [
+    "Sketch",
+    "Extrude"
+   ],
+   "cues": [
+    {
+     "at_ms": 0,
+     "label": "I add a shallow lip to prevent slipping while leaving room to reach the bottom of the device."
+    },
+    {
+     "at_ms": 4050,
+     "label": "Higher than about a centimeter starts covering the screen."
+    }
+   ],
    "geometry": {
     "meshes": [
      {
@@ -1221,39 +1089,6 @@
      }
     ]
    },
-   "media": {},
-   "operation": {
-    "tool": "Sketch → Extrude",
-    "instruction": "Sketch a 6 mm strip near the front edge and extrude it 10 mm up.",
-    "parameters": [
-     {
-      "name": "Lip height",
-      "value": "10 mm"
-     },
-     {
-      "name": "Lip thickness",
-      "value": "6 mm"
-     }
-    ]
-   },
-   "reasoning": {
-    "text": "I add a shallow lip to prevent slipping while leaving room to reach the bottom of the device. Higher than about a centimeter starts covering the screen.",
-    "source": "mockup"
-   },
-   "cues": [
-    {
-     "at_ms": 0,
-     "label": "A small lip holds the device near the lower edge."
-    },
-    {
-     "at_ms": 3600,
-     "label": "I extrude only enough to resist sliding."
-    },
-    {
-     "at_ms": 6700,
-     "label": "The phone size might call for a different lip."
-    }
-   ],
    "animation": {
     "type": "extrude",
     "profile": [
@@ -1566,62 +1401,25 @@
      "event": "move"
     }
    ],
-   "decision": {
-    "topic": "retaining_lip",
-    "question": "How tall should the retaining lip be?",
-    "criteria": [
-     "Holds the phone at the chosen angle",
-     "Does not cover the screen",
-     "Works with a phone case"
-    ],
-    "options": [
-     {
-      "label": "Low",
-      "note": "Covers nothing, but a cased phone can slip over it.",
-      "value": "5 mm"
-     },
-     {
-      "label": "Medium",
-      "note": "Holds a cased phone without covering the screen.",
-      "value": "10 mm",
-      "chosen": true
-     },
-     {
-      "label": "High",
-      "note": "Very secure, hides the bottom of the screen.",
-      "value": "15 mm"
-     }
-    ],
-    "applies_to": {
-     "features": [
-      "ExtrudeFeature"
-     ],
-     "tags": [
-      "lip",
-      "ledge",
-      "stop",
-      "front"
-     ]
-    },
-    "parameter": {
-     "name": "Lip height",
-     "value": "10 mm",
-     "kind": "length"
-    }
-   },
-   "scope": {
-    "kind": "goal_specific",
-    "note": "Height assumes a phone in a case"
-   },
-   "depends_on": [
-    "support"
-   ]
+   "media": {}
   },
   {
    "id": "base_round",
    "title": "Round the base edges",
-   "goal": "Make the base pleasant to handle without losing contact area.",
    "duration_ms": 9000,
+   "tools": [
+    "Fillet"
+   ],
+   "cues": [
+    {
+     "at_ms": 0,
+     "label": "Before moving to details, I soften the sharp base corners for handling while keeping enough flat contact for stability."
+    },
+    {
+     "at_ms": 4050,
+     "label": "A large radius would eat into the footprint I chose in step 1."
+    }
+   ],
    "geometry": {
     "meshes": [
      {
@@ -2694,39 +2492,6 @@
      }
     ]
    },
-   "media": {},
-   "operation": {
-    "tool": "Fillet",
-    "instruction": "Select the four vertical base edges and fillet them with an 8 mm radius.",
-    "parameters": [
-     {
-      "name": "Radius",
-      "value": "8 mm"
-     },
-     {
-      "name": "Edges",
-      "value": "4"
-     }
-    ]
-   },
-   "reasoning": {
-    "text": "Before moving to details, I soften the sharp base corners for handling while keeping enough flat contact for stability. A large radius would eat into the footprint I chose in step 1.",
-    "source": "mockup"
-   },
-   "cues": [
-    {
-     "at_ms": 0,
-     "label": "A wide base helps stability, but sharp corners feel unfinished."
-    },
-    {
-     "at_ms": 3400,
-     "label": "I increase the fillet radius a little at a time."
-    },
-    {
-     "at_ms": 6900,
-     "label": "Too much rounding would take away useful flat contact."
-    }
-   ],
    "animation": {
     "type": "fillet",
     "before_meshes": [
@@ -4935,63 +4700,26 @@
      "event": "move"
     }
    ],
-   "decision": {
-    "topic": "edge_rounding",
-    "question": "How much should the base corners be rounded?",
-    "criteria": [
-     "Comfortable to handle",
-     "Keeps flat contact area",
-     "Matches the product's visual language"
-    ],
-    "options": [
-     {
-      "label": "Break the edge",
-      "note": "Just removes sharpness.",
-      "value": "2 mm"
-     },
-     {
-      "label": "Soft",
-      "note": "Friendly look, contact area barely changes.",
-      "value": "8 mm",
-      "chosen": true
-     },
-     {
-      "label": "Pebble",
-      "note": "Very soft, but the footprint shrinks noticeably.",
-      "value": "15 mm"
-     }
-    ],
-    "applies_to": {
-     "features": [
-      "FilletFeature",
-      "ChamferFeature"
-     ],
-     "tags": [
-      "fillet",
-      "round",
-      "corner",
-      "edge"
-     ]
-    },
-    "parameter": {
-     "name": "Radius",
-     "value": "8 mm",
-     "kind": "length"
-    }
-   },
-   "scope": {
-    "kind": "general",
-    "note": "Softening edges without losing contact area"
-   },
-   "depends_on": [
-    "base"
-   ]
+   "media": {}
   },
   {
    "id": "cable",
    "title": "Leave a charging-cable passage",
-   "goal": "Allow charging while the phone is on the stand.",
    "duration_ms": 9000,
+   "tools": [
+    "Sketch",
+    "Extrude (Cut)"
+   ],
+   "cues": [
+    {
+     "at_ms": 0,
+     "label": "The retaining lip should not block charging."
+    },
+    {
+     "at_ms": 4050,
+     "label": "I cut a centered cable passage but keep support on both sides, so the phone still cannot slide."
+    }
+   ],
    "geometry": {
     "meshes": [
      {
@@ -6170,39 +5898,6 @@
      }
     ]
    },
-   "media": {},
-   "operation": {
-    "tool": "Sketch → Extrude (Cut)",
-    "instruction": "Sketch a 20 mm wide slot centered on the lip and cut through it.",
-    "parameters": [
-     {
-      "name": "Slot width",
-      "value": "20 mm"
-     },
-     {
-      "name": "Operation",
-      "value": "Cut"
-     }
-    ]
-   },
-   "reasoning": {
-    "text": "The retaining lip should not block charging. I cut a centered cable passage but keep support on both sides, so the phone still cannot slide.",
-    "source": "mockup"
-   },
-   "cues": [
-    {
-     "at_ms": 0,
-     "label": "The phone still needs to charge while it is on the stand."
-    },
-    {
-     "at_ms": 3400,
-     "label": "I remove a small section of the front lip."
-    },
-    {
-     "at_ms": 6900,
-     "label": "Both lip segments remain to prevent sliding."
-    }
-   ],
    "animation": {
     "type": "boolean",
     "before_meshes": [
@@ -8605,64 +8300,27 @@
      "event": "move"
     }
    ],
-   "decision": {
-    "topic": "cable_access",
-    "question": "How wide should the cable passage be?",
-    "criteria": [
-     "Fits common charging plugs",
-     "Keeps enough lip on both sides",
-     "Centered on the phone's port"
-    ],
-    "options": [
-     {
-      "label": "Narrow",
-      "note": "Fits a bare cable, not a USB-C plug housing.",
-      "value": "10 mm"
-     },
-     {
-      "label": "Medium",
-      "note": "Fits most plugs; both lip halves still hold.",
-      "value": "20 mm",
-      "chosen": true
-     },
-     {
-      "label": "Wide",
-      "note": "Fits any plug, lip halves get short.",
-      "value": "30 mm"
-     }
-    ],
-    "applies_to": {
-     "features": [
-      "ExtrudeFeature",
-      "CombineFeature"
-     ],
-     "tags": [
-      "cable",
-      "slot",
-      "cut",
-      "passage",
-      "charge"
-     ]
-    },
-    "parameter": {
-     "name": "Slot width",
-     "value": "20 mm",
-     "kind": "length"
-    }
-   },
-   "scope": {
-    "kind": "general",
-    "note": "Keep charging access whenever a lip is used"
-   },
-   "depends_on": [
-    "lip"
-   ]
+   "media": {}
   },
   {
    "id": "ribs",
    "title": "Reinforce the back support",
-   "goal": "Keep the tilted back from flexing when the screen is tapped.",
    "duration_ms": 9000,
+   "tools": [
+    "Sketch",
+    "Extrude",
+    "Mirror"
+   ],
+   "cues": [
+    {
+     "at_ms": 0,
+     "label": "The angled back may flex."
+    },
+    {
+     "at_ms": 4050,
+     "label": "I add a pair of narrow ribs near the sides instead of filling the entire area with material, and mirror one rib so both sides stay identical when I edit it."
+    }
+   ],
    "geometry": {
     "meshes": [
      {
@@ -9993,39 +9651,6 @@
      }
     ]
    },
-   "media": {},
-   "operation": {
-    "tool": "Sketch → Extrude → Mirror",
-    "instruction": "Sketch a triangular rib on a side plane, extrude it 6 mm, mirror it across the YZ midplane.",
-    "parameters": [
-     {
-      "name": "Rib thickness",
-      "value": "6 mm"
-     },
-     {
-      "name": "Ribs",
-      "value": "2 (mirrored)"
-     }
-    ]
-   },
-   "reasoning": {
-    "text": "The angled back may flex. I add a pair of narrow ribs near the sides instead of filling the entire area with material, and mirror one rib so both sides stay identical when I edit it.",
-    "source": "mockup"
-   },
-   "cues": [
-    {
-     "at_ms": 0,
-     "label": "The tilted back panel may need more stiffness."
-    },
-    {
-     "at_ms": 3400,
-     "label": "I build a narrow triangular rib near one side."
-    },
-    {
-     "at_ms": 6900,
-     "label": "I mirror the structural idea to keep the support balanced."
-    }
-   ],
    "animation": {
     "type": "mirror",
     "new_meshes": [
@@ -11358,65 +10983,26 @@
      "event": "move"
     }
    ],
-   "decision": {
-    "topic": "stiffening",
-    "question": "How should the tilted back be stiffened?",
-    "criteria": [
-     "Stiffness when tapped",
-     "Material use",
-     "Edits stay consistent on both sides"
-    ],
-    "options": [
-     {
-      "label": "Thicker panel",
-      "note": "Simple, but doubles the panel's material.",
-      "value": "12 mm"
-     },
-     {
-      "label": "One central rib",
-      "note": "Blocks the cable path behind the phone."
-     },
-     {
-      "label": "Two mirrored side ribs",
-      "note": "Stiff, light, and one edit updates both.",
-      "value": "6 mm",
-      "chosen": true
-     }
-    ],
-    "applies_to": {
-     "features": [
-      "ExtrudeFeature",
-      "MirrorFeature",
-      "RibFeature",
-      "WebFeature"
-     ],
-     "tags": [
-      "rib",
-      "gusset",
-      "brace",
-      "support",
-      "web"
-     ]
-    },
-    "parameter": {
-     "name": "Rib thickness",
-     "value": "6 mm",
-     "kind": "length"
-    }
-   },
-   "scope": {
-    "kind": "general",
-    "note": "Stiffen a tilted panel locally instead of thickening it"
-   },
-   "depends_on": [
-    "support"
-   ]
+   "media": {}
   },
   {
    "id": "pads",
    "title": "Pattern four anti-slip pads",
-   "goal": "Keep the stand from sliding on the desk.",
    "duration_ms": 9000,
+   "tools": [
+    "Extrude",
+    "Rectangular Pattern"
+   ],
+   "cues": [
+    {
+     "at_ms": 0,
+     "label": "Instead of making the base heavier, I use four small contact pads to increase friction and stabilize the stand on an uneven table."
+    },
+    {
+     "at_ms": 4050,
+     "label": "Patterning one pad means I edit all four at once."
+    }
+   ],
    "geometry": {
     "meshes": [
      {
@@ -13171,39 +12757,6 @@
      }
     ]
    },
-   "media": {},
-   "operation": {
-    "tool": "Extrude → Rectangular Pattern",
-    "instruction": "Extrude one 12 mm pad under a corner, then pattern it 2 × 2.",
-    "parameters": [
-     {
-      "name": "Pad size",
-      "value": "12 mm"
-     },
-     {
-      "name": "Pattern",
-      "value": "2 × 2"
-     }
-    ]
-   },
-   "reasoning": {
-    "text": "Instead of making the base heavier, I use four small contact pads to increase friction and stabilize the stand on an uneven table. Patterning one pad means I edit all four at once.",
-    "source": "mockup"
-   },
-   "cues": [
-    {
-     "at_ms": 0,
-     "label": "The stand should not slide on the desk."
-    },
-    {
-     "at_ms": 3400,
-     "label": "I place grip pads near the base corners."
-    },
-    {
-     "at_ms": 6900,
-     "label": "Four pads give support without extending the footprint."
-    }
-   ],
    "animation": {
     "type": "rectangular_pattern",
     "new_meshes": [
@@ -14711,63 +14264,26 @@
      "event": "move"
     }
    ],
-   "decision": {
-    "topic": "anti_slip",
-    "question": "How should the stand resist sliding?",
-    "criteria": [
-     "Friction on smooth desks",
-     "Rocking on uneven tables",
-     "Weight and cost"
-    ],
-    "options": [
-     {
-      "label": "Heavier base",
-      "note": "Works, but adds material and print time."
-     },
-     {
-      "label": "Full rubber sheet",
-      "note": "Grippy, but rocks on uneven tables."
-     },
-     {
-      "label": "Four corner pads",
-      "note": "Three-point-like contact, no rocking.",
-      "value": "12 mm",
-      "chosen": true
-     }
-    ],
-    "applies_to": {
-     "features": [
-      "RectangularPatternFeature",
-      "CircularPatternFeature",
-      "ExtrudeFeature"
-     ],
-     "tags": [
-      "pad",
-      "foot",
-      "grip",
-      "rubber",
-      "pattern"
-     ]
-    },
-    "parameter": {
-     "name": "Pad size",
-     "value": "12 mm",
-     "kind": "length"
-    }
-   },
-   "scope": {
-    "kind": "general",
-    "note": "Friction without enlarging the footprint"
-   },
-   "depends_on": [
-    "base"
-   ]
+   "media": {}
   },
   {
    "id": "back_window",
    "title": "Lighten the back support",
-   "goal": "Use less material without losing the side rails.",
    "duration_ms": 9000,
+   "tools": [
+    "Sketch",
+    "Extrude (Cut)"
+   ],
+   "cues": [
+    {
+     "at_ms": 0,
+     "label": "A solid back panel uses more material than needed."
+    },
+    {
+     "at_ms": 4050,
+     "label": "I explore a central opening while retaining side rails, accepting that it may reduce stiffness — the ribs from step 6 make that acceptable."
+    }
+   ],
    "geometry": {
     "meshes": [
      {
@@ -16840,39 +16356,6 @@
      }
     ]
    },
-   "media": {},
-   "operation": {
-    "tool": "Sketch → Extrude (Cut)",
-    "instruction": "Sketch a 60 × 45 mm window on the back panel and cut through it.",
-    "parameters": [
-     {
-      "name": "Window",
-      "value": "60 × 45 mm"
-     },
-     {
-      "name": "Rail width",
-      "value": "15 mm"
-     }
-    ]
-   },
-   "reasoning": {
-    "text": "A solid back panel uses more material than needed. I explore a central opening while retaining side rails, accepting that it may reduce stiffness — the ribs from step 6 make that acceptable.",
-    "source": "mockup"
-   },
-   "cues": [
-    {
-     "at_ms": 0,
-     "label": "The solid back support may use unnecessary material."
-    },
-    {
-     "at_ms": 3400,
-     "label": "I cut an opening through its center."
-    },
-    {
-     "at_ms": 6900,
-     "label": "The side rails remain, but strength should still be checked."
-    }
-   ],
    "animation": {
     "type": "boolean",
     "before_meshes": [
@@ -21063,64 +20546,26 @@
      "event": "move"
     }
    ],
-   "decision": {
-    "topic": "material_reduction",
-    "question": "Should the back panel be lightened?",
-    "criteria": [
-     "Material and print time",
-     "Stiffness of the support",
-     "Cooling and cable routing"
-    ],
-    "options": [
-     {
-      "label": "Keep it solid",
-      "note": "Stiffest, most material."
-     },
-     {
-      "label": "Central window",
-      "note": "Saves ~40% of the panel; ribs keep it stiff.",
-      "value": "60 mm",
-      "chosen": true
-     },
-     {
-      "label": "Slots",
-      "note": "Looks technical, harder to print without supports."
-     }
-    ],
-    "applies_to": {
-     "features": [
-      "ExtrudeFeature",
-      "CombineFeature",
-      "ShellFeature"
-     ],
-     "tags": [
-      "window",
-      "lighten",
-      "cut",
-      "hole",
-      "opening",
-      "pocket"
-     ]
-    },
-    "parameter": {
-     "name": "Window width",
-     "value": "60 mm",
-     "kind": "length"
-    }
-   },
-   "scope": {
-    "kind": "goal_specific",
-    "note": "Acceptable only because of the ribs"
-   },
-   "depends_on": [
-    "ribs"
-   ]
+   "media": {}
   },
   {
    "id": "fit",
    "title": "Check phone fit and clearance",
-   "goal": "Verify angle, lip and charging access with a real phone size.",
    "duration_ms": 9000,
+   "tools": [
+    "Insert proxy",
+    "Move"
+   ],
+   "cues": [
+    {
+     "at_ms": 0,
+     "label": "I bring in a simplified phone proxy to check the viewing angle, charging access, and whether the lip clears the device before committing to dimensions."
+    },
+    {
+     "at_ms": 4050,
+     "label": "The proxy is temporary and not printed."
+    }
+   ],
    "geometry": {
     "meshes": [
      {
@@ -23299,39 +22744,6 @@
      }
     ]
    },
-   "media": {},
-   "operation": {
-    "tool": "Insert proxy → Move",
-    "instruction": "Insert a 75 × 150 × 8 mm phone proxy and move it against the back and lip.",
-    "parameters": [
-     {
-      "name": "Proxy",
-      "value": "75 × 150 × 8 mm"
-     },
-     {
-      "name": "Clearance",
-      "value": "≥ 1 mm"
-     }
-    ]
-   },
-   "reasoning": {
-    "text": "I bring in a simplified phone proxy to check the viewing angle, charging access, and whether the lip clears the device before committing to dimensions. The proxy is temporary and not printed.",
-    "source": "mockup"
-   },
-   "cues": [
-    {
-     "at_ms": 0,
-     "label": "I want to check the design with a phone-sized object."
-    },
-    {
-     "at_ms": 3400,
-     "label": "I position a temporary proxy against the angled back."
-    },
-    {
-     "at_ms": 6900,
-     "label": "I inspect the lip and charging clearance before finalizing."
-    }
-   ],
    "animation": {
     "type": "transform",
     "new_meshes": [
@@ -25565,68 +24977,7 @@
      "event": "move"
     }
    ],
-   "decision": {
-    "topic": "fit_check",
-    "question": "How do you verify the stand fits the phone?",
-    "criteria": [
-     "Catches dimension mistakes early",
-     "Cost of a failed print",
-     "Effort"
-    ],
-    "options": [
-     {
-      "label": "Trust the dimensions",
-      "note": "Fast; mistakes show up only after printing."
-     },
-     {
-      "label": "Phone proxy in CAD",
-      "note": "Cheap check of angle, lip and port access.",
-      "chosen": true
-     },
-     {
-      "label": "Print a test slice",
-      "note": "Most reliable, costs a print."
-     }
-    ],
-    "applies_to": {
-     "features": [
-      "MoveFeature",
-      "CombineFeature"
-     ],
-     "tags": [
-      "phone",
-      "proxy",
-      "fit",
-      "clearance",
-      "check"
-     ]
-    }
-   },
-   "scope": {
-    "kind": "general",
-    "note": "Check against a real device size before finalizing"
-   },
-   "depends_on": [
-    "support",
-    "lip",
-    "cable"
-   ]
+   "media": {}
   }
- ],
- "designer": "Illustrative (exCADmple team)",
- "date": "2026-11-08",
- "brief": {
-  "goal": "A printable stand for reading and watching on a phone at a desk",
-  "users": "Office workers with 6–7 inch phones, often in a case",
-  "constraints": [
-   "Stable when the screen is tapped",
-   "Charging while on the stand",
-   "Little material"
-  ]
- },
- "provenance": {
-  "geometry": "authored",
-  "reasoning": "illustrative",
-  "source_file": ""
- }
+ ]
 }

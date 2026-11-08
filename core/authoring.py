@@ -1,14 +1,11 @@
-"""Assemble a version-2 example package from the three source files.
+"""Assemble an example package from what was recorded.
 
-* extracted draft (from the designer's .f3d, see core/extract_fusion.py),
-* annotation (written by the researcher),
-* timestamped transcript of the think-aloud recording.
+* extracted draft (the designer's .f3d timeline, see core/extract_fusion.py),
+* annotation: the step titles, which timeline features and which part of
+  the recording each step covers (written by the researcher),
+* timestamped transcript of what the designer said (think-aloud).
 
-Pure Python. Every step's geometry, operation and parameters come from the
-extracted draft; every word of reasoning comes from the annotation and the
-transcript. Nothing is inferred about the designer's intent; only feature
-input relations are used to *derive* possible dependencies, and those are
-labelled as derived.
+Pure Python. Nothing is added beyond what was recorded.
 """
 import json
 import zipfile
@@ -19,7 +16,6 @@ from .packages import _validate as validate_package, PackageError
 
 EXTRACT_FORMAT = "excadmple-extract"
 ANNOTATION_FORMAT = "excadmple-annotation"
-SCOPES = ("general", "goal_specific")
 LABELS = {
     "Sketch": "Sketch", "ExtrudeFeature": "Extrude", "RevolveFeature": "Revolve",
     "FilletFeature": "Fillet", "ChamferFeature": "Chamfer", "HoleFeature": "Hole",
@@ -28,7 +24,6 @@ LABELS = {
     "MoveFeature": "Move", "SweepFeature": "Sweep", "LoftFeature": "Loft", "ThreadFeature": "Thread",
     "SplitBodyFeature": "Split body", "ConstructionPlane": "Construction plane",
 }
-MAX_PARAMETERS = 8
 
 
 class AuthoringError(ValueError):
@@ -61,11 +56,8 @@ def check_extract(data):
 def check_annotation(data):
     _require(isinstance(data, dict) and data.get("format") == ANNOTATION_FORMAT and data.get("version") == 1,
              "Not an exCADmple annotation (format excadmple-annotation, version 1)")
-    for key in ("id", "title", "designer", "date"):
+    for key in ("id", "title"):
         _require(isinstance(data.get(key), str) and data[key].strip(), "Annotation needs " + key)
-    brief = data.get("brief")
-    _require(isinstance(brief, dict) and isinstance(brief.get("goal"), str) and brief["goal"].strip(),
-             "Annotation needs brief.goal — the designer's own design goal")
     steps = data.get("steps")
     _require(isinstance(steps, list) and steps, "Annotation needs steps")
     ids = set()
@@ -74,17 +66,11 @@ def check_annotation(data):
         _require(step["id"] not in ids, "Duplicate step id " + step["id"])
         ids.add(step["id"])
         _require(isinstance(step.get("title"), str) and step["title"].strip(), "Step " + step["id"] + " needs a title")
-        _require(isinstance(step.get("summary"), str) and step["summary"].strip(),
-                 "Step " + step["id"] + " needs a summary of what the designer said")
         _require(isinstance(step.get("features"), list) and step["features"],
                  "Step " + step["id"] + " needs its timeline features")
         rec = step.get("recording")
         _require(isinstance(rec, dict) and all(isinstance(rec.get(k), (int, float)) for k in ("start_ms", "end_ms"))
                  and 0 <= rec["start_ms"] < rec["end_ms"], "Step " + step["id"] + " needs recording start_ms < end_ms")
-        scope = step.get("scope")
-        if scope is not None:
-            _require(isinstance(scope, dict) and scope.get("kind") in SCOPES,
-                     "Step " + step["id"] + ": scope.kind must be general or goal_specific")
     return data
 
 
@@ -108,22 +94,13 @@ def _state(extract, ids):
     return [extract["meshes"][i] for i in ids]
 
 
-def _tool(features):
+def _tools(features):
     labels = []
     for feature in features:
         label = LABELS.get(feature.get("kind", ""), feature.get("kind", "Operation").replace("Feature", ""))
-        if not labels or labels[-1] != label:
+        if label not in labels:
             labels.append(label)
-    return " → ".join(labels)
-
-
-def _parameters(features):
-    params = []
-    for feature in features:
-        for param in feature.get("parameters", []):
-            params.append({"name": feature["name"] + " · " + param["name"],
-                           "value": param.get("expression") or str(param.get("value", ""))})
-    return params[:MAX_PARAMETERS]
+    return labels
 
 
 def _media_name(path):
@@ -136,7 +113,6 @@ def build_manifest(extract, annotation, segments, offset_cm=None, source_model=N
     transcript_mod.validate(segments)
     features = sorted(extract["features"], key=lambda f: f["index"])
     recording = annotation.get("recording") or {}
-    owner = {}             # feature index -> step id
     steps, last_index, last_end = [], -1, -1
     for item in annotation["steps"]:
         feats = _resolve(features, item["features"], item["id"])
@@ -153,56 +129,32 @@ def build_manifest(extract, annotation, segments, offset_cm=None, source_model=N
                 states.append(state)
         if len(states) == 1:
             states.append(states[0])        # e.g. a sketch-only step
-        duration = int(rec["end_ms"] - rec["start_ms"])
         step = {
-            "id": item["id"], "title": item["title"], "duration_ms": max(500, duration),
+            "id": item["id"], "title": item["title"],
+            "duration_ms": max(500, int(rec["end_ms"] - rec["start_ms"])),
             "geometry": {"meshes": states[-1]},
             "animation": {"type": "snapshots", "states": states},
-            "operation": {"tool": _tool(feats), "parameters": _parameters(feats),
-                          "instruction": ", ".join(f["name"] for f in feats)},
+            "tools": item.get("tools") or _tools(feats),
             "source_features": [{"index": f["index"], "name": f["name"], "kind": f.get("kind", "")} for f in feats],
-            "reasoning": {"text": item["summary"], "source": "think_aloud"},
             "cues": transcript_mod.within(segments, rec["start_ms"], rec["end_ms"]),
             "media": {},
         }
-        if item.get("goal"):
-            step["goal"] = item["goal"]
         for kind in ("audio", "video"):
             if recording.get(kind):
                 step["media"][kind] = _media_name(recording[kind])
         if step["media"]:
             step["media"]["offset_ms"] = int(rec["start_ms"])
-        for key in ("decision", "scope", "depends_on"):
-            if item.get(key) is not None:
-                step[key] = item[key]
-        derived = []
-        for feature in feats:
-            for source in list(feature.get("inputs", {}).get("features", [])) + \
-                    list(feature.get("inputs", {}).get("sketches", [])):
-                sid = owner.get(source)
-                if sid and sid not in derived:
-                    derived.append(sid)
-        if derived:
-            step["depends_on_derived"] = derived
-        for feature in feats:
-            owner[feature["index"]] = item["id"]
+        if item.get("pointer"):
+            step["pointer"] = item["pointer"]
         steps.append(step)
         last_index, last_end = feats[-1]["index"], rec["end_ms"]
-    known = [s["id"] for s in steps]
-    for i, step in enumerate(steps):
-        for dep in step.get("depends_on", []):
-            _require(dep in known[:i], "Step %s depends on unknown or later step %r" % (step["id"], dep))
     if offset_cm is None:
         xs = [v[0] for m in steps[-1]["geometry"]["meshes"] for v in m["vertices"]]
         offset_cm = [round(14 - min(xs), 3) if xs else 14, 0, 0]
     manifest = {
         "format": "excadmple", "version": 2,
         "id": annotation["id"], "title": annotation["title"],
-        "designer": annotation["designer"], "date": annotation["date"],
-        "brief": annotation["brief"],
-        "description": annotation.get("description", annotation["brief"]["goal"]),
-        "provenance": {"geometry": "extracted", "reasoning": "think_aloud",
-                       "source_file": (extract.get("source") or {}).get("file", "")},
+        "description": annotation.get("description", ""),
         "reference_offset_cm": offset_cm,
         "steps": steps,
     }

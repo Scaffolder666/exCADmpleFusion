@@ -29,7 +29,7 @@ class PackageTests(unittest.TestCase):
         self.assertEqual(counts, sorted(counts))   # cumulative construction
         self.assertNotIn("geometry", pkg.player_data()["steps"][0])
         self.assertTrue(pkg.player_data()["steps"][0]["has_geometry"])
-        self.assertEqual(pkg.player_data()["steps"][0]["reasoning"]["source"], "mockup")
+        self.assertTrue(pkg.player_data()["steps"][0]["tools"])
         pkg.close()
 
     def test_duplicate_ids_rejected(self):

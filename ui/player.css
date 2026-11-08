@@ -211,3 +211,11 @@ body.collapsed .intro, body.collapsed .lesson-scroll { display:none; }
 .brief p { display:block; -webkit-line-clamp:unset; }
 .brief summary { cursor:pointer; font-size:10px; letter-spacing:.4px; text-transform:uppercase; color:var(--quiet); }
 .example-meta { display:none; }
+
+/* Simplified tutorial: tools used and what the designer said. */
+.tools { display:flex; flex-wrap:wrap; gap:4px; }
+.said { list-style:none; margin:4px 0 6px; padding:0; display:grid; gap:4px; }
+.said li { padding:6px 9px; border-radius:6px; background:var(--panel); color:var(--muted); font-size:12.5px; line-height:1.45; cursor:pointer; }
+.said li.said-before { color:var(--text); }
+.said li.current { background:#e6effc; color:var(--ink); border-left:3px solid var(--blue); }
+.said li.empty { cursor:default; font-style:italic; }

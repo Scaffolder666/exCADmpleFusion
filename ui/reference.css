@@ -76,3 +76,8 @@ body { display:flex; flex-direction:column; }
 .foot { border-top:1px solid var(--line); padding:8px 12px 10px; display:grid; gap:5px; font-size:12px; }
 .foot input[type=range] { vertical-align:middle; width:150px; }
 .rail { flex:1; }
+.title { margin:4px 12px 6px; font-size:16px; }
+.said { list-style:none; margin:4px 0 0; padding:0; display:grid; gap:4px; }
+.said li { padding:5px 8px; border-radius:6px; background:white; color:var(--muted); cursor:pointer; }
+.said li.before { color:var(--ink); }
+.said li.current { color:var(--ink); background:#e6effc; border-left:3px solid var(--blue); }

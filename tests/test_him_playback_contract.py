@@ -50,7 +50,7 @@ class HiMPlaybackContractTests(unittest.TestCase):
             finally:
                 package.close()
 
-    def test_all_demo_steps_have_timed_captions_and_reasoning(self):
+    def test_all_demo_steps_have_timed_words_and_tools(self):
         package = open_package(ROOT / "examples" / "phone_stand.json")
         try:
             for step in package.data["steps"]:
@@ -59,7 +59,7 @@ class HiMPlaybackContractTests(unittest.TestCase):
                 self.assertEqual(cues[0]["at_ms"], 0)
                 self.assertEqual([c["at_ms"] for c in cues],
                                  sorted(c["at_ms"] for c in cues))
-                self.assertTrue(step.get("reasoning", {}).get("text"))
+                self.assertTrue(step.get("tools"))
         finally:
             package.close()
 

@@ -35,16 +35,13 @@ EXTRACT = {
 }
 ANNOTATION = {
     "format": "excadmple-annotation", "version": 1,
-    "id": "stand", "title": "Stand", "designer": "P03", "date": "2026-11-10",
-    "brief": {"goal": "A stand for watching videos at lunch", "constraints": ["No supports"]},
+    "id": "stand", "title": "Stand",
     "recording": {"audio": "session.wav"},
     "steps": [
         {"id": "base", "title": "Base", "features": ["Sketch1", "Extrude1", "Fillet1"],
-         "recording": {"start_ms": 0, "end_ms": 20000}, "summary": "Wide base so it won't tip.",
-         "scope": {"kind": "goal_specific", "note": "Sized for a 7-inch phone"}},
+         "recording": {"start_ms": 0, "end_ms": 20000}},
         {"id": "lip", "title": "Lip", "features": [3, 4],
-         "recording": {"start_ms": 20000, "end_ms": 35000}, "summary": "A lip so it won't slide.",
-         "depends_on": ["base"]},
+         "recording": {"start_ms": 20000, "end_ms": 35000}},
     ],
 }
 SRT = """1
@@ -63,21 +60,17 @@ class AuthoringTests(unittest.TestCase):
 
     def test_manifest_follows_extract_annotation_and_transcript(self):
         m = self.build()
-        self.assertEqual((m["version"], m["provenance"]["geometry"], m["provenance"]["reasoning"]),
-                         (2, "extracted", "think_aloud"))
+        self.assertEqual(m["version"], 2)
         base, lip = m["steps"]
-        self.assertEqual(base["operation"]["tool"], "Sketch → Extrude → Fillet")
-        self.assertEqual(base["operation"]["parameters"][0], {"name": "Extrude1 · d1", "value": "7 mm"})
+        self.assertEqual(base["tools"], ["Sketch", "Extrude", "Fillet"])
+        self.assertEqual(set(base) - {"geometry", "animation"},
+                         {"id", "title", "duration_ms", "tools", "source_features", "cues", "media"})
         # before (empty) -> after extrude -> after fillet; the sketch adds no state
         self.assertEqual(base["animation"]["states"], [[], [tri(0)], [tri(0.1)]])
         self.assertEqual(animation_meshes(base["animation"], 1.0), base["geometry"]["meshes"])
         self.assertEqual(base["cues"], [{"at_ms": 1000, "label": "I start with a wide base."}])
         self.assertEqual(lip["cues"][0]["at_ms"], 1500)
         self.assertEqual(lip["media"], {"audio": "media/session.wav", "offset_ms": 20000})
-        self.assertEqual(lip["depends_on"], ["base"])
-        self.assertEqual(lip["depends_on_derived"], ["base"])      # Extrude2 uses Extrude1
-        self.assertNotIn("depends_on_derived", base)               # own sketch is not a dependency
-        self.assertEqual(base["reasoning"], {"text": "Wide base so it won't tip.", "source": "think_aloud"})
         self.assertEqual([f["name"] for f in lip["source_features"]], ["Sketch2", "Extrude2"])
 
     def test_package_roundtrip_with_recording(self):
@@ -91,7 +84,6 @@ class AuthoringTests(unittest.TestCase):
             package = open_package(out)
             try:
                 meta = package.player_data()
-                self.assertEqual(meta["brief"]["goal"], "A stand for watching videos at lunch")
                 self.assertEqual(meta["steps"][1]["media"]["offset_ms"], 20000)
                 self.assertTrue(meta["steps"][1]["media"]["audio"].startswith("file:"))
             finally:
@@ -105,20 +97,12 @@ class AuthoringTests(unittest.TestCase):
         with self.assertRaisesRegex(AuthoringError, "overlaps"):
             self.build(bad)
         bad = copy.deepcopy(ANNOTATION)
-        del bad["brief"]["goal"]
-        with self.assertRaisesRegex(AuthoringError, "brief.goal"):
-            self.build(bad)
-        bad = copy.deepcopy(ANNOTATION)
-        bad["steps"][0]["depends_on"] = ["lip"]
-        with self.assertRaisesRegex(AuthoringError, "later"):
-            self.build(bad)
-        bad = copy.deepcopy(ANNOTATION)
         bad["steps"][1]["features"] = ["Nope"]
         with self.assertRaisesRegex(AuthoringError, "Nope"):
             self.build(bad)
         bad = copy.deepcopy(ANNOTATION)
-        del bad["steps"][0]["summary"]
-        with self.assertRaisesRegex(AuthoringError, "summary"):
+        del bad["steps"][0]["recording"]
+        with self.assertRaisesRegex(AuthoringError, "recording"):
             self.build(bad)
 
 
