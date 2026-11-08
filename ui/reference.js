@@ -225,7 +225,9 @@ function tick(now) {
     S.last = now;
     // Wall-time is accounted for while Fusion recomputes a frame, but
     // progress is advanced ONLY when that frame has finished rendering.
-    if (S.frameClock) S.frameClock.tick(dt, S.speed);
+    // Feature duration starts after Fusion acknowledges the Timeline
+    // transition, not while a complex model is still loading that step.
+    if (S.frameClock && !S.stepPending) S.frameClock.tick(dt, S.speed);
     // Do not rebuild up to 150 timeline cards at 60 FPS while the CAD
     // kernel is busy computing a single native animation frame.
     if (!S.inFlight) render();
