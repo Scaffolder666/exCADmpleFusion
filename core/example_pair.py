@@ -133,8 +133,11 @@ class LocalPairPackage(ExamplePackage):
             if not isinstance(digest, str) or len(digest) != 64 or any(
                     c not in "0123456789abcdefABCDEF" for c in digest):
                 raise PackageError("Invalid model_sha256")
-            actual_digest = hashlib.sha256(self.model_path.read_bytes()).hexdigest()
-            if actual_digest.lower() != digest.lower():
+            hasher = hashlib.sha256()
+            with self.model_path.open("rb") as handle:
+                for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                    hasher.update(chunk)
+            if hasher.hexdigest().lower() != digest.lower():
                 raise PackageError("This JSON references a different .f3d; its SHA-256 does not match")
         self.data = {
             "format": "excadmple", "version": 2,
@@ -164,7 +167,9 @@ class LocalPairPackage(ExamplePackage):
         by_name = {}
         for feature in features:
             by_name.setdefault(feature.name, []).append(feature)
-        auto = bool(self.raw.get("auto_generate", False))
+        auto = self.raw.get("auto_generate", False)
+        if not isinstance(auto, bool):
+            raise PackageError("auto_generate must be true or false")
         supplied = self.raw.get("steps", [])
         if not isinstance(supplied, list):
             raise PackageError("steps must be a list")
