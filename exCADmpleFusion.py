@@ -17,6 +17,7 @@ import adsk.fusion
 
 from core.packages import open_package, PackageError
 from core.renderer import ReferenceRenderer
+from core.history import history_step_indices, HistoryError
 from core.spatial import SpatialLinkController
 
 PALETTE_ID = "excadmple.fusion.player"
@@ -113,6 +114,18 @@ class PaletteHandler(adsk.core.HTMLEventHandler):
                     _post("example", _package.player_data())
                     _post("step", {"index": _step_index})
                     _post_links()
+            elif command == "filter_history":
+                if not _package:
+                    raise ValueError("Load a model history example first")
+                entity = body.get("entity_id")
+                if not isinstance(entity, str) or not entity.strip():
+                    raise ValueError("Choose an entity id from the example")
+                features = _package.data.get("feature_history", [])
+                if not features:
+                    raise ValueError("This example does not contain feature provenance")
+                indices = history_step_indices(features, _package.data["steps"], entity, body.get("expand", False))
+                _post("history_filter", {"indices": indices, "entity_id": entity})
+                _status(str(len(indices)) + " related history steps (authored provenance).")
             elif command == "load_demo":
                 _load(str(ROOT / "examples" / "phone_stand.json"))
             elif command == "open_package":
