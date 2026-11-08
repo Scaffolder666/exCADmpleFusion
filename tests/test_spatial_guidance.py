@@ -99,6 +99,25 @@ class PhoneStandDetectionTests(unittest.TestCase):
         self.assertGreater(count(same), count(changed))   # the flat faces stay unhighlighted
 
 
+class ActiveCommandTests(unittest.TestCase):
+    def test_animation_tool_is_single_and_recorded(self):
+        steps = phone_stand()
+        expected = [
+            "Extrude", "Rotate", "Extrude", "Fillet", "Extrude (Cut)",
+            "Mirror", "Rectangular Pattern", "Extrude (Cut)", "Move"
+        ]
+        self.assertEqual([active_fusion_command(step) for step in steps], expected)
+
+    def test_unknown_animation_does_not_guess_a_tool(self):
+        self.assertIsNone(active_fusion_command({"tools": ["Sketch", "Cut"],
+                                                  "animation": {"type": "unknown"}}))
+
+    def test_native_feature_name_takes_precedence(self):
+        step = {"tools": ["Sketch", "Extrude", "Fillet"],
+                "animation": {"type": "extrude"}}
+        self.assertEqual(active_fusion_command(step, "adsk::fusion::FilletFeature"), "Fillet")
+
+
 class DetectionRobustnessTests(unittest.TestCase):
     def test_vertex_and_triangle_order_and_float_noise_are_not_changes(self):
         mesh = box(0, 0, 0, 4, 3, 1)
@@ -199,7 +218,14 @@ class Matrix:
         self.cells[(row, col)] = val
 
 adsk.core.Matrix3D = types.SimpleNamespace(create=lambda: Matrix())
-from core.renderer import ReferenceRenderer, CHANGE_COLOR  # noqa: E402
+adsk.fusion.CustomGraphicsViewScale = types.SimpleNamespace(
+    create=lambda size, anchor: ("pixel-scale", size, anchor))
+adsk.fusion.CustomGraphicsBillBoard = types.SimpleNamespace(
+    create=lambda anchor: types.SimpleNamespace(anchor=anchor, billBoardStyle=None))
+adsk.fusion.CustomGraphicsBillBoardStyles = types.SimpleNamespace(
+    ScreenBillBoardStyle="screen")
+
+from core.renderer import ReferenceRenderer, CHANGE_COLOR, active_fusion_command  # noqa: E402
 
 
 def teal(group):
@@ -249,10 +275,19 @@ class RendererLifecycleTests(unittest.TestCase):
 
         self.assertTrue(self.renderer.render_command(self.steps[2]))
         label = self.renderer.command_group.texts[0]
-        self.assertIn("Sketch", label.text)
-        self.assertIn("Extrude", label.text)
+        self.assertEqual(label.text, "Extrude")    # not Sketch + Extrude at once
+        self.assertEqual(label.size, 0.32)          # Fusion API uses centimeters
         self.assertFalse(label.isSelectable)
         self.assertIsNotNone(label.viewPlacement)
+        self.assertEqual(label.viewScale[0], "pixel-scale")
+        self.assertEqual(label.viewScale[1], 45)
+        self.assertEqual(label.billBoarding.billBoardStyle, "screen")
+        first = self.renderer.command_group
+        self.assertTrue(self.renderer.render_command(self.steps[2]))
+        self.assertIs(self.renderer.command_group, first)  # no per-frame rebuild
+        self.assertTrue(self.renderer.render_command(self.steps[1]))
+        self.assertEqual(self.renderer.command_group.texts[0].text, "Rotate")
+        self.assertFalse(first.isValid)
 
     def test_switching_steps_replaces_the_highlight(self):
         self.renderer.render(self.steps[2], [0, 0, 0], self.previous(2))
