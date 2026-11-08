@@ -135,7 +135,7 @@ def _previous_geometry(index):
     return _package.step(index - 1).get("geometry", {}).get("meshes", [])
 
 
-def _set_step(index):
+def _set_step(index, preview=True):
     global _step_index
     if not _package:
         return
@@ -148,7 +148,12 @@ def _set_step(index):
             # Merely selecting/loading a step is not an animation command.
             # Show the COMPLETE shaded model until Play requests the first
             # native Feature frame. The user can inspect the overall design.
-            _session.show_overview()
+            if preview:
+                _session.show_overview()
+            else:
+                # Continuous playback: clear the prior Feature's temporary
+                # parameters and ghost, but do not show a full-model flash.
+                _session.stop()
         else:
             _renderer.render(step, [0, 0, 0], _previous_geometry(index))    # recorded geometry only
         # A step selection shows the geometry; the command label appears only
@@ -293,7 +298,7 @@ class PaletteHandler(adsk.core.HTMLEventHandler):
             elif command == "extract_draft":
                 _status(extract_with_dialog(_app, _ui))
             elif command == "set_step":
-                _set_step(int(body["index"]))
+                _set_step(int(body["index"]), preview=body.get("preview", True) is not False)
             elif command == "animation_frame":
                 # Version B: one frame of the recorded geometry in the user's canvas.
                 if _package:
