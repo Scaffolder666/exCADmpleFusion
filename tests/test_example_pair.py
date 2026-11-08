@@ -11,7 +11,7 @@ import unittest
 from pathlib import Path
 
 from core.packages import open_package, PackageError
-from core.example_pair import hypothetical_transcript
+from core.example_pair import hypothetical_transcript, feature_parameters_by_index
 
 class LocalExamplePairTests(unittest.TestCase):
     def setUp(self):
@@ -63,6 +63,25 @@ class LocalExamplePairTests(unittest.TestCase):
         self.assertTrue(meta["source_model_included"])
         self.assertEqual(meta["steps"][1]["media"], {})
         pkg.close()
+
+    def test_real_parameters_are_preserved_without_guessing(self):
+        def p(created_by, name, expression):
+            return types.SimpleNamespace(createdBy=types.SimpleNamespace(
+                timelineObject=types.SimpleNamespace(index=created_by)),
+                name=name, expression=expression)
+        values = [p(1, "d1", "22 mm"), p(3, "a1", "45 deg")]
+        collection = types.SimpleNamespace(
+            count=len(values), item=lambda i: values[i])
+        model = types.SimpleNamespace(design=types.SimpleNamespace(allParameters=collection))
+        self.assertEqual(feature_parameters_by_index(model)[1],
+                         [{"name": "d1", "expression": "22 mm"}])
+        pkg = open_package(self.config)
+        pkg.populate_from_features(self.features, model=model)
+        self.assertEqual(pkg.data["steps"][1]["parameters"][0]["expression"], "22 mm")
+        self.assertEqual(pkg.data["steps"][3]["parameters"][0]["expression"], "45 deg")
+        saved = json.loads(pkg.generated_path.read_text(encoding="utf-8"))
+        self.assertEqual(saved["steps"][1]["parameters"][0]["feature_index"], 1)
+        self.assertFalse(pkg.data["steps"][0]["parameters"])
 
     def test_generated_annotations_are_reusable_and_editable(self):
         original = open_package(self.config)
