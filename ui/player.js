@@ -57,7 +57,7 @@ function renderRail() {
   state.example.steps.forEach((item, i) => {
     const button = document.createElement("button");
     button.type = "button";
-    button.className = "step-card" + (i === state.index ? " active" : "");
+    button.className = "step-card" + (i === state.index ? " active" : "") + (i < state.index ? " visited" : "");
     button.setAttribute("aria-current", i === state.index ? "step" : "false");
     button.setAttribute("aria-label", "Step " + (i + 1) + ": " + item.title);
     button.title = "Step " + (i + 1) + ": " + item.title;
@@ -80,7 +80,11 @@ function renderRail() {
     }
     const indicator = document.createElement("span");
     indicator.className = "step-indicator";
-    indicator.textContent = i === state.index ? "VIEWING" : "›";
+    indicator.textContent = i === state.index ? "VIEWING" : i < state.index ? "✓" : "›";
+    const timing = document.createElement("span");
+    timing.className = "step-duration";
+    timing.textContent = secs(item.duration_ms || 8000);
+    labels.appendChild(timing);
     button.append(num, labels, indicator);
     button.addEventListener("click", () => selectStep(i));
     rail.appendChild(button);
