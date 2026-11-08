@@ -68,7 +68,7 @@ def _validate_step_sources(step):
 
 def _expand_mesh_refs(data):
     """Steps may refer to meshes by id in a package-level "meshes" library
-    (recorded HiM frames repeat the same bodies). Replace ids with the mesh
+    (consecutive model states share most bodies). Replace ids with the mesh
     objects (shared, not copied)."""
     library = data.get("meshes")
     if library is None:

@@ -25,7 +25,7 @@ class ExtractTests(unittest.TestCase):
     def test_extract_states_and_build(self):
         design, entities, radius = stub.build()
         timeline = design.timeline
-        base, rounded = Body(0.0), Body(lambda: radius.value)   # the fillet's shape follows its radius
+        base, rounded = Body(0.0), Body(0.1)
 
         def bodies():
             marker = timeline.markerPosition
@@ -42,11 +42,8 @@ class ExtractTests(unittest.TestCase):
         self.assertEqual(states[0], [])
         self.assertNotEqual(states[1], states[2])
         fillet = data["features"][2]
-        # HiM: the fillet radius grew from ~0 while Fusion recomputed; frames recorded
-        self.assertEqual(len(fillet["frames"]), extract_fusion.FRAMES_PER_FEATURE)
-        self.assertEqual(radius.value, 0.2)                          # restored
-        self.assertEqual(radius.expression, "2.0 mm")
-        self.assertEqual(data["features"][1]["frames"], [])           # no animatable parameter in the stub
+        self.assertNotIn("frames", fillet)                             # one state per feature only
+        self.assertEqual(len(data["meshes"]), 2)
         self.assertEqual(fillet["parameters"][0]["name"], "d3")
         self.assertEqual(data["features"][1]["inputs"]["sketches"], [0])
         annotation = {
@@ -54,8 +51,8 @@ class ExtractTests(unittest.TestCase):
             "steps": [{"id": "all", "title": "All", "features": [0, 1, 2],
                        "recording": {"start_ms": 0, "end_ms": 5000}}]}
         manifest = build_manifest(data, annotation, [])
-        # empty before-state + extrude result + 8 fillet frames + fillet result
-        self.assertEqual(len(manifest["steps"][0]["animation"]["states"]), 3 + extract_fusion.FRAMES_PER_FEATURE)
+        # empty before-state, after Extrude1, after Fillet1
+        self.assertEqual(len(manifest["steps"][0]["animation"]["states"]), 3)
 
 
 if __name__ == "__main__":

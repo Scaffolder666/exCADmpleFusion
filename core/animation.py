@@ -298,8 +298,8 @@ def rectangular_pattern_meshes(animation, progress):
     return output
 
 
-MAX_SNAPSHOT_STATES = 400          # recorded HiM frames of every feature in a step
-MAX_SNAPSHOT_TRIANGLES = 6000000
+MAX_SNAPSHOT_STATES = 60           # the model after each feature of a step
+MAX_SNAPSHOT_TRIANGLES = 1500000
 
 
 def validate_snapshots(data):
@@ -307,7 +307,7 @@ def validate_snapshots(data):
     of its features (extracted from the designer's .f3d timeline)."""
     states = data.get("states")
     if not isinstance(states, list) or not 2 <= len(states) <= MAX_SNAPSHOT_STATES:
-        raise AnimationError("Snapshots need 2–400 model states")
+        raise AnimationError("Snapshots need 2–60 model states")
     total = 0
     for state in states:
         _validate_mesh_collection(state, "Snapshot state")
