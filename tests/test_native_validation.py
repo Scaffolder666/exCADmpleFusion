@@ -9,7 +9,7 @@ from pathlib import Path
 
 from core.packages import open_package
 from tests.test_authoring import EXTRACT
-from tools.build_native_validation import (make_annotation, make_package,
+from tools.build_native_validation import (native_only_manifest, make_annotation, make_package,
                                            hypothetical_reasoning, synthetic_reasoning_segments)
 
 
@@ -74,6 +74,42 @@ class NativeValidationTests(unittest.TestCase):
                 self.assertEqual(package.source_model_path().read_bytes(), source.read_bytes())
             finally:
                 package.close()
+
+    def test_metadata_only_native_package_supports_real_timeline_without_snapshots(self):
+        with tempfile.TemporaryDirectory() as folder:
+            source = Path(folder) / "fusion.f3d"
+            source.write_bytes(b"original parametric design")
+            destination = Path(folder) / "native.excadmple"
+            extract = dict(EXTRACT, meshes={})
+            extract["features"] = [dict(feature, state=[]) for feature in EXTRACT["features"]]
+            result, count = make_package(
+                extract, source, destination, synthetic_reasoning=True,
+                native_only=True)
+            self.assertEqual(result, destination)
+            self.assertEqual(count, len(EXTRACT["features"]))
+            pkg = open_package(result)
+            try:
+                self.assertEqual(pkg.source_model_path().read_bytes(), source.read_bytes())
+                self.assertEqual(len(pkg.data["steps"]), count)
+                self.assertTrue(all("animation" not in s and not s["geometry"]["meshes"]
+                                    for s in pkg.data["steps"]))
+                self.assertEqual([s["source_features"][0]["index"] for s in pkg.data["steps"]],
+                                 [0, 1, 2, 3, 4])
+                self.assertTrue(all(len(s["cues"]) == 1 and s["media"] == {}
+                                    for s in pkg.data["steps"]))
+                self.assertEqual(pkg.data["steps"][1]["tools"], ["Extrude"])
+            finally:
+                pkg.close()
+
+    def test_native_only_does_not_truncate_a_large_feature_history(self):
+        source = Path("fusion.f3d")
+        features = [dict(EXTRACT["features"][1], index=i, name="Extrude" + str(i), state=[])
+                    for i in range(125)]
+        extract = dict(EXTRACT, meshes={}, features=features)
+        manifest = native_only_manifest(extract, source, "Large test", True)
+        self.assertEqual(len(manifest["steps"]), 125)
+        self.assertEqual(manifest["steps"][124]["source_features"][0]["index"], 124)
+        self.assertEqual(len(manifest["steps"][124]["cues"]), 1)
 
     def test_source_file_cannot_be_overwritten(self):
         with tempfile.TemporaryDirectory() as folder:
