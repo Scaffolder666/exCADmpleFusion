@@ -665,7 +665,8 @@ class HiMController:
         mode = animation_mode(feature.kind)
         prepared = {"feature": feature, "mode": mode, "params": [], "bodies": [],
                     "entity": entity, "fallback": "", "wireframe": False,
-                    "before_tokens": snapshot["body_tokens"] if snapshot else frozenset()}
+                    "before_tokens": snapshot["body_tokens"] if snapshot else frozenset(),
+                    "context_captured": snapshot is not None}
         design = self.design()
         if entity is None:
             prepared["mode"] = NONE
@@ -689,6 +690,7 @@ class HiMController:
                 and prepared["mode"] in (PARAMETRIC, FADE)):
             self._start_ghost_context(prepared, snapshot)
         if not prepared["wireframe"]:
+            prepared["context_fallback"] = ("exact pre-feature context or affected faces unavailable")
             if self.wireframe_context and snapshot is not None and snapshot["curves"]:
                 self.log("HiM: exact changed faces unavailable for {}: using translucent context"
                          .format(feature.name))
@@ -722,6 +724,7 @@ class HiMController:
         if not design:
             return
         group = design.rootComponent.customGraphicsGroups.add()
+        self.group = group  # own it before any draw can fail
         group.isSelectable = False
         curves = self.model_highlights.get(prepared["feature"].index, [])
         for curve in curves:
@@ -756,6 +759,7 @@ class HiMController:
                     prepared["mode"] == FADE and not self.instant_nonparametric))
                 targets = self._change_targets(prepared)
             center = _center(targets) if prepared["mode"] == FADE else None
+            draw_failed = False
             for body in targets:
                 try:
                     overlay = group.addBRepBody(body)
@@ -766,12 +770,14 @@ class HiMController:
                         # changed faces are the only visible solid geometry.
                         opacity = 1.0 if prepared.get("wireframe") else (
                             0.18 if body in prepared["bodies"] else 0.6)
-                        overlay.setOpacity(opacity, True)
+                        if overlay.setOpacity(opacity, True) is False:
+                            raise RuntimeError("Fusion rejected feature overlay opacity")
                     elif self.instant_nonparametric:
                         # The real Timeline already contains the operation's
                         # result. There is no numeric parameter to animate:
                         # simply SHOW that geometry at its actual size.
-                        overlay.setOpacity(1.0, True)
+                        if overlay.setOpacity(1.0, True) is False:
+                            raise RuntimeError("Fusion rejected feature overlay opacity")
                     else:
                         # Legacy HiM inspect mode retains its original
                         # fade/scale visual effect outside the reference.
@@ -787,7 +793,18 @@ class HiMController:
                     overlay.depthPriority = 1
                     overlay.isSelectable = False
                 except Exception as error:
+                    draw_failed = True
                     self.log("HiM geometry guidance: " + str(error))
+            if draw_failed and prepared.get("wireframe"):
+                self.focus.restore()
+                if self.ghost_group and self.ghost_group.isValid:
+                    self.ghost_group.deleteMe()
+                self.ghost_group = None
+                prepared["wireframe"] = False
+                prepared["context_fallback"] = "changed feature faces could not be drawn"
+                self._apply_focus(prepared["bodies"])
+                self._draw_overlay(prepared, progress)
+                return
             # A precise native face copy is a reliable target. A whole
             # result Body is not: omit the arrow rather than point vaguely.
             self._add_geometry_arrow(group, targets, prepared["bodies"])
@@ -863,11 +880,15 @@ class HiMController:
                 self.log("HiM: incomplete affected-face copy; refusing partial isolation")
             except Exception as error:
                 self.log("HiM geometry guidance: " + str(error))
-        if prepared.get("wireframe"):
+        if prepared.get("wireframe") or self.instant_nonparametric:
             # A modified pre-existing Body must NEVER be substituted for
             # the Feature's own faces; that would show an entire part as
             # though this one edit had just created it.
             before = prepared.get("before_tokens", frozenset())
+            feature = prepared.get("feature")
+            if (not prepared.get("context_captured") or feature is None
+                    or not can_isolate_feature(feature.kind, [], prepared["bodies"], before)):
+                return []
             return [b for b in prepared["bodies"]
                     if _token(b) not in before]
         return list(prepared["bodies"])
@@ -908,7 +929,7 @@ class HiMController:
         try:
             self.journal.restore([key for key, _, _ in prepared["params"]])
         except Exception as error:
-            self.log("HiM restore: " + str(error))
+            raise RuntimeError("Native fallback could not restore parameters: " + str(error)) from error
         prepared["mode"] = FADE
         prepared["fallback"] = reason
         if not prepared.get("wireframe"):
@@ -1050,3 +1071,4 @@ class HiMController:
                 self.post("him_result", self.describe())
                 return name + " = " + expression
         raise ValueError("Parameter not found: " + str(name))
+

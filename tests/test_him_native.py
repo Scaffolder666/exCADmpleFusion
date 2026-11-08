@@ -397,6 +397,10 @@ class NativePlaybackTests(unittest.TestCase):
         self.assertRestored()
 
     def test_nonparametric_feature_appears_immediately_without_fade(self):
+        # Exact Mirror-owned face geometry supports an opaque overlay.
+        self.entities["mi1"].faces = Coll([types.SimpleNamespace(boundingBox=box())])
+        adsk.fusion.TemporaryBRepManager = types.SimpleNamespace(
+            get=lambda: types.SimpleNamespace(copy=lambda face: face))
         shown = self.session.frame(3, 0.5)
         self.assertEqual(shown["mode"], "instant")
         group = self.groups[-1]
@@ -443,7 +447,8 @@ class FailureTests(unittest.TestCase):
         self.assertIn("rejected d2", shown["fallback"])
         self.assertEqual(d2.expression, original)
         self.assertAlmostEqual(d2.value, 0.2)
-        self.assertTrue(groups[-1].bodies)                                  # instant geometry after fallback
+        self.assertEqual(groups[-1].bodies, [])  # never mislabel the entire edited body
+        self.assertEqual(entities["body1"].opacity, 1.0)  # actual native result remains visible
         session.stop()
         self.assertTrue(all(not g.isValid for g in groups))
         self.assertEqual(len(session.him.journal), 0)
@@ -533,3 +538,4 @@ class TutorialDataTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

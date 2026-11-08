@@ -44,7 +44,7 @@ separate transient graphics layers:
    group updates after each native parameter frame; the background curves
    remain static for that Feature.
 
-On step completion, pause/step switch or error, the original parameter
+On step completion, step switch or error, the original parameter
 expressions and every captured body opacity are restored, both Custom
 Graphics groups are deleted, and the next Feature may be loaded.
 
@@ -120,7 +120,7 @@ Using the committed `tests/fixtures/real_fusion/fusion.f3d` and
 `fusion_example.json` in Autodesk Fusion Desktop:
 
 1. Confirm actual Timeline list and exact per-feature mapping after import;
-   record all feature modes (parameter / fade / timeline).
+   record all feature modes (parameter / instant / timeline).
 2. On real Extrude/Revolve/Fillet/Pattern features **that exist in this
    model**, inspect successive Fusion parameter values and geometry states:
    they must change during playback, not show a mesh snapshot.
@@ -138,10 +138,18 @@ Using the committed `tests/fixtures/real_fusion/fusion.f3d` and
    tutorial and switch documents. Verify all parameter expressions,
    opacity/visibility and Timeline states restore; the original
    `fusion.f3d` checksum remains unchanged.
-6. Inspect a Mirror/Combine case: it should use explicit fade/scale, and
-   report its mode rather than falsely claiming native parameter animation.
+6. Inspect a Mirror/Combine case: it must appear immediately at actual
+   size, without fade/scale, and report instant mode. If exact affected
+   faces cannot be isolated, retain native shading without highlighting
+   the entire edited body.
 7. Record Fusion version, OS, actual frame timings, pass/fail and relevant
    screenshots for each criterion.
 
 The Python and JS tests do **not** execute the Autodesk CAD kernel, so
 passing them cannot establish real-model animation fidelity.
+
+
+## Latest automated assessment
+
+See [HIM_VALIDATION_REPORT.md](HIM_VALIDATION_REPORT.md) for verified checks,
+feature coverage, failure-recovery fixes and the outstanding Desktop gate.

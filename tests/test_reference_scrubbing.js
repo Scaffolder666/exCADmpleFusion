@@ -101,6 +101,43 @@ async function main() {
   assert.deepEqual(calls.filter(c => c.action === "set_step").map(c => c.payload.index), [0, 1]);
   assert.deepEqual(calls.filter(c => c.action === "set_step").map(c => c.payload.preview),
                    [true, false], "Only the initial step previews the full solid model; continuous Feature playback does not flash the overview");
-  console.log("Reference full/focus/full and interactive scrubbing: PASS");
+  // Selection is navigation, including re-selecting the current step.
+  let frames = count("ref_frame");
+  value("selectStep(0)");
+  await flush();
+  assert.equal(value("S.playing"), false);
+  assert.equal(value("S.fresh"), true);
+  assert.equal(count("ref_frame"), frames);
+  value("selectStep(0)");
+  await flush();
+  assert.equal(count("ref_frame"), frames);
+  assert.equal(calls.at(-1).action, "ref_overview");
+
+  // Filtering must not animate before Play either.
+  value('applyFilter({steps:[1], tags:{1:"changed here"}, features:["Mirror1"]})');
+  await flush();
+  assert.equal(value("S.playing"), false);
+  assert.equal(count("ref_frame"), frames);
+
+  // Selecting a step during an expensive native frame cannot let its old
+  // acknowledgement restart playback or overwrite the final overview.
+  let release;
+  window.adsk.fusionSendData = (action, json) => {
+    calls.push({action, payload: JSON.parse(json)});
+    if (action === "ref_frame") return new Promise(resolve => { release = resolve; });
+    return Promise.resolve(JSON.stringify({ok:true}));
+  };
+  scrub.handlers.input({currentTarget:{value:"50"}});
+  assert.equal(value("S.inFlight"), true);
+  value("selectStep(1)");
+  await flush();
+  frames = count("ref_frame");
+  release(JSON.stringify({ok:true}));
+  await flush();
+  assert.equal(value("S.playing"), false);
+  assert.equal(count("ref_frame"), frames);
+  assert.equal(calls.at(-1).action, "ref_overview");
+  console.log("Reference full/focus/full, selection, filtering and delayed scrubbing: PASS");
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });
+

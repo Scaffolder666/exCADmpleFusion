@@ -153,7 +153,7 @@ def _set_step(index, preview=True):
             else:
                 # Continuous playback: clear the prior Feature's temporary
                 # parameters and ghost, but do not show a full-model flash.
-                _session.stop()
+                _session.stop(restore_timeline=False)
         else:
             _renderer.render(step, [0, 0, 0], _previous_geometry(index))    # recorded geometry only
         # A step selection shows the geometry; the command label appears only
@@ -332,6 +332,10 @@ class PaletteHandler(adsk.core.HTMLEventHandler):
                         if shown and shown != _last_shown:
                             _last_shown = shown
                             _post("animation", shown)
+                        if shown is None:
+                            raise RuntimeError("Activate the reference document to continue playback")
+                        if shown.get("mode") == "error":
+                            raise RuntimeError(shown.get("fallback") or "Native frame failed")
                     elif step.get("animation"):
                         _renderer.render_animation(step, [0, 0, 0], value, _previous_geometry(index))
                     # Show exactly the operation being animated; tutorial tool
@@ -566,6 +570,8 @@ class AfterSave(adsk.core.DocumentEventHandler):
 class BeforeDeactivate(adsk.core.DocumentEventHandler):
     def notify(self, args):
         try:
+            if _session and _session.live:
+                _session.stop()
             if _spatial:
                 _spatial.clear_overlay()
             if _renderer and ROLE != REFERENCE:
@@ -673,3 +679,4 @@ def stop(_context):
         _handlers.clear()
     except Exception:
         _log_error()
+

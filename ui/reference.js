@@ -197,14 +197,24 @@ function backward() {
   S.direction = -1;
   play(false);
 }
-function selectStep(i) {
+function selectStep(i, autoplay = false) {
+  S.playing = false;
+  S.manualFrame = false;
+  stopAudio();
+  stopSpeech();
   const at = S.clip.indexOf(i);
   if (at < 0) { S.filtered = false; S.changed = []; S.more = []; setClip(false); }
   S.pos = S.clip.indexOf(i);
-  setIndex(i);
+  // Re-selecting the current step must also restore overview.
+  if (i === S.index) {
+    S.epoch++;
+    S.fresh = true;
+    S.overviewPending = true;
+  } else setIndex(i);
   S.elapsed = 0;
   S.direction = 1;
-  play(false);
+  if (autoplay) play(false);
+  else render();
 }
 function finishNativeStep() {
   if (S.direction > 0 && S.continuous && S.pos < S.clip.length - 1) {
@@ -263,7 +273,7 @@ function applyFilter(result) {
   S.elapsed = 0;
   S.direction = 1;
   status("HiM: " + (result.features || []).length + " feature(s) made or changed the selection.");
-  play(true);       // HiM renders the clip immediately upon selection
+  selectStep(S.index);  // Filtering selects context; Play starts reconstruction
 }
 function showAll() {
   S.filtered = false;
@@ -293,7 +303,8 @@ function card(item) {
       let text = p.feature + " · ";
       if (live && live.mode === "instant") {
         text += "appears immediately · actual Fusion geometry" +
-                (live.wireframe ? " · ghost wireframe context" : "");
+                (live.wireframe ? " · ghost wireframe context" :
+                  " · shaded context (" + (live.context_fallback || "exact isolation unavailable") + ")");
         if (live.fallback) text += " (" + live.fallback + ")";
       }
       else if (live && live.fallback) text += "visual fallback (" + live.fallback + ")";
@@ -454,7 +465,7 @@ window.fusionJavaScriptHandler = {
       } else if (action === "step") {
         const i = payload.index;
         if (typeof i === "number" && i >= 0 && i < steps().length) {
-          if (payload.play) selectStep(i);
+          if (payload.play) selectStep(i, true);
           else if (i !== S.index) {
             const at = S.clip.indexOf(i);
             if (at >= 0) S.pos = at;
@@ -506,3 +517,4 @@ $("extractDraft").addEventListener("click", () => { pause(); bridge("extract_dra
 
 requestAnimationFrame(tick);
 bridge("ready");
+

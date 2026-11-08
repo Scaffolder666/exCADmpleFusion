@@ -105,13 +105,16 @@ class ReferenceSession:
         self.mapped, self.unmatched, self.filter_result = [], [], None
         self.plan = []
 
-    def stop(self):
+    def stop(self, restore_timeline=True):
         """Restore every temporary change (parameters, opacity, overlay)."""
         try:
             self.him._finish_feature()
+            if restore_timeline and self.model is not None:
+                self.model.restore()
         except Exception as error:
             self.last_error = "Could not restore the reference model: " + str(error)
             self.log(self.last_error)
+            raise
         self.current = None
 
     def _active(self):
@@ -162,7 +165,7 @@ class ReferenceSession:
         """
         if not self.live:
             return
-        self.stop()                # restores parameter expressions and opacity
+        self.stop(restore_timeline=False)  # restores parameter expressions and opacity
         self.model.go(self.model.end_state())
         self.current = ("overview",)
         try:
@@ -208,7 +211,7 @@ class ReferenceSession:
         key = (step_index, position)
         try:
             if key != self.current:
-                self.stop()
+                self.stop(restore_timeline=False)
                 self._read_inputs([items[position]])
                 # Exact pre-feature context is more informative than a ghost
                 # copy of the finished model. Capture once, before rolling
@@ -224,14 +227,13 @@ class ReferenceSession:
         except Exception as error:
             self.last_error = "{}: {}".format(items[position].name, error)
             self.log("HiM frame: " + self.last_error)
-            self.stop()
             try:
-                self._roll_after(items[position])
-            except Exception:
-                pass
+                self.show_overview()
+            except Exception as restore_error:
+                self.last_error += "; restoration failed: " + str(restore_error)
             self.current = (step_index, "error")
             return {"step": step_index, "feature": items[position].name, "mode": "error",
-                    "fallback": str(error)}
+                    "fallback": self.last_error}
         status = self.him.status() or {}
         status["step"] = step_index
         return status
@@ -241,7 +243,7 @@ class ReferenceSession:
         animated), with the step's geometry highlighted."""
         if not self.live:
             return
-        self.stop()
+        self.stop(restore_timeline=False)
         features = animated(self.mapped[step_index]) if 0 <= step_index < len(self.mapped) else []
         self._read_inputs(features)
         if step_index >= len(self.mapped) - 1:
@@ -302,3 +304,4 @@ class ReferenceSession:
         return {"steps": steps, "tags": tags,
                 "features": [f.name for f in result.features],
                 "can_show_more": result.can_show_more()}
+

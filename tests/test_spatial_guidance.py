@@ -398,7 +398,9 @@ class NativeGuidanceTests(unittest.TestCase):
         self.assertTrue(all(not g.isValid for g in self.groups))
         self.assertAlmostEqual(self.native.param(self.entities, "fi1").value, 0.2)
 
-    def test_no_faces_reported_falls_back_to_result_body(self):
+    def test_no_faces_reported_preserves_native_body_without_false_highlight(self):
         self.entities["fi1"].faces = stub.Coll()
         self.session.show_result(1)
-        self.assertEqual(self.session.him.group.bodies[0].opacity, 0.18)
+        self.assertEqual(self.session.him.group.bodies, [])
+        self.assertEqual(self.entities["body1"].opacity, 1.0)
+
