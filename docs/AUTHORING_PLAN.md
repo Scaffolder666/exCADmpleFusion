@@ -1,6 +1,6 @@
 # 案例制作流程：思路记录
 
-> 状态：思路，尚未实现。格式规范见 [`EXAMPLE_FORMAT.md`](EXAMPLE_FORMAT.md)。
+> 状态：**已实现**（在 `fusion` 与 `fusion-him` 分支）。实际做法与下面最初的思路不同的地方见文末"实现"。格式规范见 `fusion` 分支的 [`docs/EXAMPLE_FORMAT.md`](https://github.com/Scaffolder666/exCADmpleFusion/blob/fusion/docs/EXAMPLE_FORMAT.md)。
 
 ## 问题
 
@@ -51,3 +51,14 @@
 
 - 第一个真实案例用哪个 `.f3d`、请谁录制。
 - 文字稿用哪个转写工具（中文、英文，或中英混合）。
+
+## 实现（2026-11）
+
+最终做成了 AI 辅助的流程，代码在 `fusion` 分支：
+
+1. **录制时就记下时间**（`exCADmple: Record tutorial`，`core/session_recorder.py`）：设计师边建模边说时，插件记录用到的工具、每个特征出现的时间、选中的位置（作为鼠标轨迹）。这样就不用再对着录像手工找每一步的时间点。
+2. **AI 切分步骤**（`tools/author.py`，`core/ai_segment.py`）：Claude 根据特征出现时间、工具和文字稿，提议怎么把录制切成步骤、每步的标题（尽量用设计师自己的话）。它不写任何推理。提议会被检查（特征按顺序、每个只用一次、时间不重叠），不合格或没有 API 凭据时改用按特征的规则切分。
+3. **人工检查**（`ui/author.html`）：在浏览器里对着录像调整标题、起止时间、包含的特征，可拆分、合并，然后导出 `annotation.json`。
+4. **转写**仍用任意工具，或本地的 `tools/transcribe.py`（faster-whisper）。
+
+原计划中的"检查脚本"由 `tools/author.py` 的检查和 `ui/author.html` 的实时检查代替；"填空模板"不再需要，因为 `annotation.json` 由工具生成。
