@@ -12,6 +12,14 @@
 
 项目概况见 [`main`](https://github.com/Scaffolder666/exCADmpleFusion)；Blender 版本见 [`blender`](https://github.com/Scaffolder666/exCADmpleFusion/tree/blender)。
 
+## 默认 Example 加载：一个 JSON + 一个 Fusion .f3d
+
+**新流程：** 把 `fusion_example.json` 和 `fusion.f3d` 放到同一个文件夹。启动本分支的 exCADmple 后，直接点击 **+ Import** 并选择 JSON。插件会自动打开与 JSON 配对的 `.f3d` 副本、读取真实的 Feature Timeline、按 Feature 类型显示彩色历史卡片、播放原生 HiM 动画。**不需要先制作 `.excadmple` ZIP**。
+
+首次导入 `"auto_generate": true` 的 JSON，会根据真实 Feature index、名称和类型生成多个步骤，并创建可编辑的 `fusion_example.generated.json`。JSON 中的 `transcript` 将用于文字与合成语音；当前自动生成的推理**只是明确标注的假设性教学说明**，不是设计师真实的 think-aloud。Fusion 能读取到的原生参数表达式也会一并保存在生成文件中。以后直接修改、导入 `.generated.json` 即可，不再需要打包或运行额外 Python 命令。
+
+可选的原始音频可作为同目录的第三个文件；提供后优先播放录音而非合成语音。旧的 `.excadmple` 包仍然支持。详见 [JSON + F3D 使用说明](docs/JSON_F3D_PAIR.md)。
+
 ## 用真实 `fusion.f3d` 自动生成复杂测试教程
 
 打开研究者提供的 **`fusion.f3d`**，在 Fusion 360 的
