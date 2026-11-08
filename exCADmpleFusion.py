@@ -18,7 +18,7 @@ import adsk.fusion
 from core.packages import open_package, PackageError
 from core.renderer import ReferenceRenderer
 from core.history import history_step_indices, HistoryError
-from core.fusion_history import scan_candidate_features
+from core.fusion_history import scan_candidate_features, trace_direct_creators
 from core.spatial import SpatialLinkController
 
 PALETTE_ID = "excadmple.fusion.player"
@@ -146,8 +146,10 @@ class ActiveGeometrySelection(adsk.core.ActiveSelectionEventHandler):
                 design = adsk.fusion.Design.cast(_app.activeProduct)
                 candidates = scan_candidate_features(design, _selected_native_entity())
                 _post("native_history", {"features": candidates, "complete": False})
+                _post("native_provenance", trace_direct_creators(design, _selected_native_entity()))
             else:
                 _post("native_history", {"features": [], "complete": False})
+                _post("native_provenance", {"features": [], "complete": False})
         except Exception:
             _log_error()
 
@@ -165,6 +167,7 @@ class PaletteHandler(adsk.core.HTMLEventHandler):
                 _post("geometry_selection", _selected_geometry_from_ui())
                 design = adsk.fusion.Design.cast(_app.activeProduct)
                 _post("native_history", {"features": scan_candidate_features(design, _selected_native_entity()), "complete": False})
+                _post("native_provenance", trace_direct_creators(design, _selected_native_entity()))
             elif command == "filter_history":
                 if not _package:
                     raise ValueError("Load a model history example first")
