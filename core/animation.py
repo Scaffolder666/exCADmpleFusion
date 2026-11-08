@@ -31,6 +31,10 @@ def validate_animation(data):
         if not isinstance(context, list) or len(context) > 25:
             raise AnimationError("Reveal context needs 0–25 meshes")
         return data
+    if data.get("type") in ("fillet", "chamfer", "boolean", "split", "combine", "loft", "shell", "thread", "import", "export"):
+        return validate_mesh_transition(data)
+    if data.get("type") == "rectangular_pattern":
+        return validate_rectangular_pattern(data)
     if data.get("type") in ("revolve", "pattern", "mirror", "transform"):
         return validate_transform_animation(data)
     if data.get("type") != "extrude":
@@ -200,4 +204,93 @@ def operation_meshes(animation, progress):
         translation = animation["translation_cm"]
         for mesh in animation["new_meshes"]:
             output.append(transformed(mesh, lambda p: [p[i]+t*translation[i] for i in range(3)]))
+    return output
+
+
+def _validate_mesh_collection(meshes, label):
+    if not isinstance(meshes, list) or len(meshes) > 50:
+        raise AnimationError(label + " requires at most 50 meshes")
+    for mesh in meshes:
+        if not isinstance(mesh, dict):
+            raise AnimationError("Invalid mesh")
+        vertices, triangles = mesh.get("vertices"), mesh.get("triangles")
+        if not isinstance(vertices, list) or len(vertices) < 3 or len(vertices) > 40000:
+            raise AnimationError("Invalid mesh vertices")
+        if not isinstance(triangles, list) or len(triangles) > 60000:
+            raise AnimationError("Invalid mesh triangles")
+        for vertex in vertices:
+            _point(vertex)
+        for tri in triangles:
+            if not isinstance(tri, list) or len(tri) != 3 or any(
+                not isinstance(i, int) or isinstance(i, bool) or i < 0 or i >= len(vertices) for i in tri
+            ):
+                raise AnimationError("Invalid triangle")
+
+
+def validate_mesh_transition(data):
+    """Explicit before/after snapshots, not reconstructed native features."""
+    before, after = data.get("before_meshes"), data.get("after_meshes")
+    _validate_mesh_collection(before, "Before")
+    _validate_mesh_collection(after, "After")
+    if not after:
+        raise AnimationError("Transition requires final geometry")
+    return data
+
+
+def transition_meshes(animation, progress):
+    """Interpolate matching mesh topology; otherwise switch at midpoint.
+
+    No mesh morph is claimed for topology-changing Boolean/Fillet operations.
+    """
+    validate_mesh_transition(animation)
+    if isinstance(progress, bool) or not isinstance(progress, (int, float)) or not math.isfinite(progress):
+        raise AnimationError("Invalid animation progress")
+    t = max(0.0, min(1.0, float(progress)))
+    before, after = animation["before_meshes"], animation["after_meshes"]
+    if t <= 0: return before
+    if t >= 1: return after
+    if len(before) != len(after) or any(
+        len(a["vertices"]) != len(b["vertices"]) or a["triangles"] != b["triangles"]
+        for a, b in zip(before, after)
+    ):
+        return before if t < .5 else after
+    return [{"vertices": [
+        [a[i] * (1-t) + b[i] * t for i in range(3)]
+        for a, b in zip(left["vertices"], right["vertices"])
+    ], "triangles": right["triangles"]} for left, right in zip(before, after)]
+
+
+def validate_rectangular_pattern(data):
+    _validate_mesh_collection(data.get("new_meshes"), "Pattern source")
+    _validate_mesh_collection(data.get("context_meshes", []), "Pattern context")
+    if not data["new_meshes"]:
+        raise AnimationError("Pattern requires source geometry")
+    for prefix in ("x", "y"):
+        count = data.get(prefix + "_count", 1)
+        if isinstance(count, bool) or not isinstance(count, int) or not 1 <= count <= 20:
+            raise AnimationError("Pattern count must be 1–20")
+        _point(data.get(prefix + "_offset_cm", [0, 0, 0]))
+    if data.get("x_count", 1) * data.get("y_count", 1) > 100:
+        raise AnimationError("Pattern has too many instances")
+    return data
+
+
+def rectangular_pattern_meshes(animation, progress):
+    validate_rectangular_pattern(animation)
+    if isinstance(progress, bool) or not isinstance(progress, (int, float)) or not math.isfinite(progress):
+        raise AnimationError("Invalid animation progress")
+    t = max(0.0, min(1.0, float(progress)))
+    nx, ny = animation.get("x_count", 1), animation.get("y_count", 1)
+    total = nx * ny
+    visible = 1 + int((total-1)*t + 1e-9)
+    output = list(animation.get("context_meshes", []))
+    dx, dy = animation.get("x_offset_cm", [0,0,0]), animation.get("y_offset_cm", [0,0,0])
+    for j in range(ny):
+        for i in range(nx):
+            if j*nx+i >= visible: return output
+            for mesh in animation["new_meshes"]:
+                output.append({"vertices": [
+                    [p[k] + i*dx[k] + j*dy[k] for k in range(3)]
+                    for p in mesh["vertices"]
+                ], "triangles": mesh["triangles"]})
     return output
