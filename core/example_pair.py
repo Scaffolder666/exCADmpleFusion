@@ -206,9 +206,12 @@ class LocalPairPackage(ExamplePackage):
                 "features": [{"index": f.index, "name": f.name, "kind": f.kind} for f in matched],
                 "duration_ms": step_duration,
                 "transcript": narration if isinstance(narration, str) else "",
-                "cues": clean_cues,
                 "reasoning_source": item.get("reasoning_source", "user"),
             })
+            # A generated file should have ONE editable transcript field.
+            # Preserve explicit timed cues only when authored by the user.
+            if not auto and item.get("cues") is not None:
+                persisted[-1]["cues"] = clean_cues
         self.data["steps"] = constructed
         _validate(self.data)
         self.needs_populate = False
@@ -219,9 +222,13 @@ class LocalPairPackage(ExamplePackage):
             output["auto_generate"] = False
             output["steps"] = persisted
             target = self.json_path.with_name(self.json_path.stem + ".generated.json")
-            try:
-                target.write_text(json.dumps(output, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+            if target.is_file():
+                # Never overwrite a researcher's hand-edited transcript.
                 self.generated_path = target
-            except OSError:
-                pass  # read-only folders may still play the example
+            else:
+                try:
+                    target.write_text(json.dumps(output, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+                    self.generated_path = target
+                except OSError:
+                    pass  # read-only folders may still play the example
         return self.data["steps"]
