@@ -34,7 +34,8 @@ INPUT_PROPERTIES = (
     "startExtent.profilePlane", "plane", "neutralPlane",
 )
 MAX_TIMELINE = 600
-HIGHLIGHT = (37, 99, 235, 255)
+HIGHLIGHT = (37, 99, 235, 255)  # blue: recorded feature input / target edges
+CHANGE_HIGHLIGHT = (20, 184, 166, 255)  # teal: geometry affected by feature
 
 
 def _get_path(obj, path):
@@ -622,28 +623,36 @@ class HiMController:
                 line.depthPriority = 1
             except Exception:
                 continue
-        if prepared["mode"] == FADE:
+        # Only feature-owned result bodies are marked as changing. Do not
+        # pretend to know which face was selected when source inputs are absent.
+        # The low-opacity overlay for native parameters remains stationary;
+        # the underlying Fusion feature itself supplies the actual motion.
+        if prepared["mode"] in (FADE, PARAMETRIC):
             for body in prepared["bodies"]:
                 try:
                     overlay = group.addBRepBody(body)
                     overlay.color = adsk.fusion.CustomGraphicsSolidColorEffect.create(
-                        adsk.core.Color.create(*HIGHLIGHT))
-                    overlay.setOpacity(max(0.05, progress), True)
-                    box = body.boundingBox
-                    c = adsk.core.Point3D.create((box.minPoint.x + box.maxPoint.x) / 2,
-                                                 (box.minPoint.y + box.maxPoint.y) / 2,
-                                                 (box.minPoint.z + box.maxPoint.z) / 2)
-                    scale = 0.5 + 0.5 * progress
-                    matrix = adsk.core.Matrix3D.create()
-                    for i in range(3):
-                        matrix.setCell(i, i, scale)
-                    matrix.setCell(0, 3, c.x * (1 - scale))
-                    matrix.setCell(1, 3, c.y * (1 - scale))
-                    matrix.setCell(2, 3, c.z * (1 - scale))
-                    overlay.transform = matrix
+                        adsk.core.Color.create(*CHANGE_HIGHLIGHT))
+                    if prepared["mode"] == PARAMETRIC:
+                        overlay.setOpacity(0.18, True)
+                    else:
+                        overlay.setOpacity(max(0.05, progress * 0.65), True)
+                        box = body.boundingBox
+                        center = adsk.core.Point3D.create(
+                            (box.minPoint.x + box.maxPoint.x) / 2,
+                            (box.minPoint.y + box.maxPoint.y) / 2,
+                            (box.minPoint.z + box.maxPoint.z) / 2)
+                        scale = 0.5 + 0.5 * progress
+                        matrix = adsk.core.Matrix3D.create()
+                        for axis in range(3):
+                            matrix.setCell(axis, axis, scale)
+                        matrix.setCell(0, 3, center.x * (1 - scale))
+                        matrix.setCell(1, 3, center.y * (1 - scale))
+                        matrix.setCell(2, 3, center.z * (1 - scale))
+                        overlay.transform = matrix
                     overlay.isSelectable = False
-                except Exception:
-                    continue
+                except Exception as error:
+                    self.log("HiM geometry guidance: " + str(error))
         self.group = group
 
     def _delete_group(self):
@@ -671,7 +680,7 @@ class HiMController:
                 failure = "the feature failed to compute at this parameter value"
             if failure is not None:
                 self._fallback(prepared, failure)
-        if prepared["mode"] == FADE:
+        if prepared["mode"] in (FADE, PARAMETRIC):
             self._draw_overlay(prepared, frame.progress)
         self._refresh()
 
