@@ -89,7 +89,7 @@ function setClip(keepIndex) {
   S.pos = at >= 0 ? at : 0;
   if (S.clip.length) setIndex(S.clip[S.pos]);
 }
-function setIndex(i) {
+function setIndex(i, preview = true) {
   if (i === S.index && S.example) return;
   S.index = i;
   S.shown = null;
@@ -103,7 +103,7 @@ function setIndex(i) {
   S.fresh = true;     // selected but not played yet: show the step's result
   S.stepPending = true;
   const request = ++S.stepRequest;
-  bridge("set_step", { index: i }).then((ok) => {
+  bridge("set_step", { index: i, preview }).then((ok) => {
     if (request !== S.stepRequest) return;
     S.stepPending = false;
     if (!ok) {
@@ -206,7 +206,9 @@ function selectStep(i) {
 function finishNativeStep() {
   if (S.direction > 0 && S.continuous && S.pos < S.clip.length - 1) {
     S.pos++;
-    setIndex(S.clip[S.pos]);
+    // Intermediate continuous-play transitions do not flash the fully
+    // shaded overview between every pair of reconstructed features.
+    setIndex(S.clip[S.pos], false);
     S.elapsed = 0;
     S.direction = 1;
     resetNativeClock();
