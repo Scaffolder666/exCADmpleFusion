@@ -1,10 +1,23 @@
-# exCADmple — Autodesk Fusion 原型
+# exCADmple — HiM 风格的 Fusion 历史探索版
 
-**固定开发分支：`fusion`**
+**独立实验分支：`fusion-him`，基于 `fusion` 创建。**
 
 这是 [exCADmple](https://github.com/Scaffolder666/exCADmpleFusion) 的 Autodesk Fusion 版本。项目探索如何在自己的 CAD 设计过程中，探索并复用其他设计师在预设案例中表达的 **Design Reasoning（设计推理）**。
 
-Fusion 相关的后续开发直接提交到 **`fusion` 分支**。另一个固定分支 [`blender`](https://github.com/Scaffolder666/exCADmpleFusion/tree/blender) 包含单视口播放器与九步骤 Phone Stand 原型；默认 [`main`](https://github.com/Scaffolder666/exCADmpleFusion) 分支用于项目总体介绍。
+三个版本分别维护：[`fusion`](https://github.com/Scaffolder666/exCADmpleFusion/tree/fusion) 是设计理由优先的左侧教程版；[`blender`](https://github.com/Scaffolder666/exCADmpleFusion/tree/blender) 是单视口九步动画版；本分支 [`fusion-him`](https://github.com/Scaffolder666/exCADmpleFusion/tree/fusion-him) 是操作历史优先的实验版。
+
+## 这个版本有什么不同
+
+白底左侧面板以**纵向建模历史卡片**为主，展示步骤名称、CAD 操作和前两个参数。选中一步后，下面显示操作细节、设计理由、媒体与关联几何。
+
+- **Current step（默认）**：只播放当前操作，到结尾停止，便于逐项观察。
+- **Full example**：按案例顺序自动播放到最后一步。
+- **Replay step**：从当前步骤起点重新播放，保留当前播放范围选择。
+- **关联几何与 Focus**：沿用 Fusion 版已有的手动关联和高亮机制。
+
+参考 [History in Motion, SCF 2023](https://doi.org/10.1145/3623263.3623358) 的历史探索思路。此版本不是 HiM 复刻：没有从选中 Face/Edge 自动追溯特征依赖，也没有新增 Revolve、Fillet、Pattern 的原生参数动画。已有预计算 Extrude 与步骤快照继续工作。Reasoning 仍保留，因为 exCADmple 关注操作与设计理由的复用。
+
+**切换版本时先停止另一个 Fusion 插件版本。** 两个分支共用插件入口与会话标识，不应同时运行。
 
 本插件允许用户**在同一个 Fusion 工作空间中，一边探索参考案例，一边继续建立自己的模型**。参考案例使用独立的数据驱动时间轴，不会移动用户原生 Fusion Feature Timeline 的历史标记。
 
@@ -23,18 +36,9 @@ Fusion 相关的后续开发直接提交到 **`fusion` 分支**。另一个固�
 
 当前附带的 Phone Stand 是**说明性质的测试案例**：包含三个网格快照和示例推理文本，**没有真实设计师录制的语音或视频**；但可用于验证播放计时与操作提示。
 
-## 白底参考教程界面
-
-- **左侧常驻面板**：默认宽 360 px，Fusion 画布自动为面板留出空间。
-- **突出当前决策**：浅蓝步骤卡固定在内容区顶部，先展示目标和 Why，再查看操作、参数、媒体与几何关联。
-- **底部常驻播放条**：横向步骤编号、前后跳转、播放／暂停、步骤内进度。长步骤列表可以横向滚动，悬停或辅助阅读可获得完整步骤标题。
-- **自由探索**：可以直接跳到任意决策，阅读理由并返回自己的设计，不要求按顺序完成教程。
-
-底部播放条位于 **exCADmple 左侧面板内部**，不是覆盖整个 Fusion 窗口，也不替换原生 Feature Timeline。当前示例仍为三步骤；这次更新同步了界面与交互组织，没有把 Blender 的九步动画冒充为 Fusion 已实现功能。
-
 ## 在 Autodesk Fusion 中安装
 
-1. 下载本仓库的 **`fusion` 分支 ZIP** 并解压。
+1. 下载本仓库的 **`fusion-him` 分支 ZIP** 并解压。
 2. 保持所有插件文件位于同一个 `exCADmpleFusion` 文件夹中，包括 `exCADmpleFusion.py` 和 `exCADmpleFusion.manifest`；**不要只安装 `ui` 文件夹**。
 3. 打开 Fusion，新建或打开一个 **Design** 文档。
 4. 进入 **Utilities → Scripts and Add-Ins → Add-Ins**，点击 **+**，选中整个 `exCADmpleFusion` 文件夹，并运行插件。
