@@ -1,0 +1,13 @@
+{
+  "format": "excadmple-pair",
+  "version": 1,
+  "id": "fusion-native-history-test",
+  "title": "Fusion — Real Feature History Example",
+  "model": "fusion.f3d",
+  "model_sha256": "696ce58b26afc66d68789daa860e8c5ab735522abe2eaa7620b955f1e51c944b",
+  "description": "Complex-model native HiM test. Automatically generated transcript/reasoning is hypothetical, not the original designer's statements.",
+  "auto_generate": true,
+  "step_duration_ms": 8000,
+  "reasoning_source": "simulated",
+  "steps": []
+}
