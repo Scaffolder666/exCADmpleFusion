@@ -231,3 +231,11 @@ python -m unittest discover -s tests -v
 - [Fusion Custom Graphics](https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/CustomGraphics_UM.htm)
 - [Fusion Add-In Manifest](https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/WritingDebugging_UM.htm)
 - [Fusion Document Save Events](https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/core_Application_documentSaving.htm)
+
+
+### HiM-style 操作动画实现状态（2026-11）
+
+- 已接入 Fusion Custom Graphics：Extrude、Mesh Reveal、Revolve（现有网格绕轴旋转）、Circular Pattern（实例逐个出现）、Mirror（镜像几何渐变）、Transform（平移）。
+- 新增纯 Python 回归测试：`tests/test_operation_previews.py`。测试已提交，尚未在 Fusion 桌面端执行。
+- **精度边界**：Revolve 不是草图截面扫掠生成 BRep；Pattern 目前仅支持圆周阵列；Mirror 为网格预览；Mesh Reveal 是解释性过渡。尚未完成 Fillet、Chamfer、Rectangular Pattern、Split、Combine、Import/Export、Ghost Pointer 等全部 HiM 功能。
+- 所有预览使用临时网格，不会重算或修改原生 Fusion Timeline。
