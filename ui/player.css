@@ -187,3 +187,9 @@ blockquote { background:#f0f6ff; border-left-color:var(--blue); font-size:13px; 
 .current-step { border-radius:0 0 8px 8px; }
 @media(max-height:650px) { .step-rail { max-height:110px; } }
 @media(max-height:480px) { .step-rail { max-height:64px; } .intro { padding-top:4px; padding-bottom:4px; } }
+
+/* HiM history metadata and completed-step affordances. */
+.step-card.visited:not(.active) { border-left-color:#7da0c9; }
+.step-card.visited:not(.active) .step-indicator { color:#527ca7; }
+.step-duration { display:block; font-size:9px; color:var(--quiet); margin-top:2px; font-variant-numeric:tabular-nums; }
+.step-card:focus-visible { outline:2px solid var(--blue); outline-offset:2px; }
