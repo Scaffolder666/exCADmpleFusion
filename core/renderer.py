@@ -6,7 +6,7 @@ palette. The model's native history marker and feature parameters are untouched.
 import adsk.core
 import adsk.fusion
 
-from .animation import extrude_mesh, reveal_meshes, operation_meshes
+from .animation import extrude_mesh, reveal_meshes, operation_meshes, transition_meshes, rectangular_pattern_meshes
 
 
 class ReferenceRenderer:
@@ -105,6 +105,10 @@ class ReferenceRenderer:
             meshes = reveal_meshes(animation, progress)
         elif animation["type"] == "extrude":
             meshes = list(animation.get("context_meshes", [])) + [extrude_mesh(animation, progress)]
+        elif animation["type"] == "rectangular_pattern":
+            meshes = rectangular_pattern_meshes(animation, progress)
+        elif animation["type"] in ("fillet", "chamfer", "boolean", "split", "combine", "loft", "shell", "thread", "import", "export"):
+            meshes = transition_meshes(animation, progress)
         else:
             meshes = operation_meshes(animation, progress)
         # Hide the completed reference mesh before rendering partial geometry.
