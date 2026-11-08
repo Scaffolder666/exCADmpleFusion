@@ -668,7 +668,22 @@ class HiMController:
                     overlay.isSelectable = False
                 except Exception as error:
                     self.log("HiM geometry guidance: " + str(error))
+            # A precise native face copy is a reliable target. A whole
+            # result Body is not: omit the arrow rather than point vaguely.
+            self._add_geometry_arrow(group, targets, prepared["bodies"])
         self.group = group
+
+    @staticmethod
+    def _add_geometry_arrow(group, targets, result_bodies):
+        """Point at a feature-owned changed face if its geometry is available."""
+        if not targets or not any(all(target is not body for body in result_bodies)
+                                  for target in targets):
+            return
+        try:
+            from .renderer import add_target_arrow, body_target_bounds
+            add_target_arrow(group, body_target_bounds(targets))
+        except Exception:
+            pass  # guidance is optional and must never interrupt native playback
 
     MAX_FACE_HIGHLIGHTS = 200
 
@@ -682,6 +697,7 @@ class HiMController:
             return None
         group = design.rootComponent.customGraphicsGroups.add()
         group.isSelectable = False
+        arrow_target = None
         for feature in features:
             for curve in self.model_highlights.get(feature.index, []):
                 try:
@@ -694,7 +710,10 @@ class HiMController:
                     continue
             entity = self._feature_entity(feature)
             bodies = [b for b in _items(getattr(entity, "bodies", None)) if b] if entity is not None else []
-            for body in self._change_targets({"entity": entity, "bodies": bodies}):
+            targets = self._change_targets({"entity": entity, "bodies": bodies})
+            if targets and any(all(target is not b for b in bodies) for target in targets):
+                arrow_target = (targets, bodies)
+            for body in targets:
                 try:
                     overlay = group.addBRepBody(body)
                     overlay.color = adsk.fusion.CustomGraphicsSolidColorEffect.create(
@@ -704,6 +723,8 @@ class HiMController:
                     overlay.isSelectable = False
                 except Exception as error:
                     self.log("HiM geometry guidance: " + str(error))
+        if arrow_target:
+            self._add_geometry_arrow(group, *arrow_target)
         self.group = group
         self._refresh()
         return group
