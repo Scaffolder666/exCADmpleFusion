@@ -18,7 +18,7 @@ import adsk.fusion
 from core.packages import open_package, PackageError
 from core.renderer import ReferenceRenderer
 from core.history import history_step_indices, HistoryError
-from core.fusion_history import scan_candidate_features, trace_direct_creators
+from core.fusion_history import scan_candidate_features, trace_direct_creators, trace_feature_inputs
 from core.spatial import SpatialLinkController
 
 PALETTE_ID = "excadmple.fusion.player"
@@ -146,7 +146,7 @@ class ActiveGeometrySelection(adsk.core.ActiveSelectionEventHandler):
                 design = adsk.fusion.Design.cast(_app.activeProduct)
                 candidates = scan_candidate_features(design, _selected_native_entity())
                 _post("native_history", {"features": candidates, "complete": False})
-                _post("native_provenance", trace_direct_creators(design, _selected_native_entity()))
+                _post("native_provenance", trace_feature_inputs(design, _selected_native_entity()))
             else:
                 _post("native_history", {"features": [], "complete": False})
                 _post("native_provenance", {"features": [], "complete": False})
