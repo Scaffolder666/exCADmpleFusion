@@ -40,6 +40,12 @@
         <button id="showMoreHistory" type="button" class="text-button">Show more</button>
         <button id="clearHistory" type="button" class="text-button">All steps</button>
       </div>
+      <details class="geometry-link" open>
+        <summary>Direct geometry provenance (where available)</summary>
+        <div id="provenanceStatus">Select a face, edge or vertex.</div>
+        <div id="provenanceList"></div>
+        <small>Direct creator attribution does not reconstruct full topology-changing history.</small>
+      </details>
       <details class="geometry-link">
         <summary>Native Fusion feature candidates (read-only)</summary>
         <div id="nativeHistoryStatus">Select a face, edge or vertex.</div>
