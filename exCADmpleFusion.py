@@ -186,6 +186,32 @@ def _load(filename):
     """Open a tutorial (replacing the current one)."""
     global _package
     package = open_package(filename)
+    if getattr(package, "needs_populate", False):
+        if ROLE != REFERENCE or not _session:
+            package.close()
+            raise PackageError("JSON + .f3d pairs require the History in Motion layout")
+        # Native feature names and indices do not exist in the sidecar until
+        # Fusion imports the original .f3d and reads its real Timeline.
+        try:
+            _session.open(package)
+            data = package.player_data()
+        except Exception:
+            package.close()
+            raise
+        _renderer.clear()
+        if _spatial:
+            _spatial.reset_example()
+        old, _package = _package, package
+        if old:
+            old.close()
+        _post("example", data)
+        _post_source()
+        _set_step(0)
+        if package.generated_path:
+            _status("Editable steps saved to " + str(package.generated_path))
+        if _palette and _palette.isValid:
+            _palette.isVisible = True
+        return
     try:
         data = package.player_data()
     except Exception:
@@ -206,7 +232,7 @@ def _load(filename):
 
 def _open_dialog():
     dialog = _ui.createFileDialog()
-    dialog.title = "Open an exCADmple tutorial"
+    dialog.title = "Load Example (JSON + matching Fusion .f3d, or .excadmple)"
     dialog.filter = "exCADmple tutorials (*.excadmple;*.json)"
     if dialog.showOpen() == adsk.core.DialogResults.DialogOK:
         _load(dialog.filename)
