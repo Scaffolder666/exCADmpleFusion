@@ -738,6 +738,20 @@ class HiMController:
         # absent. The native feature itself supplies the actual motion.
         if prepared["mode"] in (FADE, PARAMETRIC):
             targets = self._change_targets(prepared)
+            if prepared.get("wireframe") and not targets:
+                # If Fusion rejects a transient copy of the Feature's
+                # changed faces, a ghost-only viewport would be misleading.
+                # Restore original faces and fall back to the established
+                # shaded context rather than concealing the whole model.
+                self.log("HiM: exact changed faces cannot be drawn; reverting to translucent context")
+                self.focus.restore()
+                if self.ghost_group and self.ghost_group.isValid:
+                    self.ghost_group.deleteMe()
+                self.ghost_group = None
+                prepared["wireframe"] = False
+                prepared["context_fallback"] = "changed feature faces could not be copied"
+                self._apply_focus(prepared["bodies"], hide_result=prepared["mode"] == FADE)
+                targets = self._change_targets(prepared)
             center = _center(targets) if prepared["mode"] == FADE else None
             for body in targets:
                 try:
@@ -834,9 +848,9 @@ class HiMController:
             try:
                 manager = adsk.fusion.TemporaryBRepManager.get()
                 copies = [manager.copy(face) for face in faces]
-                copies = [c for c in copies if c]
-                if copies:
+                if len(copies) == len(faces) and all(c is not None for c in copies):
                     return copies
+                self.log("HiM: incomplete affected-face copy; refusing partial isolation")
             except Exception as error:
                 self.log("HiM geometry guidance: " + str(error))
         if prepared.get("wireframe"):
@@ -907,7 +921,8 @@ class HiMController:
                 "parameters": [key for key, _, _ in prepared["params"]] if prepared["mode"] == PARAMETRIC else [],
                 "fallback": prepared.get("fallback", ""),
                 "wireframe": bool(prepared.get("wireframe")),
-                "ghost_edges": prepared.get("ghost_edges", 0)}
+                "ghost_edges": prepared.get("ghost_edges", 0),
+                "context_fallback": prepared.get("context_fallback", "")}
 
     def _finish_feature(self):
         """Restore parameters, opacity and overlay of the active feature."""
