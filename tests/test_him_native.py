@@ -244,7 +244,7 @@ class WireframePlaybackTests(unittest.TestCase):
             get=lambda: types.SimpleNamespace(copy=lambda face: types.SimpleNamespace(boundingBox=box())))
         _, session = session_for(design, dim=True)
         shown = session.frame(1, 0.1)
-        self.assertEqual(shown["mode"], "visual")  # Fusion rejects tiny radius
+        self.assertEqual(shown["mode"], "instant")  # Fusion rejects tiny radius
         session.stop()
         self.assertEqual(entities["body0"].opacity, 0.6)
         self.assertEqual(entities["body1"].opacity, 1.0)
@@ -259,6 +259,7 @@ class ParameterDiscoveryTests(unittest.TestCase):
         design, _, _ = build()
         session = ReferenceSession(FakeApp(design), None)
         self.assertTrue(session.him.dim_others)
+        self.assertTrue(session.him.instant_nonparametric)
 
     def test_registry_paths_only(self):
         design, entities, _ = build()
@@ -269,19 +270,42 @@ class ParameterDiscoveryTests(unittest.TestCase):
         self.assertEqual(_model_parameters(design, entities["ex2"], "ExtrudeFeature"), [])
         self.assertEqual(_model_parameters(design, entities["mi1"], "MirrorFeature"), [])
 
-    def test_animation_plan_distinguishes_parameter_and_visual(self):
+    def test_animation_plan_distinguishes_parameter_and_instant(self):
         design, _, _ = build()
         _, session = session_for(design)
         modes = [[(i["feature"], i["mode"], i["parameters"]) for i in step] for step in session.plan]
         self.assertEqual(modes, [
             [("Sketch1", "timeline", []), ("Extrude1", "parameter", ["d1"])],
             [("Fillet1", "parameter", ["d2"])],
-            [("Sketch2", "timeline", []), ("Extrude2", "visual", [])],
-            [("Mirror1", "visual", [])],
+            [("Sketch2", "timeline", []), ("Extrude2", "instant", [])],
+            [("Mirror1", "instant", [])],
         ])
 
 
 class NativePlaybackTests(unittest.TestCase):
+    def test_overview_before_play_and_after_final_feature(self):
+        design, entities, groups = build()
+        _, session = session_for(design, dim=True)
+        # Loading an example must begin with the complete shaded design.
+        session.show_overview()
+        self.assertEqual(design.timeline.markerPosition, design.timeline.count)
+        self.assertEqual(entities["body0"].opacity, 0.6)
+        self.assertIsNone(session.him.group)
+        self.assertIsNone(session.him.ghost_group)
+        # Playback temporarily rolls to a feature and focuses its geometry.
+        session.frame(0, 0.5)
+        self.assertEqual(design.timeline.markerPosition, 2)
+        # Finishing the final step must present the FULL model again.
+        result = session.frame(3, 1.0)
+        self.assertEqual(result["mode"], "overview")
+        self.assertEqual(design.timeline.markerPosition, design.timeline.count)
+        self.assertEqual(entities["body0"].opacity, 0.6)
+        self.assertEqual(entities["body1"].opacity, 1.0)
+        self.assertEqual(entities["body2"].opacity, 1.0)
+        self.assertIsNone(session.him.group)
+        self.assertIsNone(session.him.ghost_group)
+        self.assertTrue(all(not group.isValid for group in groups))
+
     def setUp(self):
         self.design, self.entities, self.groups = build()
         self.app, self.session = session_for(self.design)
@@ -339,8 +363,8 @@ class NativePlaybackTests(unittest.TestCase):
                 seen.append((step, shown["mode"], shown.get("feature")))
         self.assertIn((0, "parameter", "Extrude1"), seen)
         self.assertIn((1, "parameter", "Fillet1"), seen)
-        self.assertIn((2, "visual", "Extrude2"), seen)
-        self.assertIn((3, "visual", "Mirror1"), seen)
+        self.assertIn((2, "instant", "Extrude2"), seen)
+        self.assertIn((3, "instant", "Mirror1"), seen)
         self.assertRestored()
         self.assertEqual(self.design.timeline.markerPosition, 6)            # finished model
         # Replay step 1 from the start after finishing it.
@@ -357,18 +381,19 @@ class NativePlaybackTests(unittest.TestCase):
         self.session.stop()
         self.assertRestored()
 
-    def test_visual_fallback_draws_and_cleans_up(self):
+    def test_nonparametric_feature_appears_immediately_without_fade(self):
         shown = self.session.frame(3, 0.5)
-        self.assertEqual(shown["mode"], "visual")
+        self.assertEqual(shown["mode"], "instant")
         group = self.groups[-1]
         self.assertTrue(group.isValid)
         self.assertEqual(len(group.bodies), 1)
-        self.assertAlmostEqual(group.bodies[0].opacity, 0.5)
-        self.session.frame(3, 1.0)
-        self.assertFalse(group.isValid)                                     # fade overlay removed
-        guidance = self.session.him.group                                   # the result stays marked
-        self.assertTrue(guidance.isValid)
-        self.assertEqual(len(guidance.bodies), 1)                           # Mirror1's result body
+        self.assertAlmostEqual(group.bodies[0].opacity, 1.0)
+        self.assertFalse(hasattr(group.bodies[0], "transform"))  # no scale motion
+        final = self.session.frame(3, 1.0)
+        self.assertEqual(final["mode"], "overview")
+        self.assertFalse(group.isValid)                                     # all ghost/overlay graphics gone
+        self.assertIsNone(self.session.him.group)
+        self.assertEqual(self.design.timeline.markerPosition, self.design.timeline.count)
         self.session.stop()
         self.assertTrue(all(not g.isValid for g in self.groups))
         self.assertEqual(self.d1.writes, [])                                # model untouched
@@ -399,11 +424,11 @@ class FailureTests(unittest.TestCase):
         d2 = param(entities, "fi1")
         original = d2.expression
         shown = session.frame(1, 0.1)                                       # 0.2 * ~0.12 < 0.1
-        self.assertEqual(shown["mode"], "visual")
+        self.assertEqual(shown["mode"], "instant")
         self.assertIn("rejected d2", shown["fallback"])
         self.assertEqual(d2.expression, original)
         self.assertAlmostEqual(d2.value, 0.2)
-        self.assertTrue(groups[-1].bodies)                                  # the fade is drawn instead
+        self.assertTrue(groups[-1].bodies)                                  # instant geometry after fallback
         session.stop()
         self.assertTrue(all(not g.isValid for g in groups))
         self.assertEqual(len(session.him.journal), 0)
@@ -417,7 +442,7 @@ class FailureTests(unittest.TestCase):
             shown = session.frame(0, 0.3)
         finally:
             del adsk.fusion.FeatureHealthStates
-        self.assertEqual(shown["mode"], "visual")
+        self.assertEqual(shown["mode"], "instant")
         self.assertIn("failed to compute", shown["fallback"])
         self.assertAlmostEqual(param(entities, "ex1").value, 1.0)
 
