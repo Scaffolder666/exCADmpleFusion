@@ -241,7 +241,11 @@ def open_package(filename):
     if source.suffix.lower() == ".json":
         if source.stat().st_size > 8 * 1024 * 1024:
             raise PackageError("JSON file is too large")
-        return ExamplePackage(json.loads(source.read_text(encoding="utf-8")), source.parent, source_path=source)
+        data = json.loads(source.read_text(encoding="utf-8"))
+        if isinstance(data, dict) and data.get("format") == "excadmple-pair":
+            from .example_pair import LocalPairPackage
+            return LocalPairPackage(data, source)
+        return ExamplePackage(data, source.parent, source_path=source)
     if source.suffix.lower() != ".excadmple":
         raise PackageError("Choose a .json or .excadmple file")
     temp = None
