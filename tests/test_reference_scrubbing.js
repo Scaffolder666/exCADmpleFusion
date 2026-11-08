@@ -58,6 +58,23 @@ async function main() {
   const count = action => calls.filter(c => c.action === action).length;
   const value = expr => vm.runInContext(expr, context);
 
+  const grouped = value(`operationCueGroups({duration_ms:8000,cues:[
+    {at_ms:0,label:"base"},{at_ms:3999,label:"still base"},
+    {at_ms:4000,label:"mirror"},{at_ms:8000,label:"end"}]},[
+    {feature:"Sketch1",kind:"Sketch"},{feature:"Extrude1",kind:"ExtrudeFeature"},
+    {feature:"Mirror1",kind:"MirrorFeature"}])`);
+  assert.deepEqual(Array.from(grouped, g => [g.operation.feature, Array.from(g.cues, c => c.index)]),
+    [["Extrude1", [0, 1]], ["Mirror1", [2, 3]]]);
+  const collectText = node => [node.textContent || "", ...node.children.map(collectText)].join(" ");
+  value('S.plan=[[{feature:"Extrude1",kind:"ExtrudeFeature"},{feature:"Mirror1",kind:"MirrorFeature"}]]');
+  const groupedCard = value('card({title:"Base",duration_ms:8000,tools:["Extrude","Mirror"],cues:[{at_ms:0,label:"Make base"},{at_ms:4000,label:"Make symmetric"}]})');
+  const cardText = collectText(groupedCard);
+  assert.equal((cardText.match(/Extrude1/g) || []).length, 1);
+  assert.equal((cardText.match(/Mirror1/g) || []).length, 1);
+  assert.ok(!cardText.includes("Transcript"));
+  assert.ok(collectText(groupedCard.children[0]).includes("Make base"));
+  assert.ok(collectText(groupedCard.children[1]).includes("Make symmetric"));
+
   window.fusionJavaScriptHandler.handle("example", JSON.stringify({
     title: "Two feature tutorial",
     steps: [

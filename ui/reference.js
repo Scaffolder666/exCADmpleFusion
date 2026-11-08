@@ -286,60 +286,48 @@ function showAll() {
 }
 
 /* ---------- rendering ---------- */
+function operationCueGroups(item, plan) {
+  // Match reference_plan.frame_target: non-sketch features share step time
+  // equally. This is a timing association, not an inferred design intention.
+  const source = plan.length ? plan : (item.source_features || []).map(f => ({feature:f.name, kind:f.kind}));
+  const animated = source.filter(p => p.kind !== "Sketch" && !(p.kind || "").startsWith("Construction"));
+  const operations = animated.length ? animated : source;
+  const groups = operations.map(p => ({ operation:p, cues:[] }));
+  if (!groups.length) groups.push({ operation:null, cues:[] });
+  (item.cues || []).forEach((cue, index) => {
+    const slot = Math.max(0, Math.min(groups.length - 1,
+      Math.floor(cue.at_ms / (item.duration_ms || 8000) * groups.length)));
+    groups[slot].cues.push({cue, index});
+  });
+  return groups;
+}
 function card(item) {
   const box = el("div", { class: "card" });
-  if ((item.tools || []).length) {
-    const tools = el("div", { class: "params" });
-    for (const name of item.tools) tools.appendChild(el("span", {}, name));
-    box.appendChild(tools);
-  }
-  const plan = S.plan[S.index] || [];
-  if (plan.length) {
-    // How the designer's model shows this step: native parameter animation,
-    // a visual fallback, or the timeline state only.
-    const line = el("ul", { class: "anim" });
-    for (const p of plan) {
-      const live = S.shown && S.shown.step === S.index && S.shown.feature === p.feature ? S.shown : null;
-      let text = p.feature + " · ";
-      if (live && live.mode === "instant") {
-        text += "appears immediately · actual Fusion geometry" +
-                (live.wireframe ? " · ghost wireframe context" :
-                  " · shaded context (" + (live.context_fallback || "exact isolation unavailable") + ")");
-        if (live.fallback) text += " (" + live.fallback + ")";
-      }
-      else if (live && live.fallback) text += "visual fallback (" + live.fallback + ")";
-      else if (live && live.wireframe && live.mode === "parameter")
-        text += "native reconstruction · ghost wireframe · " + (live.parameters || []).join(", ");
-      else if (live && live.wireframe && live.mode === "visual")
-        text += "ghost wireframe · feature fade (no suitable numeric parameter)";
-      else if (live && live.mode === "parameter")
-        text += "native reconstruction · translucent context (" +
-                (live.context_fallback || "exact isolation unavailable") + ") · " +
-                (live.parameters || []).join(", ");
-      else if (p.mode === "parameter") text += "parameter animation: " + p.parameters.join(", ");
-      else if (p.mode === "instant") text += "instant appearance (no numeric parameter)";
-      else if (p.mode === "visual") text += "visual fade (legacy inspect mode)";
-      else text += "timeline state";
-      line.appendChild(el("li", { class: p.mode + (live ? " live" : ""), title: text },
-        p.feature + (live ? " · Current" : "")));
-    }
-    box.appendChild(line);
-  }
   const cues = item.cues || [];
   let active = -1;
   cues.forEach((c, i) => { if (c.at_ms <= S.elapsed) active = i; });
-  {
-    const label = el("div", { class: "explanation-label" },
-      "Transcript");
-    box.appendChild(label);
+  for (const group of operationCueGroups(item, S.plan[S.index] || [])) {
+    const section = el("div", { class: "operation-transcript" });
+    const operation = group.operation;
+    // If the step itself is named Extrude1, its capsule already names it.
+    if (operation && operation.feature !== item.title) {
+      const live = S.shown && S.shown.step === S.index && S.shown.feature === operation.feature;
+      section.appendChild(el("div", { class: "operation-name" + (live ? " live" : "") }, operation.feature));
+    }
     const list = el("ol", { class: "said" });
-    cues.forEach((c, i) => {
+    group.cues.forEach(({cue:c, index:i}) => {
       const li = el("li", { class: i === active ? "current" : (i < active ? "before" : "") }, c.label);
       li.addEventListener("click", (e) => { e.stopPropagation(); S.elapsed = c.at_ms; S.fresh = false; S.epoch++; S.manualFrame = true; resetNativeClock(); syncAudio(true); render(); });
       list.appendChild(li);
     });
-    if (!cues.length) list.appendChild(el("li", {}, "Nothing was said in this step."));
-    box.appendChild(list);
+    if (!group.cues.length) list.appendChild(el("li", {}, "No transcript available."));
+    section.appendChild(list);
+    box.appendChild(section);
+  }
+  // Keep actual runtime limitations visible, without repeating operation names.
+  if (S.shown && S.shown.step === S.index) {
+    const reason = S.shown.fallback || S.shown.context_fallback;
+    if (reason) box.appendChild(el("div", { class: "playback-note" }, reason));
   }
   if (active !== S.cue) {
     S.cue = active;
@@ -347,6 +335,7 @@ function card(item) {
   }
   return box;
 }
+
 function render() {
   if (!S.example) return;
   const progress = Math.max(0, Math.min(1, S.elapsed / duration()));
@@ -413,7 +402,7 @@ function render() {
     const button = el("button", { class: "capsule", type: "button" });
     const name = el("span", { class: "name" }, (i + 1) + "  " + item.title);
     if (S.filtered) name.appendChild(el("span", { class: "tag" }, S.tags[i] || "changed here"));
-    button.append(name, el("span", { class: "meta" }, (item.tools || []).join(" · ")));
+    button.appendChild(name);
     button.addEventListener("click", () => selectStep(i));
     li.appendChild(button);
     const bar = el("div", { class: "progress" });

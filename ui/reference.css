@@ -110,3 +110,8 @@ body { display:flex; flex-direction:column; }
 .anim li.parameter::before, .anim li.visual::before, .anim li.instant::before, .anim li.timeline::before { content:""; }
 .anim { border-left:2px solid var(--kind, var(--other)); padding-left:8px; }
 .anim li { padding:2px 0; } .anim li.live { color:var(--kind, var(--other)); }
+
+.operation-transcript + .operation-transcript { margin-top:12px; }
+.operation-name { font-size:12px; font-weight:650; color:var(--kind, var(--ink)); margin-bottom:4px; }
+.operation-name.live { text-decoration:underline; text-underline-offset:3px; }
+.playback-note { margin-top:8px; color:var(--muted); font-size:11px; }
