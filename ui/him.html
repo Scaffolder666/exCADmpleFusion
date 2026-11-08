@@ -19,7 +19,6 @@
     <nav class="tabs" role="tablist">
       <button role="tab" id="tab-mine" aria-selected="true" data-panel="mine">From my model</button>
       <button role="tab" id="tab-topics" aria-selected="false" data-panel="topics">Across examples</button>
-      <button role="tab" id="tab-notebook" aria-selected="false" data-panel="notebook">My notebook <span id="noteCount" class="count">0</span></button>
     </nav>
 
     <p id="status" class="status" role="status" aria-live="polite">Waiting for a selection in your model.</p>
@@ -55,15 +54,6 @@
       <div id="topics"></div>
     </section>
 
-    <section id="panel-notebook" class="panel" role="tabpanel" aria-labelledby="tab-notebook" hidden>
-      <p class="hint">What you did with other designers' reasoning. Saved inside your design file.</p>
-      <div id="summary" class="summary"></div>
-      <div id="notebook"></div>
-      <div class="export">
-        <button id="exportJson" type="button">Export JSON</button>
-        <button id="exportCsv" type="button">Export CSV</button>
-      </div>
-    </section>
   </main>
   <script src="him.js"></script>
 </body>

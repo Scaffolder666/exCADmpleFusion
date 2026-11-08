@@ -132,14 +132,8 @@ class HiMPaletteHandler(adsk.core.HTMLEventHandler):
                     entity = _selected_native_entity()
                     if entity:
                         _him_explain(entity)
-            elif command == "reuse_record":
-                _him_status(_reuse.record(body))
-            elif command == "reuse_remove":
-                _reuse.remove(str(body.get("id", "")))
             elif command == "reuse_watch":
                 _reuse.watch(str(body.get("example_id")), str(body.get("step_id")))
-            elif command == "reuse_export":
-                _him_status(_reuse.export("csv" if body.get("format") == "csv" else "json"))
             elif command == "reuse_import":
                 _open_dialog()
             elif command == "him_command":

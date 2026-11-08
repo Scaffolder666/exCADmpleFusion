@@ -1,10 +1,8 @@
-/* Reasoning Reuse panel. Python owns the model, the examples and the
-   notebook; this page renders three views and sends user decisions back:
+/* Reasoning Reuse panel. Python owns the model and the examples;
+   this page renders two views:
    * From my model — the user's features (found by HiM) with matched example
-     decisions, the user's own value next to the example's options, and
-     adopt / adapt / not use / undecided + a note,
-   * Across examples — the same question answered by different examples,
-   * My notebook — recorded reuse decisions, exportable for research.
+     decisions and the user's own value next to the example's options,
+   * Across examples — the same question answered by different examples.
    The optional HiM inspect section animates the user's own features. */
 "use strict";
 const $ = (id) => document.getElementById(id);
@@ -18,7 +16,6 @@ const LABELS = {
   CombineFeature: "Combine", SplitBodyFeature: "Split body", SplitFaceFeature: "Split face",
   LoftFeature: "Loft", MoveFeature: "Move",
 };
-const STANCE_LABELS = { adopt: "Adopt", adapt: "Adapt", reject: "Not use", undecided: "Undecided" };
 const LEVEL_LABELS = { strong: "type + name match", name: "name match", type: "same feature type" };
 
 function send(action, payload = {}) {
@@ -91,36 +88,16 @@ function decisionCard(match, feature) {
     if (illustrative(ref.source)) card.appendChild(el("div", { class: "tag" }, "Illustrative reasoning — not a real designer's statement"));
   }
   card.appendChild(el("div", { class: "why" }, "Why suggested: " + match.reasons.join(" ")));
-  card.appendChild(stanceEditor(ref, feature, match.stance, match.note));
+  card.appendChild(watchButton(ref));
   return card;
 }
 
-function stanceEditor(ref, feature, current, note) {
-  const wrap = el("div");
-  const buttons = el("div", { class: "stances", role: "group", "aria-label": "What will you do with this reasoning?" });
-  const text = el("textarea", { placeholder: "In my design… (why you adopt, adapt or don't use it)", "aria-label": "Your reasoning" });
-  text.value = note || "";
-  let chosen = current || null;
-  for (const stance of ["adopt", "adapt", "reject", "undecided"]) {
-    const b = el("button", { type: "button", "aria-pressed": String(stance === chosen) }, STANCE_LABELS[stance]);
-    b.addEventListener("click", () => {
-      chosen = stance;
-      for (const other of buttons.children) other.setAttribute("aria-pressed", String(other === b));
-    });
-    buttons.appendChild(b);
-  }
+function watchButton(ref) {
   const row = el("div", { class: "row" });
-  const save = el("button", { type: "button", class: "primary" }, "Save to notebook");
-  save.addEventListener("click", () => {
-    if (!chosen) { setStatus("Choose adopt, adapt, not use or undecided first.", true); return; }
-    send("reuse_record", { example_id: ref.example_id, step_id: ref.step_id,
-      feature_key: feature ? feature.key : "", stance: chosen, note: text.value });
-  });
   const watch = el("button", { type: "button" }, "▶ Watch in example");
   watch.addEventListener("click", () => send("reuse_watch", { example_id: ref.example_id, step_id: ref.step_id }));
-  row.append(save, watch);
-  wrap.append(buttons, text, row);
-  return wrap;
+  row.appendChild(watch);
+  return row;
 }
 
 /* ---------- views ---------- */
@@ -176,12 +153,7 @@ function renderTopics() {
       card.appendChild(el("div", { class: "pick" }, (answer.choice || "—") + (answer.value ? " · " + answer.value : "")));
       if (answer.note) card.appendChild(el("p", {}, answer.note));
       if (answer.rationale) card.appendChild(el("p", {}, "“" + answer.rationale + "”"));
-      const ref = { example_id: answer.example_id, step_id: answer.step_id };
-      const stance = entryStance(ref);
-      const toggle = el("button", { type: "button", class: "more" },
-        stance ? "Your stance: " + STANCE_LABELS[stance] + " — edit" : "Record my stance…");
-      toggle.addEventListener("click", () => { toggle.replaceWith(stanceEditor(ref, null, stance, entryNote(ref))); });
-      card.appendChild(toggle);
+      card.appendChild(watchButton({ example_id: answer.example_id, step_id: answer.step_id }));
       answers.appendChild(card);
     }
     section.appendChild(answers);
@@ -190,42 +162,7 @@ function renderTopics() {
   const focus = $("focusTopic");
   if (focus) focus.scrollIntoView({ block: "start" });
 }
-function entryFor(ref) {
-  return (state.view?.notebook || []).find((e) => e.example_id === ref.example_id && e.step_id === ref.step_id && !e.user_feature_key);
-}
-function entryStance(ref) { return entryFor(ref)?.stance || null; }
-function entryNote(ref) { return entryFor(ref)?.note || ""; }
-
-function renderNotebook() {
-  const view = state.view;
-  const entries = view ? view.notebook : [];
-  $("noteCount").textContent = String(entries.length);
-  const summary = $("summary");
-  summary.replaceChildren();
-  if (view) for (const [stance, count] of Object.entries(view.summary)) summary.appendChild(el("span", {}, STANCE_LABELS[stance] + ": " + count));
-  const root = $("notebook");
-  root.replaceChildren();
-  if (!entries.length) { root.appendChild(el("div", { class: "empty" }, "Nothing recorded yet. Save a stance on any decision.")); return; }
-  for (const entry of [...entries].reverse()) {
-    const card = el("article", { class: "entry" });
-    card.appendChild(el("div", { class: "stance " + entry.stance }, STANCE_LABELS[entry.stance] || entry.stance));
-    card.appendChild(el("p", {}, entry.question));
-    card.appendChild(el("small", {}, entry.example_title + " · " + entry.step_title + " — chose: " + (entry.example_choice || "—")));
-    if (entry.user_feature) card.appendChild(el("p", {}, "My feature: " + entry.user_feature + (entry.user_value ? " (" + entry.user_value + ")" : "")));
-    if (entry.note) card.appendChild(el("p", {}, "“" + entry.note + "”"));
-    card.appendChild(el("small", {}, entry.updated_at));
-    const row = el("div", { class: "row" });
-    const watch = el("button", { type: "button" }, "▶ Revisit");
-    watch.addEventListener("click", () => send("reuse_watch", { example_id: entry.example_id, step_id: entry.step_id }));
-    const remove = el("button", { type: "button" }, "Delete");
-    remove.addEventListener("click", () => send("reuse_remove", { id: entry.id }));
-    row.append(watch, remove);
-    card.appendChild(row);
-    root.appendChild(card);
-  }
-}
-
-function renderView() { renderMine(); renderTopics(); renderNotebook(); }
+function renderView() { renderMine(); renderTopics(); }
 
 /* ---------- HiM inspect section ---------- */
 function modeLabel(mode) {
@@ -309,8 +246,6 @@ $("inspectMode").addEventListener("change", () => {
   send("him_command", { name: "inspect", value: $("inspectMode").checked });
   renderHiM();
 });
-$("exportJson").addEventListener("click", () => send("reuse_export", { format: "json" }));
-$("exportCsv").addEventListener("click", () => send("reuse_export", { format: "csv" }));
 $("importExample").addEventListener("click", () => send("reuse_import"));
 
 window.fusionJavaScriptHandler = {

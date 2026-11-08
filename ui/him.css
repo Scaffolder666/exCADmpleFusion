@@ -51,10 +51,6 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline:2px 
 .compare { margin:6px 0; padding:6px 8px; border-radius:6px; background:#eef4ff; font-size:12px; }
 .compare small { display:block; color:var(--muted); }
 .why { font-size:10px; color:var(--muted); margin:4px 0; }
-.stances { display:flex; gap:4px; flex-wrap:wrap; margin-top:6px; }
-.stances button { border:1px solid #cfd6de; background:white; border-radius:12px; padding:2px 9px; font-size:11px; }
-.stances button[aria-pressed=true] { background:var(--ink); color:white; border-color:var(--ink); }
-.decision textarea { width:100%; margin-top:5px; min-height:38px; border:1px solid #cfd6de; border-radius:6px; padding:4px 6px; font-size:12px; resize:vertical; }
 .row { display:flex; gap:6px; margin-top:5px; }
 .row button { border:1px solid #cfd6de; background:white; border-radius:6px; padding:3px 9px; font-size:11px; }
 .row .primary { background:var(--blue); color:white; border-color:var(--blue); }
@@ -68,18 +64,6 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline:2px 
 .answer .who { font-size:10px; color:var(--muted); }
 .answer .pick { font-weight:650; }
 .answer p { margin:3px 0 0; font-size:12px; }
-
-/* notebook */
-.summary { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px; }
-.summary span { font-size:11px; padding:1px 8px; border-radius:9px; background:var(--panel); }
-.entry { border:1px solid var(--line); border-radius:8px; padding:7px 9px; margin:0 0 6px; }
-.entry .stance { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.3px; }
-.entry .stance.adopt { color:var(--green); } .entry .stance.adapt { color:var(--blue); }
-.entry .stance.reject { color:var(--red); } .entry .stance.undecided { color:var(--muted); }
-.entry p { margin:3px 0; font-size:12px; }
-.entry small { color:var(--muted); font-size:10px; }
-.export { display:flex; gap:6px; margin-top:8px; }
-.export button { border:1px solid #cfd6de; background:white; border-radius:6px; padding:4px 10px; font-size:11px; }
 
 /* HiM inspect section */
 .inspect { margin-top:14px; border-top:1px solid var(--line); padding-top:8px; }

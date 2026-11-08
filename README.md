@@ -9,7 +9,7 @@
 
 ## v0.7 完整版：Design Reasoning Reuse
 
-本版本把 HiM 复现用于 `main` 分支的研究目标：**用户在设计自己的模型时，复用其他设计师在案例中表达的推理。**案例数据视为已经存在（预先制作），软件负责“找到 → 迁移 → 留痕”。
+本版本把 HiM 复现用于 `main` 分支的研究目标：**用户在设计自己的模型时，复用其他设计师在案例中表达的推理。**案例数据视为已经存在（预先制作），软件负责“找到 → 对照 → 迁移”。
 
 插件启动后有两个面板：
 
@@ -17,8 +17,7 @@
 - **右侧 · Reasoning Reuse**：
   1. **From my model**：在*自己的*模型上选中面、边或顶点 → HiM 算法以**只读**方式找出生成它的特征（分析后恢复时间线标记）→ 在所有打开的案例中找出相关决策，并说明**为什么推荐**（特征类型相同 / 名称含作者标签 / 参数类型相同）。每张卡片会把**你的参数值**与案例的各选项并列，并标出最接近的选项（只作参考，不判断对错）。
   2. **Across examples**：同一个设计问题在不同案例中的回答并排比较（例如防滑：Phone Stand 用四个脚垫，Tablet Stand 用整片软木），呈现设计空间，而非唯一答案。
-  3. **My notebook**：对每条推理记录 **采纳 / 改编 / 不采用 / 未决定**，并用自己的话写原因。笔记存于设计文件的 attributes（随 `.f3d` 保存）；可导出 JSON / CSV 用作研究数据。
-  4. **History in Motion · inspect（可选，默认关闭）**：论文中的原位参数动画，只有勾选后才会临时修改用户模型的参数，结束后恢复。
+  3. **History in Motion · inspect（可选，默认关闭）**：论文中的原位参数动画，只有勾选后才会临时修改用户模型的参数，结束后恢复。
 
 **附带案例（均为人工编写的示例数据，标记为 Illustrative，不是真实设计师录制）：**
 
@@ -54,9 +53,8 @@
 1. 启动插件：左侧打开 Phone Stand 与 Tablet Stand；用 **Open examples** 切换，确认各自的播放进度分别保留。
 2. 播放 Phone Stand 第 4、5、8 步：圆角半径、线槽宽度和减重窗口应逐渐变化；橙色 Ghost Pointer 沿路径移动，按下时显示圆环。
 3. 自己建一个底板并加 Fillet（命名为 “Corner fillet”）；选中圆角面，右侧应显示 “Round the base edges” 决策、你的半径与各选项的比较。
-4. 选 **Adapt**，写一句原因并保存；保存设计、关闭再打开，确认笔记仍在 My notebook 中；导出 CSV。
-5. 点 **Watch in example**：左侧应切到对应案例和步骤并开始播放。
-6. 确认在未勾选 inspect 时，你的参数与时间线没有任何变化。
+4. 点 **Watch in example**：左侧应切到对应案例和步骤并开始播放。
+5. 确认在未勾选 inspect 时，你的参数与时间线没有任何变化。
 
 ## 播放器基础功能
 
@@ -274,10 +272,9 @@ examples/phone_stand.json  九步 Phone Stand（几何、Ghost Pointer、决策�
 examples/tablet_stand.json 对照案例
 tools/build_examples.py    生成上述两个案例
 core/reuse.py              决策校验、匹配、数值对照、跨案例主题
-core/notebook.py           推理笔记（采纳/改编/不采用/未决定）
 core/library.py            多案例库与各自播放进度
 core/pointer.py            Ghost Pointer 路径校验与采样
-core/reuse_fusion.py       Reuse 与 Fusion 的连接（笔记存于设计 attributes）
+core/reuse_fusion.py       Reuse 与 Fusion 的连接
 tests/test_packages.py     纯 Python 案例包测试
 ```
 

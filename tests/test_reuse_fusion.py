@@ -1,5 +1,4 @@
-"""ReuseController on a stub adsk: selection -> matches -> notebook stored
-in the design's attributes."""
+"""ReuseController on a stub adsk: selection -> matched decisions -> watch."""
 import types
 import unittest
 from pathlib import Path
@@ -7,21 +6,9 @@ from pathlib import Path
 import tests.test_him_fusion_adapter  # noqa: F401  (installs the adsk stub)
 from core.library import ExampleLibrary
 from core.packages import open_package
-from core.reuse_fusion import ReuseController, ATTR_GROUP, ATTR_NAME
+from core.reuse_fusion import ReuseController
 
 ROOT = Path(__file__).resolve().parents[1]
-
-
-class Attributes:
-    def __init__(self):
-        self.store = {}
-
-    def itemByName(self, group, name):
-        value = self.store.get((group, name))
-        return types.SimpleNamespace(value=value) if value is not None else None
-
-    def add(self, group, name, value):
-        self.store[(group, name)] = value
 
 
 class FakeHiM:
@@ -44,10 +31,7 @@ class FakeHiM:
 
 class ReuseControllerTests(unittest.TestCase):
     def setUp(self):
-        self.attributes = Attributes()
-        design = types.SimpleNamespace(_type="Design", attributes=self.attributes,
-                                       rootComponent=types.SimpleNamespace(entityToken="doc-1"))
-        self.app = types.SimpleNamespace(activeProduct=design)
+        self.app = types.SimpleNamespace(activeProduct=None)
         self.library = ExampleLibrary()
         for name in ("tablet_stand.json", "phone_stand.json"):
             self.library.add(open_package(ROOT / "examples" / name))
@@ -62,31 +46,20 @@ class ReuseControllerTests(unittest.TestCase):
     def last_view(self):
         return [p for a, p in self.posts if a == "reuse_view"][-1]
 
-    def test_selection_record_and_watch(self):
+    def test_selection_matches_and_watch(self):
         self.controller.explain(object())
         view = self.last_view()
         fillet = view["features"][0]
         self.assertEqual(fillet["matches"][0]["ref"]["topic"], "edge_rounding")
         self.assertEqual(fillet["matches"][0]["comparison"]["nearest_option"], "Soft")
         self.assertEqual(len(view["topics"]), 9)
-        self.controller.record({"example_id": "phone-stand", "step_id": "base_round",
-                                "feature_key": "tok-f", "stance": "adapt", "note": "smaller radius"})
-        raw = self.attributes.store[(ATTR_GROUP, ATTR_NAME)]
-        self.assertIn("smaller radius", raw)
-        view = self.last_view()
-        self.assertEqual(view["summary"]["adapt"], 1)
-        self.assertEqual(view["features"][0]["matches"][0]["stance"], "adapt")
-        self.assertEqual(view["notebook"][0]["user_value"], "6 mm")
         self.controller.watch("phone-stand", "base_round")
         self.assertEqual(self.opened, [("phone-stand", 3)])
 
-    def test_notebook_reloads_from_another_document(self):
-        self.controller.record({"example_id": "tablet-stand", "step_id": "cork", "stance": "reject"})
-        other = types.SimpleNamespace(_type="Design", attributes=Attributes(),
-                                      rootComponent=types.SimpleNamespace(entityToken="doc-2"))
-        self.app.activeProduct = other
+    def test_document_change_clears_selection(self):
+        self.controller.explain(object())
         self.controller.document_changed()
-        self.assertEqual(self.last_view()["notebook"], [])
+        self.assertEqual(self.last_view()["features"], [])
 
 
 if __name__ == "__main__":
