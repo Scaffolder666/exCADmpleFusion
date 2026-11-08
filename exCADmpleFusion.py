@@ -18,6 +18,7 @@ import adsk.fusion
 from core.packages import open_package, PackageError
 from core.renderer import ReferenceRenderer
 from core.history import history_step_indices, HistoryError
+from core.fusion_history import scan_candidate_features
 from core.spatial import SpatialLinkController
 
 PALETTE_ID = "excadmple.fusion.player"
@@ -105,6 +106,16 @@ def _open_dialog():
 
 
 
+def _selected_native_entity():
+    selections = _ui.activeSelections
+    for i in range(selections.count - 1, -1, -1):
+        entity = selections.item(i).entity
+        if (adsk.fusion.BRepFace.cast(entity) or adsk.fusion.BRepEdge.cast(entity)
+                or adsk.fusion.BRepVertex.cast(entity)):
+            return entity
+    return None
+
+
 def _selected_geometry_from_ui():
     class CurrentSelection:
         currentSelection = _ui.activeSelections
@@ -131,6 +142,12 @@ class ActiveGeometrySelection(adsk.core.ActiveSelectionEventHandler):
         try:
             selected = _selected_geometry(args)
             _post("geometry_selection", selected)
+            if selected["selected"]:
+                design = adsk.fusion.Design.cast(_app.activeProduct)
+                candidates = scan_candidate_features(design, _selected_native_entity())
+                _post("native_history", {"features": candidates, "complete": False})
+            else:
+                _post("native_history", {"features": [], "complete": False})
         except Exception:
             _log_error()
 
@@ -146,6 +163,8 @@ class PaletteHandler(adsk.core.HTMLEventHandler):
                     _post("step", {"index": _step_index})
                     _post_links()
                 _post("geometry_selection", _selected_geometry_from_ui())
+                design = adsk.fusion.Design.cast(_app.activeProduct)
+                _post("native_history", {"features": scan_candidate_features(design, _selected_native_entity()), "complete": False})
             elif command == "filter_history":
                 if not _package:
                     raise ValueError("Load a model history example first")
