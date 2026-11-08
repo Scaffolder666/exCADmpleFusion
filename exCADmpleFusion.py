@@ -252,10 +252,10 @@ def run(_context):
         if not _palette:
             _palette = _ui.palettes.add2(
                 PALETTE_ID, "exCADmple", str(ROOT / "ui" / "index.html"),
-                True, True, True, 420, 720
+                True, True, True, 360, 760
             )
         _palette.isDockedInCanvas = False
-        _palette.dockingState = adsk.core.PaletteDockingStates.PaletteDockStateRight
+        _palette.dockingState = adsk.core.PaletteDockingStates.PaletteDockStateLeft
         handler = PaletteHandler()
         _palette.incomingFromHTML.add(handler)
         _handlers.append(handler)
