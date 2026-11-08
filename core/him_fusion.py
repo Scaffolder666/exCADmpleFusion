@@ -23,6 +23,7 @@ from .him_filter import FeatureInfo, InputRef
 from .him_motion import (Playback, RestoreJournal, animation_mode, parameter_paths,
                          interpolate, short_kind, PARAMETRIC, FADE, NONE)
 from .focus import OpacityFocus, FocusError
+from .him_wireframe import capture_before_feature, can_isolate_feature, WireframeOverflow
 
 GEOMETRY_TYPES = (("face", adsk.fusion.BRepFace), ("edge", adsk.fusion.BRepEdge),
                   ("vertex", adsk.fusion.BRepVertex))
@@ -36,6 +37,8 @@ INPUT_PROPERTIES = (
 MAX_TIMELINE = 600
 HIGHLIGHT = (37, 99, 235, 255)  # blue: recorded feature input / target edges
 CHANGE_HIGHLIGHT = (20, 184, 166, 255)  # teal: geometry affected by feature
+GHOST_WIREFRAME = (155, 164, 175, 255)  # light gray: true BRep edge curves
+GHOST_SURFACE_OPACITY = 0.001         # Fusion keeps native topology selectable
 
 
 def _get_path(obj, path):
@@ -444,6 +447,9 @@ class HiMController:
         self.journal = RestoreJournal()
         self.focus = OpacityFocus(self._resolve_body, self._document_key)
         self.group = None
+        self.ghost_group = None       # persistent backdrop for ONE active Feature
+        self.pending_ghost = None     # captured at Timeline marker BEFORE feature
+        self.wireframe_context = False  # opt in only on the disposable reference copy
         self.seconds = 4.0
         self.selected_ref = None
         self.selection_label = ""
@@ -575,14 +581,90 @@ class HiMController:
         return data
 
     # --- animation ---------------------------------------------------------------
+    def capture_ghost_context(self):
+        """Read the model's *actual pre-feature* edges, without mutating it.
+
+        Called by ReferenceSession with the timeline marker before the
+        current feature, only once per feature; never on every video frame.
+        """
+        self.pending_ghost = None
+        if not self.wireframe_context or not self.dim_others:
+            return
+        design = self.design()
+        if not design:
+            return
+        try:
+            self.pending_ghost = capture_before_feature(design)
+        except WireframeOverflow as error:
+            self.log("HiM wireframe disabled for this step: " + str(error))
+        except Exception as error:
+            self.log("HiM wireframe capture failed: " + str(error))
+
+    def _start_ghost_context(self, prepared, snapshot):
+        """Draw a true gray BRep edge reference; mask native solid surfaces.
+
+        Must keep the context CustomGraphicsGroup separate from the active
+        Feature group, which is rebuilt after each parameter recomputation.
+        If a complete ghost cannot be drawn, use the established 20%-opacity
+        fallback instead of hiding parts of the actual model.
+        """
+        if snapshot is None or not snapshot["curves"]:
+            return False
+        design = self.design()
+        group = None
+        try:
+            group = design.rootComponent.customGraphicsGroups.add()
+            group.isSelectable = False
+            color = adsk.fusion.CustomGraphicsSolidColorEffect.create(
+                adsk.core.Color.create(*GHOST_WIREFRAME))
+            drawn = 0
+            for curve in snapshot["curves"]:
+                line = group.addCurve(curve)
+                if line is None:
+                    raise RuntimeError("Fusion could not draw a BRep wireframe curve")
+                line.color = color
+                line.weight = 1
+                line.depthPriority = 0
+                line.isSelectable = False
+                drawn += 1
+            if drawn != len(snapshot["curves"]):
+                raise RuntimeError("Incomplete background wireframe")
+            from .spatial import _model_bodies
+            # Hide native shaded faces; ONLY the precise feature-owned face
+            # copies (or a provably newly created Body) will be opaque.
+            # 0.001 avoids unsupported exact-zero edge cases in Fusion.
+            self.focus.apply(self._document_key(), _model_bodies(design),
+                             {"\\0wireframe"}, dim_opacity=GHOST_SURFACE_OPACITY)
+            self.ghost_group = group
+            prepared["wireframe"] = True
+            prepared["ghost_edges"] = drawn
+            return True
+        except Exception as error:
+            self.log("HiM wireframe fallback to translucency: " + str(error))
+            try:
+                self.focus.restore()
+            except Exception as restore_error:
+                self.log("HiM wireframe restore: " + str(restore_error))
+                # Never continue with a partly hidden native model.
+                raise
+            try:
+                if group and group.isValid:
+                    group.deleteMe()
+            except Exception:
+                pass
+            return False
+
     def _prepare(self, position):
-        """Start animating clip[position]: capture params, dim, highlight."""
-        self._finish_feature()
+        """Start animating: retain ghost edges, capture params, isolate faces."""
+        snapshot = self.pending_ghost
+        self._finish_feature()           # cleans up previous active graphics
+        self.pending_ghost = None
         feature = self.clip[position]
         entity = self._feature_entity(feature)
         mode = animation_mode(feature.kind)
         prepared = {"feature": feature, "mode": mode, "params": [], "bodies": [],
-                    "entity": entity, "fallback": ""}
+                    "entity": entity, "fallback": "", "wireframe": False,
+                    "before_tokens": snapshot["body_tokens"] if snapshot else frozenset()}
         design = self.design()
         if entity is None:
             prepared["mode"] = NONE
@@ -599,7 +681,17 @@ class HiMController:
             prepared["bodies"] = [b for b in _items(getattr(entity, "bodies", None)) if b]
         except Exception:
             prepared["bodies"] = []
-        self._apply_focus(prepared["bodies"], hide_result=prepared["mode"] == FADE)
+        faces = _items(getattr(entity, "faces", None), self.MAX_FACE_HIGHLIGHTS + 1)
+        suitable = len(faces) <= self.MAX_FACE_HIGHLIGHTS and can_isolate_feature(
+            feature.kind, faces, prepared["bodies"], prepared["before_tokens"])
+        if (self.wireframe_context and self.dim_others and suitable
+                and prepared["mode"] in (PARAMETRIC, FADE)):
+            self._start_ghost_context(prepared, snapshot)
+        if not prepared["wireframe"]:
+            if self.wireframe_context and snapshot is not None and snapshot["curves"]:
+                self.log("HiM: exact changed faces unavailable for {}: using translucent context"
+                         .format(feature.name))
+            self._apply_focus(prepared["bodies"], hide_result=prepared["mode"] == FADE)
         self._draw_overlay(prepared, 0.0)
         self.active_position = position
         self.active = prepared
@@ -653,7 +745,11 @@ class HiMController:
                     overlay.color = adsk.fusion.CustomGraphicsSolidColorEffect.create(
                         adsk.core.Color.create(*CHANGE_HIGHLIGHT))
                     if prepared["mode"] == PARAMETRIC:
-                        overlay.setOpacity(0.18 if body in prepared["bodies"] else 0.6, True)
+                        # With the original shaded bodies hidden, opaque
+                        # changed faces are the only visible solid geometry.
+                        opacity = 1.0 if prepared.get("wireframe") else (
+                            0.18 if body in prepared["bodies"] else 0.6)
+                        overlay.setOpacity(opacity, True)
                     else:
                         overlay.setOpacity(progress, True)
                         scale = 0.5 + 0.5 * progress
@@ -743,6 +839,13 @@ class HiMController:
                     return copies
             except Exception as error:
                 self.log("HiM geometry guidance: " + str(error))
+        if prepared.get("wireframe"):
+            # A modified pre-existing Body must NEVER be substituted for
+            # the Feature's own faces; that would show an entire part as
+            # though this one edit had just created it.
+            before = prepared.get("before_tokens", frozenset())
+            return [b for b in prepared["bodies"]
+                    if _token(b) not in before]
         return list(prepared["bodies"])
 
     def _delete_group(self):
@@ -798,7 +901,9 @@ class HiMController:
         return {"feature": prepared["feature"].name, "kind": prepared["feature"].kind,
                 "mode": {PARAMETRIC: "parameter", FADE: "visual"}.get(prepared["mode"], "timeline"),
                 "parameters": [key for key, _, _ in prepared["params"]] if prepared["mode"] == PARAMETRIC else [],
-                "fallback": prepared.get("fallback", "")}
+                "fallback": prepared.get("fallback", ""),
+                "wireframe": bool(prepared.get("wireframe")),
+                "ghost_edges": prepared.get("ghost_edges", 0)}
 
     def _finish_feature(self):
         """Restore parameters, opacity and overlay of the active feature."""
@@ -812,6 +917,13 @@ class HiMController:
         except Exception as error:
             errors.append(str(error))
         self._delete_group()
+        if self.ghost_group is not None:
+            try:
+                if self.ghost_group.isValid:
+                    self.ghost_group.deleteMe()
+            except Exception as error:
+                errors.append("ghost graphics: " + str(error))
+            self.ghost_group = None
         self.active_position = None
         self.active = {}
         if errors:
