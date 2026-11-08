@@ -8,9 +8,11 @@
 ## 制作
 
 ```text
-设计师的 .f3d ──(Fusion: Extract tutorial draft…)──► draft.extract.json   每个特征完成后的模型
-录音          ──(任意转写工具)────────────────────► transcript.srt       说了什么，带时间
-研究者        ──(标注工具)─────────────────────────► annotation.json      步骤怎么切分
+设计师建模 + 录屏 ──(Fusion: exCADmple: Record tutorial)──► tutorial.session.json  工具、特征出现时间、选中位置
+完成的 .f3d       ──(Fusion: Extract tutorial draft…)──────► draft.extract.json     每个特征完成后的模型
+录音              ──(任意转写工具 / tools/transcribe.py)────► transcript.srt         说了什么，带时间
+以上三份          ──(tools/author.py，AI 提议)─────────────► annotation.json        步骤怎么切分
+研究者            ──(ui/author.html 检查、调整)────────────► annotation.json
 
 python tools/build_package.py draft.extract.json annotation.json transcript.srt \
        --media session.mp4 --source Design.f3d -o tutorial.excadmple

@@ -27,15 +27,16 @@
 - **模型和指针**：参考模型随步骤变化，鼠标轨迹显示为橙色的 Ghost Pointer（不会移动真实鼠标）。
 - **关联几何**（可选）：可以把某一步关联到自己模型里的 Body／Face，切换到这一步时高亮它，并把其他 Body 暂时调暗。
 
-## 教程文件
+## 教程文件和制作工具
 
-教程就是录下来的东西：步骤、每一步说了什么、用了哪些工具、模型怎么变、鼠标轨迹。规范见 [`docs/EXAMPLE_FORMAT.md`](docs/EXAMPLE_FORMAT.md)。
+教程就是录下来的东西：步骤、每一步说了什么、用了哪些工具、模型怎么变、鼠标轨迹。规范见 [`docs/EXAMPLE_FORMAT.md`](docs/EXAMPLE_FORMAT.md)。制作一个教程：
 
-1. **录制**：设计师在 Fusion 里建模，边做边说，同时录屏。
-2. **提取**：在 Fusion 里打开设计师的 `.f3d`，点教程面板底部的 **Extract tutorial draft…**，记录时间轴上每个特征完成后的模型（每个特征一份）。
-3. **转写**：把录音转成带时间的文字稿（`.srt` 等）。
-4. **切分步骤**：用标注工具（见 [`authoring-plan`](https://github.com/Scaffolder666/exCADmpleFusion/tree/authoring-plan)）标出每一步的标题、时间段和对应的特征。
-5. **合成**：`python tools/build_package.py draft.extract.json annotation.json transcript.srt --media session.mp4 --source Design.f3d -o tutorial.excadmple`
+1. **录制**：设计师打开自己的设计，点工具栏 **exCADmple: Record tutorial**，同时开始录屏（带麦克风），边建模边说。插件记录用到的工具、每个特征出现的时间、选中的位置（作为鼠标轨迹）。结束时点 **Stop recording**，保存 `*.session.json`。
+2. **提取**：在 Fusion 里打开完成的 `.f3d`，点教程面板底部的 **Extract tutorial draft…**，得到每个特征完成后的模型（`*.extract.json`）。
+3. **转写**：把录音转成带时间的文字稿。可以用任意工具导出 `.srt`，或在本地运行 `python tools/transcribe.py session.mp4 -o transcript.srt`（需要 `pip install faster-whisper`）。
+4. **切分步骤（AI）**：`python tools/author.py draft.extract.json transcript.srt --session tutorial.session.json --video session.mp4 --id phone-stand --title "Phone Stand" -o annotation.json`。Claude 根据特征出现的时间、用到的工具和设计师说的话，把录制切成步骤并起标题（尽量用设计师自己的话）；它不写任何推理。结果会自动检查，不合格时、加 `--no-ai`、或没有 API 凭据时，改用按特征的规则切分。需要 `pip install anthropic` 和 `ANTHROPIC_API_KEY`（或 `ant auth login`）。
+5. **人工检查**：在浏览器里打开 `ui/author.html`，载入 `annotation.json`、文字稿、录屏（可选：提取草稿）。对着视频调整每一步的标题、起止时间和包含的特征，可以拆分或合并步骤，然后导出。
+6. **合成**：`python tools/build_package.py draft.extract.json annotation.json transcript.srt --media session.mp4 --source Design.f3d -o phone-stand.excadmple`
 
 附带的 `examples/phone_stand.json`（九步）和 `examples/tablet_stand.json` 是手工编写的示例，不是真实录制。由 `python tools/build_examples.py` 生成。
 
@@ -79,7 +80,10 @@ core/authoring.py, transcript.py   合成教程包、读取文字稿
 core/spatial.py, focus.py, geometry_links.py      关联几何
 ui/index.html, player.*   版本 B 的面板
 ui/reference.*            版本 A 的控制面板
-tools/                    build_package.py（合成）、build_examples.py（示例）
+core/session_log.py, session_recorder.py   制作：录制时记录工具、特征时间、选中位置
+core/ai_segment.py        制作：把录制切成步骤（Claude 提议 + 规则兜底 + 检查）
+ui/author.html            制作：在浏览器里对着视频检查、调整步骤
+tools/                    author.py（切分步骤）、transcribe.py（本地转写）、build_package.py（合成）、build_examples.py（示例）
 ```
 
 *History in Motion*：Veuskens et al., SCF 2023（[DOI](https://doi.org/10.1145/3623263.3623358)）。
