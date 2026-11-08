@@ -9,7 +9,7 @@
 
 ## Blender 功能对齐进度（2026-11）
 
-- **逐步几何**：当前三个 Phone Stand 步骤各有不同的累积 Mesh 快照；第一步有逐帧 Extrude 预览。新增 `tests/test_him_playback_contract.py` 检查每一步有几何快照、组成不同，且具备按时间排序的字幕。**这不等于九步全部拥有步骤内连续几何动画。**
+- **逐步几何**：当前三个 Phone Stand 步骤各有不同的累积 Mesh 快照；第一步有逐帧 Extrude 预览，第二、三步采用逐帧 Mesh Reveal 过渡（解释性动画，并非原生命令回放）。新增 `tests/test_him_playback_contract.py` 检查每一步有几何快照、组成不同，且具备按时间排序的字幕。**这仍不等于 Blender 九步完整的逐操作几何动画。**
 - **字幕**：每步时间戳 `cues` 与播放时钟同步；用户可关闭字幕。
 - **合成语音**：可选的 `Synthetic cue narration` 使用内嵌 WebView 的 `speechSynthesis` 朗读当前操作提示；有实际音视频资源时不启用。此功能不是 Blender 分支中打包的九段 WAV，Fusion WebView 的兼容性需要桌面实测。
 - **仍待移植**：九步累积 Phone Stand 几何（包括 Bevel、Boolean、支撑肋、防滑垫和手机适配检查）、三维锚定 Ghost Pointer、内部 20 操作动画目录及对应 Fusion 端集成验证。**不要把当前三步演示视为与 Blender 完全功能对齐。**
