@@ -239,3 +239,12 @@ python -m unittest discover -s tests -v
 - 新增纯 Python 回归测试：`tests/test_operation_previews.py`。测试已提交，尚未在 Fusion 桌面端执行。
 - **精度边界**：Revolve 不是草图截面扫掠生成 BRep；Pattern 目前仅支持圆周阵列；Mirror 为网格预览；Mesh Reveal 是解释性过渡。尚未完成 Fillet、Chamfer、Rectangular Pattern、Split、Combine、Import/Export、Ghost Pointer 等全部 HiM 功能。
 - 所有预览使用临时网格，不会重算或修改原生 Fusion Timeline。
+
+
+### HiM 论文界面视觉基准（用户提供截图，2026-11-07）
+
+- **白色界面**；左侧为主要 CAD 模型视图，右侧为狭窄的**垂直建模历史**，不是横向时间线。
+- 历史节点使用彩色描边的圆角胶囊卡片，连接在一条垂直时间轴上，标注 Chamfer / Thread / Fillet / Extrude / Revolve 等操作及状态。
+- 历史顶部提供返回/暂停/播放控制；底部有动画速度调节和向下导航。
+- exCADmple 在保留 HiM 历史回放交互的同时，额外展示每一步的设计理由、操作参数、字幕和可复用的 CAD 示例；模型在 Fusion 原生视口内展示，不要伪造一个替代视口。
+- 该截图是**视觉与交互参考**，不是所有论文动画能力已经实现的证明。
