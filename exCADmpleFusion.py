@@ -104,6 +104,37 @@ def _open_dialog():
         _load(dialog.filename)
 
 
+
+def _selected_geometry_from_ui():
+    class CurrentSelection:
+        currentSelection = _ui.activeSelections
+    return _selected_geometry(CurrentSelection())
+
+
+def _selected_geometry(args):
+    """Report the most recently selected native BRep face, edge or vertex."""
+    selections = args.currentSelection
+    for i in range(selections.count - 1, -1, -1):
+        entity = selections.item(i).entity
+        for kind, cls in (("Face", adsk.fusion.BRepFace),
+                          ("Edge", adsk.fusion.BRepEdge),
+                          ("Vertex", adsk.fusion.BRepVertex)):
+            if cls.cast(entity):
+                token = getattr(entity, "entityToken", "") or ""
+                return {"kind": kind, "token": token,
+                        "entity_id": token, "selected": True}
+    return {"selected": False}
+
+
+class ActiveGeometrySelection(adsk.core.ActiveSelectionEventHandler):
+    def notify(self, args):
+        try:
+            selected = _selected_geometry(args)
+            _post("geometry_selection", selected)
+        except Exception:
+            _log_error()
+
+
 class PaletteHandler(adsk.core.HTMLEventHandler):
     def notify(self, args):
         try:
@@ -114,6 +145,7 @@ class PaletteHandler(adsk.core.HTMLEventHandler):
                     _post("example", _package.player_data())
                     _post("step", {"index": _step_index})
                     _post_links()
+                _post("geometry_selection", _selected_geometry_from_ui())
             elif command == "filter_history":
                 if not _package:
                     raise ValueError("Load a model history example first")
@@ -297,6 +329,10 @@ def run(_context):
         _app.documentSaved.add(after)
         _app.documentDeactivating.add(deactivating)
         _handlers.extend((before, after, deactivating))
+        selection_handler = ActiveGeometrySelection()
+        _ui.activeSelectionChanged.add(selection_handler)
+        _handlers.append(selection_handler)
+        _post("geometry_selection", _selected_geometry_from_ui())
 
         # A deterministic, clearly labeled illustrative example.
         _load(str(ROOT / "examples" / "phone_stand.json"))
@@ -313,6 +349,13 @@ def stop(_context):
             _renderer.clear()
         if _spatial:
             _spatial.clear_overlay()
+        if _ui:
+            for handler in _handlers:
+                if isinstance(handler, ActiveGeometrySelection):
+                    try:
+                        _ui.activeSelectionChanged.remove(handler)
+                    except Exception:
+                        pass
         if _app:
             for event_name, handler_type in (("documentSaving", BeforeSave), ("documentSaved", AfterSave), ("documentDeactivating", BeforeDeactivate)):
                 for handler in _handlers:
