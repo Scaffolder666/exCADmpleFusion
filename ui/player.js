@@ -2,7 +2,7 @@
 "use strict";
 
 const $ = (id) => document.getElementById(id);
-const state = { example: null, index: 0, elapsed: 0, playing: false, startedAt: 0, raf: 0, cueIndex: -1, links: {}, lastAnimationFrame: -Infinity, animationInFlight: false };
+const state = { example: null, index: 0, elapsed: 0, playing: false, startedAt: 0, raf: 0, cueIndex: -1, links: {}, lastAnimationFrame: -Infinity, animationInFlight: false, filteredIndices: null };
 const video = $("video"), audio = $("audio");
 let spokenCue = -1;
 function stopNarration() {
@@ -74,8 +74,10 @@ function renderRail() {
   rail.replaceChildren();
   if (!state.example) return;
   state.example.steps.forEach((item, i) => {
+    if (state.filteredIndices && !state.filteredIndices.includes(i)) return;
     const button = document.createElement("button");
     button.type = "button";
+    button.dataset.stepIndex = String(i);
     button.className = "step-card" + (i === state.index ? " active" : "") + (i < state.index ? " visited" : "");
     button.setAttribute("aria-current", i === state.index ? "step" : "false");
     button.setAttribute("aria-label", "Step " + (i + 1) + ": " + item.title);
@@ -108,7 +110,7 @@ function renderRail() {
     button.addEventListener("click", () => selectStep(i));
     rail.appendChild(button);
   });
-  const active = rail.children[state.index];
+  const active = [...rail.children].find(node => Number(node.dataset.stepIndex) === state.index);
   if (active) {
     // Keep the active history card visible without scrolling the details pane.
     const top = active.offsetTop - rail.offsetTop;
@@ -318,6 +320,7 @@ function loadExample(data) {
   pause();
   state.example = data;
   state.links = {};
+  state.filteredIndices = null;
   state.index = 0;
   state.elapsed = 0;
   state.cueIndex = -1;
@@ -340,6 +343,10 @@ window.fusionJavaScriptHandler = {
       else if (action === "links") {
         state.links = payload.by_step || {};
         renderGeometryLink();
+      } else if (action === "history_filter") {
+        state.filteredIndices = payload.indices || [];
+        renderRail();
+        if (state.filteredIndices.length) selectStep(state.filteredIndices[0]);
       } else if (action === "step") {
         if (payload.index !== state.index && state.example) selectStep(payload.index);
       } else if (action === "status") setStatus(payload.message, payload.error);
@@ -350,6 +357,17 @@ window.fusionJavaScriptHandler = {
     }
   }
 };
+function requestHistoryFilter(expand = false) {
+  const entity_id = $("entityFilter").value.trim();
+  if (!entity_id) { setStatus("Enter an authored geometry entity ID.", true); return; }
+  bridge("filter_history", {entity_id, expand});
+}
+$("filterHistory").addEventListener("click", () => requestHistoryFilter(false));
+$("showMoreHistory").addEventListener("click", () => requestHistoryFilter(true));
+$("clearHistory").addEventListener("click", () => {
+  state.filteredIndices = null;
+  renderRail();
+});
 $("focusMode").addEventListener("change", (event) => {
   bridge("set_focus", {enabled: !!event.target.checked});
 });
@@ -384,7 +402,7 @@ $("stepRail").addEventListener("keydown", (event) => {
   const target = event.key === "Home" ? 0 : event.key === "End" ? state.example.steps.length - 1 :
     Math.max(0, Math.min(state.example.steps.length - 1, state.index + (event.key === "ArrowDown" ? 1 : -1)));
   selectStep(target);
-  $("stepRail").children[target]?.focus();
+  [...$("stepRail").children].find(node => Number(node.dataset.stepIndex) === target)?.focus();
 });
 $("prev").addEventListener("click", () => selectStep(state.index - 1));
 $("next").addEventListener("click", () => selectStep(state.index + 1));
