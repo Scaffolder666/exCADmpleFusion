@@ -33,10 +33,12 @@ from core.spatial import SpatialLinkController
 from core.extract_fusion import extract_with_dialog
 from core.link import InstanceLink, WORKSPACE, REFERENCE
 from core.him_reference import ReferenceSession
+from core.session_recorder import SessionRecorder
 
 PALETTE_ID = "excadmple.fusion.player"
 COMMAND_ID = "excadmple.fusion.open"
 REFERENCE_COMMAND_ID = "excadmple.fusion.reference.open"
+RECORD_COMMAND_ID = "excadmple.fusion.record"
 LINK_EVENT = "excadmple.fusion.link"
 
 
@@ -65,6 +67,7 @@ _filtering = False
 _saving_document = False
 _handlers = []
 _buttons = []
+_recorder = None
 
 
 # --- helpers ---------------------------------------------------------------------------
@@ -362,6 +365,22 @@ class ReferenceCommandExecute(adsk.core.CommandEventHandler):
                            "It will connect to this window and play the tutorial.")
 
 
+class RecordExecute(adsk.core.CommandEventHandler):
+    """Authoring: log tools, features and selections while the designer
+    records a tutorial (start it together with the screen recording)."""
+
+    def notify(self, args):
+        try:
+            message = _recorder.stop() if _recorder.recording else _recorder.start()
+            definition = _ui.commandDefinitions.itemById(RECORD_COMMAND_ID)
+            if definition:
+                definition.name = "exCADmple: Stop recording" if _recorder.recording else "exCADmple: Record tutorial"
+            _ui.messageBox(message, "exCADmple")
+        except Exception as error:
+            _ui.messageBox(str(error), "exCADmple")
+            _log_error()
+
+
 class ShowPaletteExecute(adsk.core.CommandEventHandler):
     def notify(self, args):
         if _palette:
@@ -485,7 +504,7 @@ class BeforeDeactivate(adsk.core.DocumentEventHandler):
 
 # --- add-in lifecycle ---------------------------------------------------------------------------
 def run(_context):
-    global _app, _ui, _renderer, _spatial
+    global _app, _ui, _renderer, _spatial, _recorder
     try:
         _app = adsk.core.Application.get()
         _ui = _app.userInterface
@@ -498,6 +517,12 @@ def run(_context):
                                (_app.documentDeactivating, BeforeDeactivate())):
             event.add(handler)
             _handlers.append(handler)
+
+        if ROLE != REFERENCE:
+            # Authoring: record a tutorial while modeling in this window.
+            _recorder = SessionRecorder(_app, _ui)
+            _add_button(RECORD_COMMAND_ID, "exCADmple: Record tutorial",
+                        "Log the tools, features and selections while you record a tutorial", RecordExecute)
 
         if ROLE == WORKSPACE:
             # The user's own design: nothing is drawn here; the tutorial plays
@@ -523,6 +548,8 @@ def run(_context):
 def stop(_context):
     global _palette, _package, _session, _link
     try:
+        if _recorder:
+            _recorder.cancel()
         if _session:
             _session.close()
             _session = None

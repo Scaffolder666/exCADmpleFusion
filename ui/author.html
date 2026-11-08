@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>exCADmple · Tutorial steps</title>
+<style>
+  :root { color-scheme: light; --ink:#1f2a37; --muted:#6b7785; --line:#e3e7ec; --panel:#f6f7f9; --blue:#2563eb; --red:#b42318; --green:#2a8558; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:13px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; color:var(--ink); background:#fff; }
+  header { display:flex; flex-wrap:wrap; gap:8px; align-items:center; padding:10px 16px; border-bottom:1px solid var(--line); }
+  header strong { font-size:15px; margin-right:auto; }
+  label.file { border:1px solid #cfd6de; border-radius:6px; padding:4px 9px; cursor:pointer; font-size:12px; background:white; }
+  label.file input { display:none; }
+  button { font:inherit; cursor:pointer; border:1px solid #cfd6de; background:white; border-radius:6px; padding:3px 9px; font-size:12px; }
+  button.primary { background:var(--blue); color:white; border-color:var(--blue); }
+  main { display:grid; grid-template-columns:minmax(320px, 1fr) minmax(360px, 1fr); gap:16px; padding:12px 16px; }
+  @media (max-width: 860px) { main { grid-template-columns:1fr; } }
+  video { width:100%; background:#111; border-radius:8px; max-height:52vh; }
+  .clock { font-variant-numeric:tabular-nums; color:var(--muted); margin:4px 0 8px; }
+  .said { max-height:34vh; overflow:auto; border:1px solid var(--line); border-radius:8px; }
+  .said div { padding:4px 8px; border-bottom:1px solid var(--line); cursor:pointer; }
+  .said div.now { background:#e6effc; }
+  .said span { color:var(--muted); font-variant-numeric:tabular-nums; margin-right:6px; }
+  .meta { display:grid; grid-template-columns:auto 1fr; gap:4px 8px; align-items:center; margin-bottom:10px; }
+  .meta input { border:1px solid #cfd6de; border-radius:5px; padding:3px 6px; font:inherit; }
+  .step { border:1px solid var(--line); border-radius:10px; padding:8px 10px; margin-bottom:8px; }
+  .step.current { border-color:var(--blue); box-shadow:0 0 0 2px #dbe6fd; }
+  .step .row { display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-top:5px; }
+  .step input.title { width:100%; font:inherit; font-weight:650; border:1px solid #cfd6de; border-radius:5px; padding:3px 6px; }
+  .step input.time { width:78px; font:inherit; border:1px solid #cfd6de; border-radius:5px; padding:2px 5px; font-variant-numeric:tabular-nums; }
+  .chips { display:flex; flex-wrap:wrap; gap:4px; }
+  .chip { font-size:11px; border:1px solid #cfd6de; border-radius:10px; padding:0 7px; cursor:pointer; user-select:none; }
+  .chip.on { background:#e6f4ec; border-color:#9fd3b6; }
+  .muted { color:var(--muted); font-size:11px; }
+  .problems { color:var(--red); font-size:12px; margin:6px 0; }
+  .ok { color:var(--green); font-size:12px; margin:6px 0; }
+</style>
+</head>
+<body>
+<header>
+  <strong>exCADmple · Tutorial steps</strong>
+  <label class="file">annotation.json <input id="fAnnotation" type="file" accept=".json"></label>
+  <label class="file">Transcript <input id="fTranscript" type="file" accept=".srt,.vtt,.json"></label>
+  <label class="file">Video / audio <input id="fMedia" type="file" accept="video/*,audio/*"></label>
+  <label class="file">Draft (optional) <input id="fExtract" type="file" accept=".json"></label>
+  <button id="export" class="primary">Export annotation.json</button>
+</header>
+<main>
+  <section>
+    <video id="media" controls></video>
+    <div id="clock" class="clock">0:00.0</div>
+    <div class="muted">What the designer said (click to jump)</div>
+    <div id="said" class="said"></div>
+  </section>
+  <section>
+    <div class="meta">
+      <label for="tId">Id</label><input id="tId">
+      <label for="tTitle">Title</label><input id="tTitle">
+    </div>
+    <div id="check"></div>
+    <div id="steps"></div>
+    <p class="muted">Each step: a title, the part of the recording it covers, and the timeline features it shows.
+      Steps must follow each other without overlap and use every feature once, in timeline order.
+      Titles should come from what the designer said; nothing is added to their words.</p>
+  </section>
+</main>
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+const S = { annotation: null, segments: [], features: null, current: -1 };
+const media = $("media");
+
+function fmt(ms) {
+  const s = Math.max(0, ms) / 1000;
+  return Math.floor(s / 60) + ":" + (s % 60).toFixed(1).padStart(4, "0");
+}
+function parseTime(text) {
+  const m = String(text).trim().match(/^(?:(\d+):)?(\d+(?:\.\d+)?)$/);
+  return m ? Math.round(((Number(m[1] || 0) * 60) + Number(m[2])) * 1000) : null;
+}
+function parseCues(text) {
+  const toMs = (t) => {
+    const m = t.trim().match(/(?:(\d+):)?(\d{1,2}):(\d{2})[.,](\d{1,3})/);
+    return m ? (((Number(m[1] || 0) * 60 + Number(m[2])) * 60 + Number(m[3])) * 1000 + Number(m[4].padEnd(3, "0"))) : 0;
+  };
+  const out = [];
+  for (const block of text.replace(/\r\n/g, "\n").trim().split(/\n\s*\n/)) {
+    const lines = block.split("\n").filter((l) => l.trim());
+    const i = lines.findIndex((l) => l.includes("-->"));
+    if (i < 0) continue;
+    const [a, b] = lines[i].split("-->");
+    const words = lines.slice(i + 1).join(" ").replace(/<[^>]+>/g, "").trim();
+    if (words) out.push({ start_ms: toMs(a), end_ms: toMs(b.trim().split(" ")[0]), text: words });
+  }
+  return out;
+}
+function readFile(input, cb, asUrl) {
+  input.addEventListener("change", () => {
+    const file = input.files[0];
+    if (!file) return;
+    if (asUrl) { cb(URL.createObjectURL(file), file); return; }
+    file.text().then((text) => cb(text, file));
+  });
+}
+
+/* ---------- rendering ---------- */
+function renderSaid() {
+  const box = $("said");
+  box.replaceChildren();
+  for (const seg of S.segments) {
+    const row = document.createElement("div");
+    row.innerHTML = "<span></span>";
+    row.querySelector("span").textContent = fmt(seg.start_ms);
+    row.append(document.createTextNode(seg.text));
+    row.addEventListener("click", () => { media.currentTime = seg.start_ms / 1000; });
+    box.appendChild(row);
+  }
+}
+function featureNames() {
+  if (S.features) return S.features.map((f) => f.name);
+  return (S.annotation?.steps || []).flatMap((s) => s.features);
+}
+function renderSteps() {
+  const box = $("steps");
+  box.replaceChildren();
+  if (!S.annotation) { box.textContent = "Load annotation.json (from tools/author.py)."; return; }
+  $("tId").value = S.annotation.id || "";
+  $("tTitle").value = S.annotation.title || "";
+  const all = featureNames();
+  S.annotation.steps.forEach((step, i) => {
+    const card = document.createElement("div");
+    card.className = "step" + (i === S.current ? " current" : "");
+    const title = Object.assign(document.createElement("input"), { className: "title", value: step.title });
+    title.addEventListener("change", () => { step.title = title.value.trim(); check(); });
+    card.appendChild(title);
+
+    const times = document.createElement("div");
+    times.className = "row";
+    for (const key of ["start_ms", "end_ms"]) {
+      const input = Object.assign(document.createElement("input"), { className: "time", value: fmt(step.recording[key]) });
+      input.addEventListener("change", () => {
+        const ms = parseTime(input.value);
+        if (ms !== null) step.recording[key] = ms;
+        renderSteps();
+      });
+      const here = document.createElement("button");
+      here.textContent = key === "start_ms" ? "start = now" : "end = now";
+      here.addEventListener("click", () => { step.recording[key] = Math.round(media.currentTime * 1000); renderSteps(); });
+      times.append(input, here);
+    }
+    const play = document.createElement("button");
+    play.textContent = "▶ play step";
+    play.addEventListener("click", () => playStep(i));
+    times.appendChild(play);
+    card.appendChild(times);
+
+    const chips = document.createElement("div");
+    chips.className = "row chips";
+    for (const name of all) {
+      const owner = S.annotation.steps.findIndex((s) => s.features.includes(name));
+      if (owner !== -1 && owner !== i) continue;           // features of other steps are not shown here
+      const chip = document.createElement("span");
+      chip.className = "chip" + (step.features.includes(name) ? " on" : "");
+      chip.textContent = name;
+      chip.title = "Click to add or remove this feature";
+      chip.addEventListener("click", () => {
+        step.features = step.features.includes(name) ? step.features.filter((n) => n !== name)
+          : all.filter((n) => n === name || step.features.includes(n));
+        renderSteps();
+      });
+      chips.appendChild(chip);
+    }
+    card.appendChild(chips);
+
+    const tools = document.createElement("div");
+    tools.className = "muted";
+    tools.textContent = (step.tools || []).length ? "Tools used: " + step.tools.join(", ") : "";
+    card.appendChild(tools);
+
+    const actions = document.createElement("div");
+    actions.className = "row";
+    const split = document.createElement("button");
+    split.textContent = "Split at video time";
+    split.addEventListener("click", () => splitStep(i));
+    const merge = document.createElement("button");
+    merge.textContent = "Merge with next";
+    merge.disabled = i === S.annotation.steps.length - 1;
+    merge.addEventListener("click", () => mergeStep(i));
+    actions.append(split, merge);
+    card.appendChild(actions);
+    box.appendChild(card);
+  });
+  check();
+}
+function check() {
+  const problems = [];
+  const steps = S.annotation?.steps || [];
+  const all = featureNames();
+  let last = 0, lastPos = -1;
+  const used = [];
+  steps.forEach((s, i) => {
+    if (!s.title) problems.push("Step " + (i + 1) + " has no title.");
+    if (!s.features.length) problems.push("Step " + (i + 1) + " has no features.");
+    if (s.recording.start_ms < last) problems.push("Step " + (i + 1) + " starts before step " + i + " ends.");
+    if (s.recording.end_ms <= s.recording.start_ms) problems.push("Step " + (i + 1) + " ends before it starts.");
+    for (const n of s.features) {
+      const pos = all.indexOf(n);
+      if (pos <= lastPos) problems.push("Step " + (i + 1) + ": " + n + " is out of timeline order.");
+      lastPos = Math.max(lastPos, pos);
+      used.push(n);
+    }
+    last = s.recording.end_ms;
+  });
+  const missing = all.filter((n) => !used.includes(n));
+  if (missing.length) problems.push("Not in any step: " + missing.join(", "));
+  const box = $("check");
+  box.className = problems.length ? "problems" : "ok";
+  box.textContent = problems.length ? problems.join(" ") : (steps.length ? "Ready to export: " + steps.length + " steps." : "");
+  return problems;
+}
+
+/* ---------- editing ---------- */
+function splitStep(i) {
+  const step = S.annotation.steps[i];
+  const t = Math.round(media.currentTime * 1000);
+  if (t <= step.recording.start_ms || t >= step.recording.end_ms) { alert("Move the video inside this step first."); return; }
+  const half = Math.max(1, Math.floor(step.features.length / 2));
+  const second = { id: step.id + "b", title: step.title, features: step.features.slice(half),
+                   recording: { start_ms: t, end_ms: step.recording.end_ms } };
+  step.features = step.features.slice(0, half);
+  step.recording.end_ms = t;
+  S.annotation.steps.splice(i + 1, 0, second);
+  renderSteps();
+}
+function mergeStep(i) {
+  const [a, b] = S.annotation.steps.slice(i, i + 2);
+  a.features = a.features.concat(b.features);
+  a.recording.end_ms = b.recording.end_ms;
+  a.tools = [...new Set((a.tools || []).concat(b.tools || []))];
+  if (b.pointer) a.pointer = (a.pointer || []).concat(b.pointer.map((p) => Object.assign({}, p,
+    { at_ms: p.at_ms + b.recording.start_ms - a.recording.start_ms })));
+  S.annotation.steps.splice(i + 1, 1);
+  renderSteps();
+}
+function playStep(i) {
+  S.current = i;
+  const step = S.annotation.steps[i];
+  media.currentTime = step.recording.start_ms / 1000;
+  media.play();
+  const stopAt = step.recording.end_ms / 1000;
+  const watch = () => { if (media.currentTime >= stopAt) { media.pause(); media.removeEventListener("timeupdate", watch); } };
+  media.addEventListener("timeupdate", watch);
+  renderSteps();
+}
+media.addEventListener("timeupdate", () => {
+  const ms = media.currentTime * 1000;
+  $("clock").textContent = fmt(ms);
+  [...$("said").children].forEach((row, i) => {
+    const seg = S.segments[i];
+    row.classList.toggle("now", seg.start_ms <= ms && ms < (seg.end_ms || seg.start_ms + 3000));
+  });
+});
+
+/* ---------- files ---------- */
+readFile($("fAnnotation"), (text) => {
+  try {
+    S.annotation = JSON.parse(text);
+    if (S.annotation.format !== "excadmple-annotation") throw new Error("not an exCADmple annotation");
+    renderSteps();
+  } catch (error) { alert("Could not read annotation: " + error.message); }
+});
+readFile($("fTranscript"), (text, file) => {
+  S.segments = file.name.endsWith(".json") ? JSON.parse(text) : parseCues(text);
+  renderSaid();
+});
+readFile($("fMedia"), (url) => { media.src = url; }, true);
+readFile($("fExtract"), (text) => {
+  const data = JSON.parse(text);
+  S.features = data.features.filter((f) => !f.suppressed).sort((a, b) => a.index - b.index);
+  renderSteps();
+});
+$("tId").addEventListener("change", () => { if (S.annotation) S.annotation.id = $("tId").value.trim(); });
+$("tTitle").addEventListener("change", () => { if (S.annotation) S.annotation.title = $("tTitle").value.trim(); });
+$("export").addEventListener("click", () => {
+  if (!S.annotation) return;
+  const problems = check();
+  if (problems.length && !confirm("There are problems:\n" + problems.join("\n") + "\n\nExport anyway?")) return;
+  const blob = new Blob([JSON.stringify(S.annotation, null, 1)], { type: "application/json" });
+  const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: "annotation.json" });
+  a.click();
+});
+renderSteps();
+</script>
+</body>
+</html>
