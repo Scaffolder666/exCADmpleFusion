@@ -97,7 +97,9 @@ function setIndex(i, preview = true) {
   S.frameClock = null;
   S.nextFrameAt = 0;
   S.manualFrame = false;
-  S.overviewPending = false;
+  // If the old native frame is still computing, request one final
+  // overview AFTER it acknowledges, so it cannot overwrite the preview.
+  S.overviewPending = preview && S.inFlight;
   S.cue = -1;
   stopSpeech();
   S.fresh = true;     // selected but not played yet: show the step's result
@@ -149,6 +151,7 @@ function play(continuous = true) {
   S.cue = -1;
   S.fresh = false;
   S.continuous = continuous;
+  S.overviewPending = false;   // active reconstruction takes priority
   resetNativeClock();
   S.last = performance.now();
   syncAudio(true);
@@ -434,7 +437,7 @@ window.fusionJavaScriptHandler = {
       else if (action === "filter") applyFilter(payload);
       else if (action === "animation") {
         S.shown = payload;
-        if (payload.mode === "error") {
+        if (payload.mode === "error" && payload.step === S.index) {
           S.playing = false;
           S.epoch++;
           S.manualFrame = false;
