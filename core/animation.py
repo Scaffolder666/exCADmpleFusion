@@ -97,6 +97,8 @@ def reveal_meshes(animation, progress):
     if isinstance(progress, bool) or not isinstance(progress, (int, float)) or not math.isfinite(progress):
         raise AnimationError("Invalid animation progress")
     t = max(0.001, min(1.0, float(progress)))
+    if t >= 1.0:
+        return list(animation.get("context_meshes", [])) + list(animation["new_meshes"])
     output = list(animation.get("context_meshes", []))
     for mesh in animation["new_meshes"]:
         vertices = mesh["vertices"]
