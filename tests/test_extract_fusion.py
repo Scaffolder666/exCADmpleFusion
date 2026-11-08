@@ -22,6 +22,24 @@ class Body:
 
 
 class ExtractTests(unittest.TestCase):
+    def test_native_only_extract_skips_all_tessellation_and_restores_marker(self):
+        design, _, _ = stub.build()
+        design.timeline.markerPosition = 2
+        original = extract_fusion._capture
+        try:
+            def fail_if_meshed(*args, **kwargs):
+                raise AssertionError("Native HiM must not calculate mesh snapshots")
+            extract_fusion._capture = fail_if_meshed
+            result = extract_fusion.extract(design, "fusion.f3d", include_meshes=False)
+        finally:
+            extract_fusion._capture = original
+        self.assertEqual(design.timeline.markerPosition, 2)
+        self.assertEqual(len(result["features"]), 3)
+        self.assertEqual(result["meshes"], {})
+        self.assertTrue(all(feature["state"] == [] for feature in result["features"]))
+        self.assertTrue(any(feature["parameters"] for feature in result["features"]))
+
+
     def test_extract_states_and_build(self):
         design, entities, radius = stub.build()
         timeline = design.timeline
