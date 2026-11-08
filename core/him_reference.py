@@ -31,6 +31,9 @@ class ReferenceSession:
         self.log = log or (lambda *_: None)
         self.him = HiMController(app, ui, lambda *_: None, self.log,
                                  design_provider=lambda: self.model.design if self.model else None)
+        # HiM (SCF 2023, Section 6.2) dims unrelated geometry to reveal the
+        # feature's input and result. Apply only in the unsaved reference copy.
+        self.him.dim_others = True
         self.document = None
         self.model = None
         self.mapped = []
