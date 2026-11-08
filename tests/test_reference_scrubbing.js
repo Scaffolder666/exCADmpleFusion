@@ -99,6 +99,8 @@ async function main() {
   assert.equal(count("ref_overview"), 3,
     "Finishing both steps must restore the complete model");
   assert.deepEqual(calls.filter(c => c.action === "set_step").map(c => c.payload.index), [0, 1]);
+  assert.deepEqual(calls.filter(c => c.action === "set_step").map(c => c.payload.preview),
+                   [true, false], "Only the initial step previews the full solid model; continuous Feature playback does not flash the overview");
   console.log("Reference full/focus/full and interactive scrubbing: PASS");
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });
