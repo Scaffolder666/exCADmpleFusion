@@ -133,8 +133,10 @@ class ReferenceSession:
         for features in self.mapped:
             items = []
             for feature in features:
-                mode, params = "timeline", []
-                if not feature.is_sketch:
+                mode, params = (
+                    "instant" if feature.is_sketch or feature.kind.startswith("Construction")
+                    else "timeline"), []
+                if not feature.is_sketch and not feature.kind.startswith("Construction"):
                     kind = animation_mode(feature.kind)
                     if kind == PARAMETRIC:
                         try:
@@ -177,7 +179,19 @@ class ReferenceSession:
         if not self.live or not 0 <= step_index < len(self.mapped) or not self._active():
             return None
         items = animated(self.mapped[step_index])
-        if progress >= 1.0 or not items:
+        if not items and progress < 1.0:
+            # Sketch/construction-only steps have no BRep parameter to grow.
+            # Roll to their real completed Timeline state immediately,
+            # rather than pretending an extrusion-like animation exists.
+            if self.current != (step_index, "result"):
+                self.show_result(step_index)
+                self.current = (step_index, "result")
+            features = self.mapped[step_index]
+            return {"step": step_index,
+                    "feature": features[-1].name if features else None,
+                    "kind": features[-1].kind if features else None,
+                    "mode": "instant", "parameters": []}
+        if progress >= 1.0:
             # The FINAL step returns to the entire shaded model, not a
             # ghost/partial-timeline state. Intermediate steps preserve the
             # actual post-step model until the following Feature begins.
