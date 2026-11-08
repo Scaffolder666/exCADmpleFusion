@@ -25,5 +25,7 @@ jobs:
           node --check ui/reference.js
           node --check ui/him_frame_clock.js
           node --check ui/player.js
-      - name: HiM frame pacing regression
-        run: node tests/test_him_frame_clock.js
+      - name: HiM frame pacing and full/focus/full playback regressions
+        run: |
+          node tests/test_him_frame_clock.js
+          node tests/test_reference_scrubbing.js
