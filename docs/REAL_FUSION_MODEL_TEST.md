@@ -22,6 +22,39 @@ Keep a private copy at `local-validation/fusion.f3d` under the repository
 folder. The `local-validation/` folder is gitignored. The checksum above
 distinguishes this specific fixture from another file called `fusion.f3d`.
 
+## Recommended: one-click complex-model demo (synthetic explanations)
+
+1. Update `fusion-him`, then open the exact researcher-provided
+   `fusion.f3d` in Fusion Desktop (do not open the bundled Phone Stand).
+2. Go to **Utilities → Scripts and Add-Ins → Scripts → +** and select
+   `tools/fusion_native_demo`, then **Run**. The script operates on the
+   **currently open design**, so check its tab before running.
+3. Fusion exports a private reference copy, extracts the actual Feature
+   Timeline, and creates **one tutorial step for every real Timeline item**.
+   It also produces a small, explicitly hypothetical explanation using the
+   operation type, extracted parameters, and recorded dependencies.
+4. The generated files are in
+   `~/exCADmple-validation/real-fusion/`; **Import**
+   `fusion-native-reasoning.excadmple` in the exCADmple HiM palette.
+5. Inspect the colored Feature cards (Sketch, Extrude, Fillet, Pattern,
+   Revolve, Combine, Move, etc.) and test native animation, input geometry
+   highlights, play/pause, reverse, timeline jump, and performance on this
+   actual model.
+
+**Interpretation boundary:** explanatory text begins with
+`SIMULATED TEST REASONING (not the designer's words)`. It is a
+hypothesis/demo stimulus, **not evidence of what the original designer
+thought or intended**. Neither synthetic speech nor synthetic timestamps
+can be used as think-aloud data for a study. The file remains private.
+
+The original `.f3d` is never saved by this script; the archive embedded
+in the tutorial is an exported **copy**. The timeline extractor temporarily
+rolls the active design's history but restores its previous marker. If
+extraction fails on a complex feature, preserve the error and feature index
+instead of substituting the Phone Stand data.
+
+## Alternative: two-stage extraction and packaging
+
 ## 1. Inspect and extract in Fusion Desktop
 
 1. Open `local-validation/fusion.f3d` in Fusion using the normal local
@@ -47,13 +80,15 @@ python tools/build_native_validation.py \
   local-validation/fusion.extract.json \
   local-validation/fusion.f3d \
   -o local-validation/fusion-validation.excadmple \
-  --title "Fusion native HiM test"
+  --title "Fusion native HiM test" \
+  --synthetic-reasoning
 ```
 
 The script creates **one step for each actual extracted Timeline item**,
 using its exact index/name/kind and a synthetic 4-second *test playback
 duration* (NOT original authoring timing). It embeds the original `.f3d`
-and **does not invent think-aloud, spoken words, cursor paths or actual
+and with `--synthetic-reasoning` generates *explicitly labeled hypothetical
+testing captions*. These are **not captured think-aloud, cursor paths, or actual
 command activation timestamps**. It does not change the original `.f3d`.
 
 This is a *technical test package*, not a design-reasoning tutorial. For a
