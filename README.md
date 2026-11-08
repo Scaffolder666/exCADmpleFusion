@@ -1,5 +1,9 @@
 # exCADmple — Autodesk Fusion 插件 · 版本 A（History in Motion 式独立参考视口）
 
+
+> **真实模型测试基准（2026-11-08）：** 后续原生 HiM 验收优先使用研究者提供的 `fusion.f3d`（324,089 bytes，SHA-256 以 [REAL_FUSION_MODEL_TEST.md](docs/REAL_FUSION_MODEL_TEST.md) 为准），而不是 Phone Stand 手工示例。测试模型不公开提交到仓库。通过 `tools/build_native_validation.py` 将真实 Fusion Timeline 提取结果与原始 `.f3d` 组成技术验证包。详见 [真实模型测试步骤](docs/REAL_FUSION_MODEL_TEST.md)。本段说明只改变测试基准，不改变现有播放器行为。
+
+
 **Supporting Design Reasoning Through Shared CAD Models** · 分支 `fusion-him`
 
 > 本分支是**版本 A**：教程在第二个 Fusion 窗口里、在设计师 `.f3d` 的副本上播放（按 *History in Motion* 的做法）；用户在第一个 Fusion 窗口里做自己的设计。代码与 [`fusion`](https://github.com/Scaffolder666/exCADmpleFusion/tree/fusion)（版本 B）相同，只有 `config.json` 的 `"layout": "reference"` 和插件随 Fusion 启动不同。改动在 `fusion` 上进行，再合并到本分支。
