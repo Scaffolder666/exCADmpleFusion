@@ -6,6 +6,14 @@ exCADmple 是一个人机交互（HCI）研究原型，探索设计师如何在*
 
 一个完成的 CAD 模型告诉我们「**做出了什么**」，传统教程通常侧重「**怎样复现**」。exCADmple 希望进一步呈现「**为什么这样设计**」：将其他设计师的 Design Reasoning 与三维建模过程联系起来，让用户能够直接在自己的 CAD 工作环境中探索和借鉴。
 
+## 无需安装 Blender，先看界面
+
+![exCADmple 单视口界面概念预览：左侧是预设参考模型，旁边是用户模型；右侧是播放、建模步骤与设计推理](docs/preview.svg)
+
+**这是一张根据当前原型布局绘制的界面示意图，并非 Blender 桌面实拍截图。** 它展示了同一个 3D Viewport 中的 Phone Stand、用户模型、Ghost Pointer 与 HiM 风格的右侧播放器。
+
+[**查看可交互的浏览器预览（HTML）**](https://github.com/Scaffolder666/exCADmpleFusion/blob/blender/docs/preview.html)：下载该 HTML 文件后直接用浏览器打开，不必安装 Blender。可以试播九个设计步骤、跳转、拖动进度条和查看相应的 Reasoning。网页演示**不包含实际 Blender 建模功能**，真实桌面 GPU 交互仍需要在 Blender 中验证。
+
 ## 研究目标与使用流程
 
 系统围绕**用户自己的设计过程**组织，而不是要求用户线性地完成某个教程：
