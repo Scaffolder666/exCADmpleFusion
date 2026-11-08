@@ -215,8 +215,16 @@ function finishNativeStep() {
   } else {
     S.playing = false;
     S.direction = 1;
+    S.fresh = true;     // do not send another native frame after playback
+    S.frameClock = null;
+    S.shown = null;
     stopAudio();
     stopSpeech();
+    // The final clip item might not be the source model's final feature
+    // (e.g. a face-filtered clip). Restore the COMPLETE shaded design.
+    bridge("ref_overview").then((ok) => {
+      if (ok) status("Full model · all geometry visible");
+    });
   }
 }
 function tick(now) {
@@ -278,7 +286,10 @@ function card(item) {
     for (const p of plan) {
       const live = S.shown && S.shown.step === S.index && S.shown.feature === p.feature ? S.shown : null;
       let text = p.feature + " · ";
-      if (live && live.fallback) text += "visual fallback (" + live.fallback + ")";
+      if (live && live.mode === "instant")
+        text += "appears immediately · actual Fusion geometry" +
+                (live.wireframe ? " · ghost wireframe context" : "");
+      else if (live && live.fallback) text += "visual fallback (" + live.fallback + ")";
       else if (live && live.wireframe && live.mode === "parameter")
         text += "native reconstruction · ghost wireframe · " + (live.parameters || []).join(", ");
       else if (live && live.wireframe && live.mode === "visual")
@@ -288,7 +299,8 @@ function card(item) {
                 (live.context_fallback || "exact isolation unavailable") + ") · " +
                 (live.parameters || []).join(", ");
       else if (p.mode === "parameter") text += "parameter animation: " + p.parameters.join(", ");
-      else if (p.mode === "visual") text += "visual fade (no parameter to animate)";
+      else if (p.mode === "instant") text += "instant appearance (no numeric parameter)";
+      else if (p.mode === "visual") text += "visual fade (legacy inspect mode)";
       else text += "timeline state";
       line.appendChild(el("li", { class: p.mode + (live ? " live" : "") }, text));
     }
@@ -298,6 +310,9 @@ function card(item) {
   let active = -1;
   cues.forEach((c, i) => { if (c.at_ms <= S.elapsed) active = i; });
   {
+    const label = el("div", { class: "explanation-label" },
+      "Why this decision? · Reasoning / transcript");
+    box.appendChild(label);
     const list = el("ol", { class: "said" });
     cues.forEach((c, i) => {
       const li = el("li", { class: i === active ? "current" : (i < active ? "before" : "") }, c.label);
