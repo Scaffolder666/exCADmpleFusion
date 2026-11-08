@@ -35,11 +35,11 @@ from core.link import InstanceLink, WORKSPACE, REFERENCE
 from core.him_reference import ReferenceSession
 from core.session_recorder import SessionRecorder
 
-PALETTE_ID = "excadmple.fusion.player"
-COMMAND_ID = "excadmple.fusion.open"
-REFERENCE_COMMAND_ID = "excadmple.fusion.reference.open"
-RECORD_COMMAND_ID = "excadmple.fusion.record"
-LINK_EVENT = "excadmple.fusion.link"
+PALETTE_ID = "excadmple_fusion_player"
+COMMAND_ID = "excadmple_fusion_open"
+REFERENCE_COMMAND_ID = "excadmple_fusion_reference_open"
+RECORD_COMMAND_ID = "excadmple_fusion_record"
+LINK_EVENT = "excadmple_fusion_link"
 
 
 def _read_layout():
