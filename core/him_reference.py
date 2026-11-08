@@ -34,6 +34,9 @@ class ReferenceSession:
         # HiM (SCF 2023, Section 6.2) dims unrelated geometry to reveal the
         # feature's input and result. Apply only in the unsaved reference copy.
         self.him.dim_others = True
+        # Native HiM playback: one opaque Feature in front of a transparent
+        # wireframe of actual geometry BEFORE that Feature was modeled.
+        self.him.wireframe_context = True
         self.document = None
         self.model = None
         self.mapped = []
@@ -166,6 +169,12 @@ class ReferenceSession:
             if key != self.current:
                 self.stop()
                 self._read_inputs([items[position]])
+                # Exact pre-feature context is more informative than a ghost
+                # copy of the finished model. Capture once, before rolling
+                # to the native feature and animating its real parameters.
+                if self.him.wireframe_context and self.him.dim_others:
+                    self.model.go(items[position].index)
+                    self.him.capture_ghost_context()
                 self._roll_after(items[position])
                 self.him.clip = [items[position]]
                 self.him.active_position = None
