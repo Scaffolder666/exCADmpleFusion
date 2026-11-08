@@ -140,3 +140,23 @@ OS, screenshots, feature-mode inventory and frame timing. Specifically verify:
 - Source `.f3d` checksum after the complete Desktop sequence.
 
 The visual acceptance criterion remains open until this Desktop gate passes.
+
+## Auto-focus update
+
+The reference panel now has an unchecked-by-default **Auto-focus** checkbox.
+When enabled, each new native feature frames its completed affected-face bounds
+(or result-body bounds when faces are unavailable) once, before numeric growth.
+It preserves viewing direction and uses smooth camera centering/zoom; it does not
+repeatedly overwrite manual orbit on animation frames. Overview fits the complete
+model only when enabled. With it disabled, playback leaves the camera alone.
+No reliable bounds means no camera change. Component-local bounding boxes in
+assemblies remain subject to the occurrence-space limitation above.
+
+The reference panel retains **Try example** and removes the tutorial-draft
+creation button. The authoring backend is retained for existing workflows.
+
+Five camera regressions were added: center/direction and margin, missing bounds,
+perspective fallback, unchecked behavior and one focus per feature. All **173
+Python tests** and both JavaScript regressions pass locally. Fusion Desktop
+camera behavior remains unverified. Camera API reference:
+https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/core_Camera.htm

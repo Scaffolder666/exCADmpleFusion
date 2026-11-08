@@ -457,6 +457,7 @@ class HiMController:
         self.active_position = None
         self.active = {}            # prepared data of the feature being animated
         self.last_frame_seconds = None
+        self.auto_focus = False
         self.dim_others = False
         # Inspect mode animates the *user's own* features in place (paper
         # behaviour). Off by default: the user's model is the main line.
@@ -696,9 +697,27 @@ class HiMController:
                          .format(feature.name))
             self._apply_focus(prepared["bodies"], hide_result=(
                 prepared["mode"] == FADE and not self.instant_nonparametric))
+        if self.auto_focus:
+            self.focus_feature(prepared)
         self._draw_overlay(prepared, 0.0)
         self.active_position = position
         self.active = prepared
+
+    def focus_feature(self, prepared=None):
+        """Frame once at feature entry, never on every animation frame."""
+        if not self.auto_focus:
+            return False
+        prepared = self.active if prepared is None else prepared
+        if not prepared:
+            return False
+        from .him_camera import focus_geometry
+        try:
+            entity = prepared.get("entity")
+            geometry = _items(getattr(entity, "faces", None)) or prepared.get("bodies", [])
+            return focus_geometry(self.app.activeViewport, geometry, adsk.core.Point3D.create)
+        except Exception as error:
+            self.log("HiM auto-focus: " + str(error))
+            return False  # camera guidance must not interrupt native reconstruction
 
     def _apply_focus(self, bodies, hide_result=False):
         """Dim the other bodies. For the visual fallback the resulting bodies

@@ -369,7 +369,7 @@ function render() {
     const sentAt = performance.now();
     S.inFlight = true;
     S.manualFrame = false;
-    bridge("ref_frame", { index, progress: sentProgress, elapsed: S.elapsed }).then((ok) => {
+    bridge("ref_frame", { index, progress: sentProgress, elapsed: S.elapsed, auto_focus: $("autoFocus").checked }).then((ok) => {
       const renderedAt = performance.now();
       S.inFlight = false;
       if (!ok && epoch === S.epoch) {
@@ -511,11 +511,10 @@ $("forward").addEventListener("click", forward);
 $("back").addEventListener("click", backward);
 $("showMore").addEventListener("click", () => bridge("show_more"));
 $("showAll").addEventListener("click", showAll);
-$("fit").addEventListener("click", () => bridge("fit_view"));
+$("autoFocus").addEventListener("change", () => bridge("ref_auto_focus", { enabled: $("autoFocus").checked }));
 $("speed").addEventListener("input", () => { S.speed = Number($("speed").value); $("speedValue").textContent = S.speed + "×"; syncAudio(true); });
 $("import").addEventListener("click", () => { pause(); bridge("open_package"); });
 $("demo").addEventListener("click", () => { pause(); bridge("load_demo"); });
-$("extractDraft").addEventListener("click", () => { pause(); bridge("extract_draft"); });
 
 requestAnimationFrame(tick);
 bridge("ready");

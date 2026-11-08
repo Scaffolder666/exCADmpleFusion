@@ -328,6 +328,8 @@ class PaletteHandler(adsk.core.HTMLEventHandler):
                     step = _package.step(index)
                     shown = None
                     if _session and _session.live:
+                        if isinstance(body.get("auto_focus"), bool):
+                            _session.set_auto_focus(body["auto_focus"])
                         shown = _session.frame(index, value)
                         if shown and shown != _last_shown:
                             _last_shown = shown
@@ -347,6 +349,12 @@ class PaletteHandler(adsk.core.HTMLEventHandler):
                         _renderer.clear_command()
                     # The precise target arrow replaces the unrecorded ghost
                     # mouse path in reference playback.
+            elif command == "ref_auto_focus":
+                enabled = body.get("enabled")
+                if not isinstance(enabled, bool):
+                    raise ValueError("Auto-focus setting must be boolean")
+                if _session:
+                    _session.set_auto_focus(enabled)
             elif command == "ref_overview":
                 # A filtered / partial tutorial still ends with a full
                 # model, even when its last example step is not the final

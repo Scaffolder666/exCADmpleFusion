@@ -38,11 +38,10 @@
   <footer class="foot">
     <label>Speed <input id="speed" type="range" min="0.5" max="2" step="0.25" value="1"> <output id="speedValue">1×</output></label>
     <div class="options">
-      <button id="fit" class="link" type="button" title="Adjust the camera so the whole model fits in the viewport">Fit model to view</button>
+      <label title="Automatically frame the relevant geometry when an operation starts"><input id="autoFocus" type="checkbox"> Auto-focus</label>
     </div>
     <div class="authoring">
       <button id="demo" class="link" type="button">Try example</button>
-      <button id="extractDraft" class="link" type="button" title="Authoring: export the open design's timeline as a tutorial draft">Create tutorial from this model…</button>
     </div>
     <p id="status" class="status" role="status" aria-live="polite"></p>
   </footer>

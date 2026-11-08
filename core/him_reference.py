@@ -89,7 +89,8 @@ class ReferenceSession:
         self.plan = self.animation_plan()
         self.model.go(self.model.end_state())
         try:
-            self.app.activeViewport.fit()
+            if self.him.auto_focus:
+                self.app.activeViewport.fit()
         except Exception:
             pass
         return True
@@ -169,6 +170,8 @@ class ReferenceSession:
         self.model.go(self.model.end_state())
         self.current = ("overview",)
         try:
+            if self.him.auto_focus and self._active():
+                self.app.activeViewport.fit()
             self.app.activeViewport.refresh()
         except Exception:
             pass
@@ -267,6 +270,12 @@ class ReferenceSession:
             except Exception as error:
                 self.log("HiM inputs of {}: {}".format(feature.name, error))
             self.model.highlights.setdefault(feature.index, [])
+
+    def set_auto_focus(self, enabled):
+        was_enabled = self.him.auto_focus
+        self.him.auto_focus = bool(enabled)
+        if self.him.auto_focus and not was_enabled and self._active():
+            self.him.focus_feature()
 
     def set_dim(self, enabled):
         self.him.dim_others = bool(enabled)
