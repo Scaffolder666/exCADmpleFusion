@@ -12,7 +12,7 @@ exCADmple 是一个人机交互（HCI）研究原型，探索设计师如何在*
 
 **这是一张根据当前原型布局绘制的界面示意图，并非 Blender 桌面实拍截图。** 它展示了同一个 3D Viewport 中的 Phone Stand、用户模型、Ghost Pointer 与 HiM 风格的右侧播放器。
 
-[**查看可交互的浏览器预览（HTML）**](https://github.com/Scaffolder666/exCADmpleFusion/blob/blender/docs/preview.html)：下载该 HTML 文件后直接用浏览器打开，不必安装 Blender。可以试播九个设计步骤、跳转、拖动进度条和查看相应的 Reasoning。网页演示**不包含实际 Blender 建模功能**，真实桌面 GPU 交互仍需要在 Blender 中验证。
+[**查看可交互的浏览器预览（HTML）**](https://github.com/Scaffolder666/exCADmpleFusion/blob/blender/docs/preview.html)；或点击 [**直接在线体验交互预览**](https://html-preview.github.io/?url=https://github.com/Scaffolder666/exCADmpleFusion/blob/blender/docs/preview.html)（通过第三方 HTML Preview 服务打开仓库里的公开演示）。不必安装 Blender，可以试播九个设计步骤、跳转、拖动进度条和查看相应 Reasoning；不想使用第三方预览服务，也可以下载仓库中的 HTML 文件后在浏览器本地打开。网页演示**不包含实际 Blender 建模功能**，真实桌面 GPU 交互仍需要在 Blender 中验证。
 
 ## 研究目标与使用流程
 
