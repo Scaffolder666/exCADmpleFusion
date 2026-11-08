@@ -450,6 +450,7 @@ class HiMController:
         self.ghost_group = None       # persistent backdrop for ONE active Feature
         self.pending_ghost = None     # captured at Timeline marker BEFORE feature
         self.wireframe_context = False  # opt in only on the disposable reference copy
+        self.instant_nonparametric = False  # reference: no invented fades or scale
         self.seconds = 4.0
         self.selected_ref = None
         self.selection_label = ""
@@ -691,7 +692,8 @@ class HiMController:
             if self.wireframe_context and snapshot is not None and snapshot["curves"]:
                 self.log("HiM: exact changed faces unavailable for {}: using translucent context"
                          .format(feature.name))
-            self._apply_focus(prepared["bodies"], hide_result=prepared["mode"] == FADE)
+            self._apply_focus(prepared["bodies"], hide_result=(
+                prepared["mode"] == FADE and not self.instant_nonparametric))
         self._draw_overlay(prepared, 0.0)
         self.active_position = position
         self.active = prepared
@@ -750,7 +752,8 @@ class HiMController:
                 self.ghost_group = None
                 prepared["wireframe"] = False
                 prepared["context_fallback"] = "changed feature faces could not be copied"
-                self._apply_focus(prepared["bodies"], hide_result=prepared["mode"] == FADE)
+                self._apply_focus(prepared["bodies"], hide_result=(
+                    prepared["mode"] == FADE and not self.instant_nonparametric))
                 targets = self._change_targets(prepared)
             center = _center(targets) if prepared["mode"] == FADE else None
             for body in targets:
@@ -764,7 +767,14 @@ class HiMController:
                         opacity = 1.0 if prepared.get("wireframe") else (
                             0.18 if body in prepared["bodies"] else 0.6)
                         overlay.setOpacity(opacity, True)
+                    elif self.instant_nonparametric:
+                        # The real Timeline already contains the operation's
+                        # result. There is no numeric parameter to animate:
+                        # simply SHOW that geometry at its actual size.
+                        overlay.setOpacity(1.0, True)
                     else:
+                        # Legacy HiM inspect mode retains its original
+                        # fade/scale visual effect outside the reference.
                         overlay.setOpacity(progress, True)
                         scale = 0.5 + 0.5 * progress
                         matrix = adsk.core.Matrix3D.create()
@@ -906,7 +916,8 @@ class HiMController:
                 self.focus.restore()
             except Exception as error:
                 self.log("HiM focus restore before fallback: " + str(error))
-            self._apply_focus(prepared["bodies"], hide_result=True)
+            self._apply_focus(prepared["bodies"], hide_result=(
+            not self.instant_nonparametric))
         # With an active ghost, keep the real model almost invisible and
         # switch ONLY the feature-owned overlay to the visual fade. Mixing
         # opaque source bodies with the ghost would break the isolation.
@@ -917,7 +928,9 @@ class HiMController:
         if not prepared:
             return None
         return {"feature": prepared["feature"].name, "kind": prepared["feature"].kind,
-                "mode": {PARAMETRIC: "parameter", FADE: "visual"}.get(prepared["mode"], "timeline"),
+                "mode": {PARAMETRIC: "parameter", FADE: (
+                    "instant" if self.instant_nonparametric else "visual"
+                )}.get(prepared["mode"], "timeline"),
                 "parameters": [key for key, _, _ in prepared["params"]] if prepared["mode"] == PARAMETRIC else [],
                 "fallback": prepared.get("fallback", ""),
                 "wireframe": bool(prepared.get("wireframe")),
