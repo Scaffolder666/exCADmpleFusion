@@ -67,7 +67,7 @@ def run(context):
             return progress.wasCancelled
 
         title = (app.activeDocument.name if app.activeDocument else "Fusion model")
-        draft = extract(design, title, progress=report)
+        draft = extract(design, title, progress=report, include_meshes=False)
         progress.hide()
         progress = None
 
@@ -83,12 +83,13 @@ def run(context):
 
         output, steps = make_package(
             draft, source_copy, package_path,
-            title=title + " · native HiM test", synthetic_reasoning=True)
+            title=title + " · native HiM test",
+            synthetic_reasoning=True, native_only=True)
         ui.messageBox(
             "Created {} test steps from REAL Fusion Timeline entries.\n\n"
             "Package: {}\n\n"
             "Use + Import in exCADmple to open this .excadmple file.\n\n"
-            "The explanations are hypothetical TEST text, not recorded designer reasoning. "
+            "The explanations are hypothetical TEST text, not recorded designer reasoning.\nNo mesh snapshots were generated. "
             "The original design was not saved."
             .format(steps, output), "exCADmple — native HiM test")
     except Exception:
