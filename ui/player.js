@@ -223,6 +223,7 @@ function renderTime() {
   const cues = step()?.cues || [];
   let active = -1;
   cues.forEach((cue, i) => { if (cue.at_ms <= state.elapsed) active = i; });
+  $("cueText").hidden = !$("captionsEnabled").checked;
   if (active !== state.cueIndex) {
     state.cueIndex = active;
     if (state.playing) speakCue(active);
@@ -272,11 +273,7 @@ function seek(ms) {
 }
 function play() {
   if (!step()) return;
-  if (state.elapsed >= duration()) {
-    if ($("playbackScope").value === "all" && state.index === state.example.steps.length - 1) {
-      selectStep(0);
-    } else seek(0);
-  }
+  if (state.elapsed >= duration()) seek(0);
   state.playing = true;
   state.startedAt = performance.now() - state.elapsed;
   $("play").innerHTML = "Ⅱ <span>Pause</span>";
