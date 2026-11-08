@@ -9,8 +9,14 @@ features shares its time equally between them, in timeline order.
 
 
 def map_steps(steps, timeline_features):
-    """steps: package steps; timeline_features: FeatureInfo list of the opened
-    .f3d. Returns (per-step FeatureInfo lists, unmatched names)."""
+    """Map recorded source features to the imported parametric timeline.
+
+    Prefer the recorded timeline index AND name. A unique name is a safe
+    fallback when indices shifted. Never silently choose the first of
+    several identically named features: an incorrect mapping would animate
+    a different CAD operation while showing the original narration.
+    Returns (per-step FeatureInfo lists, unmatched descriptions).
+    """
     by_index = {f.index: f for f in timeline_features}
     by_name = {}
     for feature in timeline_features:
@@ -20,15 +26,16 @@ def map_steps(steps, timeline_features):
         found = []
         for source in step.get("source_features", []):
             name, index = source.get("name"), source.get("index")
-            candidates = by_name.get(name, [])
-            if len(candidates) == 1:
-                match = candidates[0]
-            elif index in by_index and by_index[index].name == name:
-                match = by_index[index]
+            indexed = by_index.get(index) if isinstance(index, int) else None
+            if indexed is not None and (not name or indexed.name == name):
+                match = indexed
+            elif name and len(by_name.get(name, [])) == 1:
+                match = by_name[name][0]
             else:
-                match = candidates[0] if candidates else None
+                match = None
             if match is None:
-                unmatched.append(name)
+                unmatched.append("step {}: {} (index {})".format(
+                    step.get("id", "?"), name or "<unnamed>", index))
             elif match not in found:
                 found.append(match)
         mapped.append(sorted(found, key=lambda f: f.index))
