@@ -1,17 +1,15 @@
 /* Version A — History in Motion control panel (reference instance).
    Same tutorials and playback abilities as version B; different
-   organisation: the example plays on the designer's own Fusion model in a
-   second Fusion instance, whose canvas is the reference viewport.
+   organisation: the tutorial is shown on the designer's own Fusion model in
+   a second Fusion instance, whose canvas is the reference viewport.
 
    Playback follows HiM (Veuskens et al., SCF 2023):
    * no selection: the whole design process plays in order (the tutorial);
    * selecting geometry of the reference model runs HiM's filtering in
      Python and plays the matching steps newest first;
    * "Show more" follows the supporting sketches' faces (HiM show more);
-   * step backward plays the current step in reverse;
-   * each frame sets the feature's parameters in Fusion; the next frame is
-     requested when the previous one has been computed, so the frame rate
-     adapts to the model, as in HiM. */
+   * each step rolls the designer's real model to the end of that step in
+     the reference canvas, where the user can rotate and inspect it. */
 "use strict";
 const $ = (id) => document.getElementById(id);
 const audio = $("audio");
@@ -117,14 +115,14 @@ function forward() {
 }
 function backward() {
   if (!S.clip.length) return;
-  if (S.elapsed <= 0 && S.pos > 0) {
+  if (S.elapsed > 1500 || S.pos === 0) {
+    S.elapsed = 0;                     // replay this step from its start
+  } else {
     S.pos--;
     setIndex(S.clip[S.pos]);
-    S.elapsed = duration();
-  } else if (S.elapsed <= 0) {
-    S.elapsed = duration();
+    S.elapsed = 0;
   }
-  S.direction = -1;
+  S.direction = 1;
   play(false);
 }
 function selectStep(i) {
@@ -312,7 +310,6 @@ $("showMore").addEventListener("click", () => bridge("show_more"));
 $("showAll").addEventListener("click", showAll);
 $("fit").addEventListener("click", () => bridge("fit_view"));
 $("speed").addEventListener("input", () => { S.speed = Number($("speed").value); $("speedValue").textContent = S.speed + "×"; syncAudio(true); });
-$("dim").addEventListener("change", () => bridge("him_dim", { enabled: $("dim").checked }));
 $("captions").addEventListener("change", render);
 $("narration").addEventListener("change", () => { if ("speechSynthesis" in window) speechSynthesis.cancel(); });
 $("import").addEventListener("click", () => { pause(); bridge("open_package"); });

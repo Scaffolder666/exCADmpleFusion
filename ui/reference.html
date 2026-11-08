@@ -17,10 +17,10 @@
   <p id="source" class="source"></p>
 
   <div class="transport" role="group" aria-label="Playback">
-    <button id="back" title="Step backward (plays the step in reverse)" aria-label="Step backward">&#9198;</button>
+    <button id="back" title="Previous step" aria-label="Previous step">&#9198;</button>
     <button id="play" title="Play / pause" aria-label="Play">&#9654;</button>
     <button id="replay" title="Replay from the start" aria-label="Replay">&#8635;</button>
-    <button id="forward" title="Step forward" aria-label="Step forward">&#9197;</button>
+    <button id="forward" title="Next step" aria-label="Next step">&#9197;</button>
     <span id="clock" class="clock">00:00</span>
   </div>
   <div id="mode" class="mode">
@@ -34,7 +34,6 @@
   <footer class="foot">
     <label>Speed <input id="speed" type="range" min="0.5" max="2" step="0.25" value="1"> <output id="speedValue">1×</output></label>
     <div class="options">
-      <label><input id="dim" type="checkbox" checked> Other bodies transparent</label>
       <label><input id="captions" type="checkbox" checked> Transcript</label>
       <label><input id="narration" type="checkbox"> Synthetic voice</label>
       <button id="fit" class="link" type="button">Fit view</button>

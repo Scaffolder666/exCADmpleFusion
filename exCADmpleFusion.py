@@ -9,9 +9,9 @@ Two layouts with the same features (config.json "layout"):
 * "overlay"   — version B: the reference model is drawn in the user's own
   canvas (Custom Graphics) and the tutorial floats over it;
 * "reference" — version A, as in History in Motion: a second Fusion
-  instance opens a copy of the designer's .f3d and plays the tutorial on
-  it by animating feature parameters; selecting geometry there plays the
-  steps that made it. The user keeps modeling in the first instance.
+  instance opens a copy of the designer's .f3d and shows the real model
+  rolled to each step, to rotate and inspect; selecting geometry there
+  plays the steps that made it. The user keeps modeling in the first one.
 """
 import json
 import os
@@ -261,8 +261,8 @@ class PaletteHandler(adsk.core.HTMLEventHandler):
                     _renderer.finish_animation()
                     _renderer.clear_pointer()
             elif command == "ref_frame":
-                # Version A: one HiM frame on the designer's model. The panel
-                # asks for the next frame only when this one is computed.
+                # Version A: the designer's model rolled to this step; the
+                # recorded pointer moves over it.
                 index, value = body.get("index"), body.get("progress")
                 if (_package and isinstance(index, int) and 0 <= index < len(_package.data["steps"])
                         and isinstance(value, (int, float)) and not isinstance(value, bool)):
@@ -270,7 +270,7 @@ class PaletteHandler(adsk.core.HTMLEventHandler):
                     value = max(0.0, min(1.0, float(value)))
                     step = _package.step(index)
                     if _session and _session.live:
-                        _session.frame(index, value)
+                        _session.show_result(index)
                     elif step.get("animation"):
                         _renderer.render_animation(step, [0, 0, 0], value)
                     if step.get("pointer"):
@@ -288,9 +288,6 @@ class PaletteHandler(adsk.core.HTMLEventHandler):
                 _ui.activeSelections.clear()
             elif command == "fit_view":
                 _app.activeViewport.fit()
-            elif command == "him_dim":
-                if _session:
-                    _session.set_dim(bool(body.get("enabled", True)))
             elif command == "link_selected":
                 if not _package or not _spatial:
                     raise ValueError("Open a tutorial before linking geometry")

@@ -15,7 +15,7 @@
 | 教程在哪里播放 | 按 *History in Motion* 的做法，在**第二个 Fusion 窗口**里打开设计师 `.f3d` 的副本播放；用户在第一个 Fusion 窗口里建模 | 在用户自己的 **Fusion 画布**里，参考模型显示在用户模型旁边 |
 | 看到的模型 | 设计师真实的参数化模型（副本），时间轴回滚到当前步骤；用户可以在那个窗口里旋转、查看 | 提取时记录的每个特征完成后的模型，显示在用户画布里，可以随画布一起旋转查看 |
 | 控制面板 | 参考窗口右侧：播放／暂停／重播／前进／后退，纵向步骤列表，当前步骤展开显示工具和设计师说的话 | 浮在画布上的紧凑面板（可收起为只剩步骤条），画布左上角显示步骤标题和当前这句话 |
-| 额外 | 在参考模型上选中面、边或顶点，只播放做出它的那些步骤（HiM 的过滤方法）；后退时倒放当前步骤 | — |
+| 额外 | 在参考模型上选中面、边或顶点，只播放做出它的那些步骤（HiM 的过滤方法） | — |
 
 说明：版本 A 需要教程包里带设计师的 `.f3d`；附带的两个手工示例没有，所以在版本 A 里只显示记录的模型，也不能按几何选择。Fusion 原生画布不允许叠加可交互的 HTML，所以版本 B 的"Overlay"是浮动面板加画布内的 Custom Graphics（模型、指针、文字）。
 
@@ -71,9 +71,9 @@ core/animation.py         模型状态动画
 core/renderer.py          画布中的参考模型、Ghost Pointer、文字
 core/pointer.py           鼠标轨迹
 core/link.py              版本 A：两个 Fusion 之间的本机连接
-core/him_reference.py     版本 A：在设计师模型副本上播放（HiM 参数动画、按几何过滤）
+core/him_reference.py     版本 A：打开设计师模型的副本，按步骤回滚时间轴；按几何过滤（HiM）
 core/reference_plan.py    版本 A：步骤与时间轴特征的对应
-core/him_filter.py, him_motion.py, him_fusion.py   History in Motion 的过滤算法与参数动画
+core/him_filter.py, him_fusion.py   History in Motion 的过滤算法与时间轴访问
 core/extract_fusion.py    从 .f3d 提取教程草稿
 core/authoring.py, transcript.py   合成教程包、读取文字稿
 core/spatial.py, focus.py, geometry_links.py      关联几何
