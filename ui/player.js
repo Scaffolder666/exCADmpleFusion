@@ -292,6 +292,7 @@ function tick() {
   // monotonic wall clock. Geometry only changes between steps, not at 60 fps.
   const master = mediaMaster();
   const mediaReady = master && master.readyState >= 2 && !master.paused;
+  if (mediaReady && master.playbackRate !== playbackSpeed()) master.playbackRate = playbackSpeed();
   state.elapsed = mediaReady ? master.currentTime * 1000 : (performance.now() - state.startedAt) * playbackSpeed();
   state.elapsed = Math.max(0, state.elapsed);
   if (state.elapsed >= duration() - 30) {
