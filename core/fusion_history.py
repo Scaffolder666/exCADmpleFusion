@@ -143,3 +143,95 @@ def trace_direct_creators(design, selected):
         "features": features, "complete": False,
         "reason": "Direct creator attribution only; complete historical topology lineage is not exposed",
     }
+
+
+def _collection_items(collection):
+    if collection is None or not hasattr(collection, "count"):
+        return []
+    try:
+        return [collection.item(i) for i in range(min(collection.count, 1000))]
+    except Exception:
+        return []
+
+
+def _input_entities(feature):
+    """Read known typed input references; do not inspect arbitrary properties."""
+    references = []
+    for property_name in ("profile", "profiles", "axis", "participantBodies",
+                          "faces", "edges", "inputEntities", "entity",
+                          "mirrorPlane", "patternEntities", "seedFeatures",
+                          "features", "tools", "toolBodies", "targetBody",
+                          "targetBodies", "bodies", "plane"):
+        try:
+            value = getattr(feature, property_name, None)
+        except Exception:
+            continue
+        if value is None:
+            continue
+        references.extend(_collection_items(value) if hasattr(value, "count") else [value])
+    return references
+
+
+def _referenced_feature(reference):
+    try:
+        if getattr(reference, "timelineObject", None) and getattr(reference, "objectType", "").endswith("Feature"):
+            return reference
+    except Exception:
+        pass
+    try:
+        return reference.createdByFeature
+    except Exception:
+        return None
+
+
+def trace_feature_inputs(design, selected, max_depth=20):
+    """Trace explicitly referenced creator features from direct face creators.
+
+    Only returns edges supported by exposed API references. Missing links are
+    not guessed; output is never marked as complete topology provenance.
+    """
+    direct = trace_direct_creators(design, selected)
+    if not design or not selected:
+        return {"features": [], "edges": [], "complete": False}
+    roots = []
+    for face in _adjacent_faces(selected):
+        feature = _feature_from_face(face)
+        if feature is not None:
+            roots.append(feature)
+    seen, edges, nodes = set(), set(), {}
+    def visit(feature, depth):
+        if feature is None or depth > max_depth:
+            return
+        token = _token(feature)
+        try:
+            index = feature.timelineObject.index
+        except Exception:
+            return
+        key = str(index)
+        if key in seen:
+            return
+        seen.add(key)
+        nodes[key] = {"timeline_index": index,
+                      "name": getattr(feature, "name", "") or "Feature",
+                      "object_type": getattr(feature, "objectType", ""),
+                      "entity_token": token,
+                      "association": "direct_creator" if depth == 0 else "referenced_input_creator"}
+        for reference in _input_entities(feature):
+            parent = _referenced_feature(reference)
+            if parent is None or parent is feature:
+                continue
+            try:
+                parent_index = parent.timelineObject.index
+            except Exception:
+                continue
+            if parent_index >= index:
+                continue
+            edges.add((str(parent_index), key))
+            visit(parent, depth + 1)
+    for root in roots:
+        visit(root, 0)
+    return {"features": sorted(nodes.values(), key=lambda x: x["timeline_index"], reverse=True),
+            "edges": [{"from": int(a), "to": int(b)} for a, b in sorted(edges)],
+            "complete": False,
+            "reason": "Only explicit Fusion API input references; topology lineage may be missing",
+            "direct_creator_count": len(direct["features"])}
