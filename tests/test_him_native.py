@@ -473,18 +473,22 @@ class FailureTests(unittest.TestCase):
         self.assertEqual(len(session.him.journal), 0)
         self.assertTrue(all(not g.isValid for g in groups))
 
-    def test_dimming_is_restored_including_result_bodies_of_visual_steps(self):
+    def test_instant_feature_is_solid_while_context_dims_and_all_opacities_restore(self):
         design, entities, _ = build()
         _, session = session_for(design, dim=True)
-        session.frame(3, 0.5)                                              # Mirror1: everything dimmed
-        self.assertEqual(entities["body2"].opacity, 0.2)
-        self.assertEqual(entities["body1"].opacity, 0.2)
+        # Mirror has no numeric parameter: show its result immediately and
+        # without a fabricated fade/scale, while dimming unrelated geometry.
+        shown = session.frame(3, 0.5)
+        self.assertEqual(shown["mode"], "instant")
+        self.assertEqual(entities["body2"].opacity, 1.0)  # current Mirror result
+        self.assertEqual(entities["body1"].opacity, 0.2)  # unrelated context
         self.assertEqual(entities["body0"].opacity, 0.2)
-        session.frame(1, 0.5)                                              # Fillet1: its body stays solid
-        self.assertEqual(entities["body1"].opacity, 1.0)
-        self.assertEqual(entities["body2"].opacity, 0.2)
+        session.frame(1, 0.5)                            # Fillet edits body1
+        self.assertEqual(entities["body1"].opacity, 1.0)  # new active body
+        self.assertEqual(entities["body2"].opacity, 0.2)  # previous result now context
         session.stop()
-        self.assertEqual([entities[t].opacity for t in ("body0", "body1", "body2")], [0.6, 1.0, 1.0])
+        self.assertEqual([entities[t].opacity for t in ("body0", "body1", "body2")],
+                         [0.6, 1.0, 1.0])
 
 
 class TutorialDataTests(unittest.TestCase):
