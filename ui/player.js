@@ -60,6 +60,7 @@ function renderRail() {
     button.className = "step-card" + (i === state.index ? " active" : "");
     button.setAttribute("aria-current", i === state.index ? "step" : "false");
     button.setAttribute("aria-label", "Step " + (i + 1) + ": " + item.title);
+    button.title = "Step " + (i + 1) + ": " + item.title;
     const num = document.createElement("span");
     num.className = "num";
     num.textContent = String(i + 1).padStart(2, "0");
@@ -83,7 +84,13 @@ function renderRail() {
     rail.appendChild(button);
   });
   const active = rail.children[state.index];
-  if (active) active.scrollIntoView({block:"nearest", inline:"nearest"});
+  if (active) {
+    // Scroll only the horizontal rail, never the lesson or whole palette.
+    const left = active.offsetLeft - rail.offsetLeft;
+    if (left < rail.scrollLeft) rail.scrollLeft = left;
+    else if (left + active.offsetWidth > rail.scrollLeft + rail.clientWidth)
+      rail.scrollLeft = left + active.offsetWidth - rail.clientWidth;
+  }
 }
 function classifyReasoning(current) {
   const note = current.reasoning || {};
