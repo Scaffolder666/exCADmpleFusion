@@ -349,7 +349,7 @@ window.fusionJavaScriptHandler = {
         if (state.filteredIndices.length) selectStep(state.filteredIndices[0]);
       } else if (action === "native_provenance") {
         const features = payload.features || [];
-        $("provenanceStatus").textContent = features.length ? features.length + " direct/adjacent creator feature(s) · incomplete lineage" : (payload.reason || "No direct creator attribution available.");
+        $("provenanceStatus").textContent = features.length ? features.length + " linked feature(s) · " + (payload.edges || []).length + " explicit dependency edge(s) · incomplete lineage" : (payload.reason || "No direct creator attribution available.");
         const list = $("provenanceList");
         list.replaceChildren();
         for (const feature of features) {
