@@ -60,8 +60,12 @@ def _capture(design, meshes):
     return state
 
 
-def extract(design, source_name="", progress=None):
-    """Return the excadmple-extract dict for a parametric design."""
+def extract(design, source_name="", progress=None, include_meshes=True):
+    """Extract real Fusion timeline data; optionally skip expensive mesh captures.
+
+    Native HiM playback loads the original .f3d copy, so serializing every
+    intermediate mesh is unnecessary for complex real-model validation.
+    """
     model = FusionTimelineModel(design)
     meshes, features = {}, []
     items = model.features()
@@ -78,7 +82,7 @@ def extract(design, source_name="", progress=None):
                         if ref.feature.index not in bucket:
                             bucket.append(ref.feature.index)
             model.go(info.index + 1)                             # marker after the item
-            state = _capture(design, meshes)
+            state = _capture(design, meshes) if include_meshes else []
             parameters = []
             for param in all_feature_parameters(design, entity) if entity is not None else []:
                 parameters.append({"name": param.name, "expression": param.expression,
