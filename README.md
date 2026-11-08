@@ -15,7 +15,7 @@
 | | 版本 A：独立参考视口（`fusion-him`，`"layout": "reference"`） | 版本 B：视口内 Overlay（`fusion`，`"layout": "overlay"`） |
 |---|---|---|
 | 教程在哪里播放 | 按 *History in Motion* 的做法，在**第二个 Fusion 窗口**里打开设计师 `.f3d` 的副本播放；用户在第一个 Fusion 窗口里建模 | 在用户自己的 **Fusion 画布**里，参考模型显示在用户模型旁边 |
-| 模型怎么动 | 在设计师的参数化模型上：时间轴回滚到当前特征，参数从约 0 逐渐变到实际值，其他 Body 半透明 | 播放记录下来的模型状态 |
+| 模型怎么动 | 在设计师的参数化模型上实时播放 HiM 动画：时间轴回滚到当前特征，参数从约 0 逐渐变到实际值，其他 Body 半透明 | 播放同样的 HiM 动画：提取时已在设计师的 `.f3d` 上把每个特征的参数从约 0 变到实际值，由 Fusion 重算并逐帧录下，这里按帧播放 |
 | 控制面板 | 参考窗口右侧：播放／暂停／重播／前进／后退，纵向步骤列表，当前步骤展开显示工具和设计师说的话 | 浮在画布上的紧凑面板（可收起为只剩步骤条），画布左上角显示步骤标题和当前这句话 |
 | 额外 | 在参考模型上选中面、边或顶点，只播放做出它的那些步骤（HiM 的过滤方法）；后退时倒放当前步骤 | — |
 
@@ -34,7 +34,7 @@
 教程就是录下来的东西：步骤、每一步说了什么、用了哪些工具、模型怎么变、鼠标轨迹。规范见 [`docs/EXAMPLE_FORMAT.md`](docs/EXAMPLE_FORMAT.md)。
 
 1. **录制**：设计师在 Fusion 里建模，边做边说，同时录屏。
-2. **提取**：在 Fusion 里打开设计师的 `.f3d`，点教程面板底部的 **Extract tutorial draft…**，得到时间轴上每个特征之后的模型。
+2. **提取**：在 Fusion 里打开设计师的 `.f3d`，点教程面板底部的 **Extract tutorial draft…**。它逐个回滚时间轴，记录每个特征之后的模型，并对有参数的特征跑一遍 HiM 动画（参数从约 0 增长到实际值，Fusion 每帧重算），把各帧一起记下。
 3. **转写**：把录音转成带时间的文字稿（`.srt` 等）。
 4. **切分步骤**：用标注工具（见 [`authoring-plan`](https://github.com/Scaffolder666/exCADmpleFusion/tree/authoring-plan)）标出每一步的标题、时间段和对应的特征。
 5. **合成**：`python tools/build_package.py draft.extract.json annotation.json transcript.srt --media session.mp4 --source Design.f3d -o tutorial.excadmple`

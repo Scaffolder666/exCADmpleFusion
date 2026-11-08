@@ -66,9 +66,46 @@ def _validate_step_sources(step):
         raise PackageError("source_features must list timeline features")
 
 
+def _expand_mesh_refs(data):
+    """Steps may refer to meshes by id in a package-level "meshes" library
+    (recorded HiM frames repeat the same bodies). Replace ids with the mesh
+    objects (shared, not copied)."""
+    library = data.get("meshes")
+    if library is None:
+        return data
+    if not isinstance(library, dict):
+        raise PackageError("meshes must map ids to meshes")
+    for mesh in library.values():
+        _validate_mesh(mesh)
+
+    def resolve(items):
+        out = []
+        for item in items:
+            if isinstance(item, str):
+                if item not in library:
+                    raise PackageError("Unknown mesh id " + item)
+                out.append(library[item])
+            else:
+                out.append(item)
+        return out
+
+    for step in data.get("steps", []) if isinstance(data.get("steps"), list) else []:
+        if not isinstance(step, dict):
+            continue
+        geometry = step.get("geometry")
+        if isinstance(geometry, dict) and isinstance(geometry.get("meshes"), list):
+            geometry["meshes"] = resolve(geometry["meshes"])
+        animation = step.get("animation")
+        if isinstance(animation, dict) and isinstance(animation.get("states"), list):
+            animation["states"] = [resolve(state) if isinstance(state, list) else state
+                                   for state in animation["states"]]
+    return data
+
+
 def _validate(data):
     if not isinstance(data, dict) or data.get("format") != "excadmple" or data.get("version") not in (1, 2):
         raise PackageError("Expected exCADmple format version 1 or 2")
+    _expand_mesh_refs(data)
     if not isinstance(data.get("title"), str) or not data["title"].strip():
         raise PackageError("Package title is required")
     for field in ("preview", "source_model"):

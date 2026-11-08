@@ -275,8 +275,9 @@ class RestoreJournal:
                 continue
             param, expression = self._originals[key]
             try:
-                if param.expression != expression:
-                    param.expression = expression
+                # Always write the original expression back: it also resets
+                # the value even if only the value was changed.
+                param.expression = expression
                 del self._originals[key]
             except Exception:
                 failures.append(key)

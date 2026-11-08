@@ -1,10 +1,13 @@
-"""Extract an example draft from the designer's .f3d (run inside Fusion).
+"""Extract a tutorial draft from the designer's .f3d (run inside Fusion).
 
 For every timeline item the marker is rolled to just after it and the meshes
-of all visible bodies are recorded, together with the item's parameters and
-the sketches / earlier features it uses. The user's marker position is
-always restored. Output follows docs/EXAMPLE_FORMAT.md (excadmple-extract).
-Nothing here interprets the designer's intent.
+of all visible bodies are recorded. For features with parameters, the
+History in Motion animation is recorded as well: the parameters grow from
+~0 to their value (extrude distance, revolve angle, fillet radius, pattern
+spacing...) and Fusion recomputes the model at each frame. These frames let
+version B and the Blender player show the same animation as HiM without
+the source model. Every parameter is restored; the marker too.
+Output follows docs/EXAMPLE_FORMAT.md (excadmple-extract).
 """
 import hashlib
 import json
@@ -13,9 +16,11 @@ import time
 import adsk.core
 import adsk.fusion
 
-from .him_fusion import FusionTimelineModel, all_feature_parameters, _items
+from .him_fusion import FusionTimelineModel, all_feature_parameters, _items, _model_parameters
+from .him_motion import PARAMETRIC, RestoreJournal, animation_mode, interpolate
 
 DIGITS = 4
+FRAMES_PER_FEATURE = 8      # HiM parameter-animation frames recorded per feature
 
 
 def _visible_bodies(design):
@@ -49,6 +54,48 @@ def _mesh_id(mesh):
     return hashlib.sha1(json.dumps(mesh, separators=(",", ":")).encode("utf-8")).hexdigest()[:16]
 
 
+def _capture(design, meshes):
+    """Mesh ids of every visible body, adding new meshes to the library."""
+    state = []
+    for body in _visible_bodies(design):
+        mesh = body_mesh(body)
+        key = _mesh_id(mesh)
+        meshes.setdefault(key, mesh)
+        state.append(key)
+    return state
+
+
+def _parameter_frames(design, entity, info, meshes, count=FRAMES_PER_FEATURE):
+    """HiM animation of one feature: its parameters from ~0 towards their
+    value, recomputed by Fusion, captured as model states (the final state
+    is recorded separately). Empty for features without parameters."""
+    if animation_mode(info.kind) != PARAMETRIC:
+        return []
+    params = _model_parameters(design, entity, info.kind)
+    if not params:
+        return []
+    journal = RestoreJournal()
+    targets = []
+    for param in params:
+        journal.capture(param.name, param)
+        targets.append((param, param.value))
+    frames = []
+    try:
+        for k in range(count):
+            t = k / count                     # 0, 1/8, ... 7/8; 1.0 is the final state
+            try:
+                for param, target in targets:
+                    param.value = interpolate(target, t)
+            except Exception:
+                continue                      # Fusion rejected this value; skip the frame
+            state = _capture(design, meshes)
+            if not frames or frames[-1] != state:
+                frames.append(state)
+    finally:
+        journal.restore()
+    return frames
+
+
 def extract(design, source_name="", progress=None):
     """Return the excadmple-extract dict for a parametric design."""
     model = FusionTimelineModel(design)
@@ -67,12 +114,8 @@ def extract(design, source_name="", progress=None):
                         if ref.feature.index not in bucket:
                             bucket.append(ref.feature.index)
             model.go(info.index + 1)                             # marker after the item
-            state = []
-            for body in _visible_bodies(design):
-                mesh = body_mesh(body)
-                key = _mesh_id(mesh)
-                meshes.setdefault(key, mesh)
-                state.append(key)
+            frames = _parameter_frames(design, entity, info, meshes) if entity is not None else []
+            state = _capture(design, meshes)
             parameters = []
             for param in all_feature_parameters(design, entity) if entity is not None else []:
                 parameters.append({"name": param.name, "expression": param.expression,
@@ -83,7 +126,7 @@ def extract(design, source_name="", progress=None):
                 suppressed = False
             features.append({"index": info.index, "name": info.name, "kind": info.kind,
                              "suppressed": suppressed, "parameters": parameters,
-                             "inputs": inputs, "state": state})
+                             "inputs": inputs, "frames": frames, "state": state})
     finally:
         model.restore()
     return {

@@ -91,7 +91,10 @@ def _resolve(features, refs, step_id):
 
 
 def _state(extract, ids):
-    return [extract["meshes"][i] for i in ids]
+    """A model state as mesh ids into the package's mesh library."""
+    for i in ids:
+        _require(i in extract["meshes"], "Unknown mesh id " + str(i))
+    return list(ids)
 
 
 def _tools(features):
@@ -122,11 +125,14 @@ def build_manifest(extract, annotation, segments, offset_cm=None, source_model=N
         _require(rec["start_ms"] >= last_end, "Step %s starts before the previous step ends" % item["id"])
         earlier = [f for f in features if f["index"] < feats[0]["index"]]
         before = _state(extract, earlier[-1].get("state", [])) if earlier else []
+        # HiM animation recorded at extraction: for each feature, the frames
+        # of its parameters growing, then its final state.
         states = [before]
         for feature in feats:
-            state = _state(extract, feature.get("state", []))
-            if state != states[-1]:
-                states.append(state)
+            for ids in list(feature.get("frames", [])) + [feature.get("state", [])]:
+                state = _state(extract, ids)
+                if state != states[-1]:
+                    states.append(state)
         if len(states) == 1:
             states.append(states[0])        # e.g. a sketch-only step
         step = {
@@ -148,21 +154,24 @@ def build_manifest(extract, annotation, segments, offset_cm=None, source_model=N
             step["pointer"] = item["pointer"]
         steps.append(step)
         last_index, last_end = feats[-1]["index"], rec["end_ms"]
+    used = sorted({i for step in steps for state in step["animation"]["states"] for i in state})
+    library = {i: extract["meshes"][i] for i in used}
     if offset_cm is None:
-        xs = [v[0] for m in steps[-1]["geometry"]["meshes"] for v in m["vertices"]]
+        xs = [v[0] for i in steps[-1]["geometry"]["meshes"] for v in library[i]["vertices"]]
         offset_cm = [round(14 - min(xs), 3) if xs else 14, 0, 0]
     manifest = {
         "format": "excadmple", "version": 2,
         "id": annotation["id"], "title": annotation["title"],
         "description": annotation.get("description", ""),
         "reference_offset_cm": offset_cm,
+        "meshes": library,          # each distinct mesh once; steps refer to ids
         "steps": steps,
     }
     if source_model:
         # Version A plays the tutorial on a copy of this model (HiM style).
         manifest["source_model"] = str(PurePosixPath("source") / Path(source_model).name)
     try:
-        validate_package(manifest)
+        validate_package(json.loads(json.dumps(manifest)))
     except PackageError as error:
         raise AuthoringError("Assembled package is invalid: " + str(error)) from error
     return manifest

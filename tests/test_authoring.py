@@ -9,7 +9,7 @@ from pathlib import Path
 from core import transcript
 from core.authoring import build_manifest, write_package, AuthoringError
 from core.animation import animation_meshes
-from core.packages import open_package
+from core.packages import open_package, _validate
 
 
 def tri(z):
@@ -66,8 +66,12 @@ class AuthoringTests(unittest.TestCase):
         self.assertEqual(set(base) - {"geometry", "animation"},
                          {"id", "title", "duration_ms", "tools", "source_features", "cues", "media"})
         # before (empty) -> after extrude -> after fillet; the sketch adds no state
-        self.assertEqual(base["animation"]["states"], [[], [tri(0)], [tri(0.1)]])
-        self.assertEqual(animation_meshes(base["animation"], 1.0), base["geometry"]["meshes"])
+        self.assertEqual(base["animation"]["states"], [[], ["base"], ["base_round"]])
+        self.assertEqual(base["geometry"]["meshes"], ["base_round"])
+        self.assertEqual(sorted(m["meshes"]), ["base", "base_round", "lip"])
+        expanded = _validate(json.loads(json.dumps(m)))           # ids -> meshes on load
+        step = expanded["steps"][0]
+        self.assertEqual(animation_meshes(step["animation"], 1.0), [tri(0.1)])
         self.assertEqual(base["cues"], [{"at_ms": 1000, "label": "I start with a wide base."}])
         self.assertEqual(lip["cues"][0]["at_ms"], 1500)
         self.assertEqual(lip["media"], {"audio": "media/session.wav", "offset_ms": 20000})
@@ -136,3 +140,13 @@ class SourceModelTests(unittest.TestCase):
                 self.assertEqual(package.source_path, out.resolve())
             finally:
                 package.close()
+
+
+class HiMFramesTests(unittest.TestCase):
+    def test_recorded_parameter_frames_play_before_each_final_state(self):
+        extract = copy.deepcopy(EXTRACT)
+        extract["meshes"].update({"r1": tri(0.03), "r2": tri(0.06)})
+        extract["features"][2]["frames"] = [["base"], ["r1"], ["r2"]]     # fillet radius growing
+        m = build_manifest(extract, ANNOTATION, [])
+        self.assertEqual(m["steps"][0]["animation"]["states"],
+                         [[], ["base"], ["r1"], ["r2"], ["base_round"]])
