@@ -248,3 +248,8 @@ python -m unittest discover -s tests -v
 - 历史顶部提供返回/暂停/播放控制；底部有动画速度调节和向下导航。
 - exCADmple 在保留 HiM 历史回放交互的同时，额外展示每一步的设计理由、操作参数、字幕和可复用的 CAD 示例；模型在 Fusion 原生视口内展示，不要伪造一个替代视口。
 - 该截图是**视觉与交互参考**，不是所有论文动画能力已经实现的证明。
+
+
+### 分支对齐进度（2026-11-07）
+
+已直接核对 `blender/blender/excadmple_blender/demo.json`：该示例有九步，Fusion-HiM 目前仅移植了三步。已在 Fusion-HiM 播放器加入 0.25× / 0.5× / 1× / 1.5× / 2× 速度控制，作用于非媒体播放时钟、媒体播放速率及合成旁白速率；在 Fusion WebView 中的实际效果仍需桌面测试。接下来须移植 Blender 的剩余六步数据和视口内 Ghost Pointer，并逐项检查 Fillet、Boolean 等操作的几何保真度。
