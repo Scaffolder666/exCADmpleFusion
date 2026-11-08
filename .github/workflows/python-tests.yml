@@ -2,6 +2,9 @@ name: Python package tests
 on:
   push:
   pull_request:
+concurrency:
+  group: python-tests-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   unittest:
     runs-on: ubuntu-latest
