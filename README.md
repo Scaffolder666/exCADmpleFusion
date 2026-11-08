@@ -253,3 +253,8 @@ python -m unittest discover -s tests -v
 ### 分支对齐进度（2026-11-07）
 
 已直接核对 `blender/blender/excadmple_blender/demo.json`：该示例有九步，Fusion-HiM 目前仅移植了三步。已在 Fusion-HiM 播放器加入 0.25× / 0.5× / 1× / 1.5× / 2× 速度控制，作用于非媒体播放时钟、媒体播放速率及合成旁白速率；在 Fusion WebView 中的实际效果仍需桌面测试。接下来须移植 Blender 的剩余六步数据和视口内 Ghost Pointer，并逐项检查 Fillet、Boolean 等操作的几何保真度。
+
+
+### 补充操作预览（2026-11-08）
+
+`core/animation.py` 和 `core/renderer.py` 新增 Rectangular Pattern（有上限的二维实例阵列），以及 Fillet / Chamfer / Boolean / Split / Combine / Loft / Shell / Thread / Import / Export 的**显式 before/after 网格预览协议**。若网格顶点和三角拓扑相同，按进度插值；拓扑不同则在中点切换状态，**不提供真实 Feature 参数动画或 BRep Boolean 重算**。案例包必须提供合法的 `before_meshes` 和 `after_meshes`。新增 `tests/test_transition_previews.py`，尚待 GitHub CI 验证。九步骤 Fusion 案例和 Ghost Pointer 仍未移植完毕。
