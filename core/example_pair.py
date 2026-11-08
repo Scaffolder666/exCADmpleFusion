@@ -46,6 +46,37 @@ def hypothetical_transcript(name, kind):
     message = HYPOTHESES.get(kind, "The purpose of this modeling operation is not known.")
     return "SIMULATED DESIGN EXPLANATION (not the original designer's words). " + name + ": " + message
 
+def feature_parameters_by_index(model):
+    """Read real Fusion ModelParameter expressions once, if available.
+
+    No guessed dimensions and no temporary parameter modifications. A
+    parameter is included only when Fusion identifies its creating Feature.
+    """
+    if model is None:
+        return {}
+    try:
+        collection = model.design.allParameters
+        count = min(int(collection.count), 10000)
+    except Exception:
+        return {}
+    grouped = {}
+    for i in range(count):
+        try:
+            parameter = collection.item(i)
+            source = parameter.createdBy
+            index = source.timelineObject.index
+            name = str(parameter.name)
+            expression = str(parameter.expression)
+            if not name or not expression:
+                continue
+            grouped.setdefault(index, []).append({
+                "name": name, "expression": expression,
+            })
+        except Exception:
+            continue
+    return grouped
+
+
 def _local_filename(raw, label):
     if not isinstance(raw, str) or not raw or raw in (".", ".."):
         raise PackageError(label + " must be a filename in the JSON folder")
@@ -117,7 +148,7 @@ class LocalPairPackage(ExamplePackage):
     def source_model_path(self):
         return self.model_path
 
-    def populate_from_features(self, features):
+    def populate_from_features(self, features, model=None):
         """Build player steps from the imported, real .f3d Feature Timeline."""
         features = sorted(features, key=lambda f: f.index)
         if not features:
@@ -128,6 +159,7 @@ class LocalPairPackage(ExamplePackage):
         duration = self.raw.get("step_duration_ms", 8000)
         if isinstance(duration, bool) or not isinstance(duration, int) or not 500 <= duration <= 60000:
             raise PackageError("step_duration_ms must be an integer from 500 to 60000")
+        parameters = feature_parameters_by_index(model)
         by_index = {f.index: f for f in features}
         by_name = {}
         for feature in features:
@@ -195,10 +227,15 @@ class LocalPairPackage(ExamplePackage):
                     media["offset_ms"] = int(item.get("audio_offset_ms", 0))
                 else:
                     raise PackageError("Audio file not found: " + filename)
+            recorded_parameters = [
+                dict({"feature_index": f.index}, **param)
+                for f in matched for param in parameters.get(f.index, [])[:8]
+            ]
             constructed.append({
                 "id": step_id, "title": title, "duration_ms": step_duration,
                 "source_features": [{"index": f.index, "name": f.name, "kind": f.kind} for f in matched],
                 "tools": [KIND_LABELS.get(f.kind, f.kind.replace("Feature", "")) for f in matched],
+                "parameters": recorded_parameters,
                 "geometry": {"meshes": []}, "cues": clean_cues, "media": media,
             })
             persisted.append({
@@ -206,6 +243,7 @@ class LocalPairPackage(ExamplePackage):
                 "features": [{"index": f.index, "name": f.name, "kind": f.kind} for f in matched],
                 "duration_ms": step_duration,
                 "transcript": narration if isinstance(narration, str) else "",
+                "parameters": recorded_parameters,
                 "reasoning_source": item.get("reasoning_source", "user"),
             })
             # A generated file should have ONE editable transcript field.
