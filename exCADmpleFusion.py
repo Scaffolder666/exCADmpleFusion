@@ -145,7 +145,10 @@ def _set_step(index):
     step = _package.step(index)
     if ROLE == REFERENCE:
         if _session and _session.live:
-            _session.show_result(index)          # the designer's model after this step
+            # Merely selecting/loading a step is not an animation command.
+            # Show the COMPLETE shaded model until Play requests the first
+            # native Feature frame. The user can inspect the overall design.
+            _session.show_overview()
         else:
             _renderer.render(step, [0, 0, 0], _previous_geometry(index))    # recorded geometry only
         # A step selection shows the geometry; the command label appears only
@@ -328,13 +331,21 @@ class PaletteHandler(adsk.core.HTMLEventHandler):
                         _renderer.render_animation(step, [0, 0, 0], value, _previous_geometry(index))
                     # Show exactly the operation being animated; tutorial tool
                     # lists have no individual activation timestamps.
-                    if value < 1.0 and ((shown and shown.get("mode") in ("parameter", "visual", "timeline"))
+                    if value < 1.0 and ((shown and shown.get("mode") in ("parameter", "visual", "instant", "timeline"))
                                         or (not (_session and _session.live) and step.get("animation"))):
                         _renderer.render_command(step, (shown or {}).get("kind"))
                     else:
                         _renderer.clear_command()
                     # The precise target arrow replaces the unrecorded ghost
                     # mouse path in reference playback.
+            elif command == "ref_overview":
+                # A filtered / partial tutorial still ends with a full
+                # model, even when its last example step is not the final
+                # source Timeline feature.
+                if _session and _session.live:
+                    _session.show_overview()
+                _renderer.clear_command()
+                _renderer.clear_pointer()
             elif command == "show_more":
                 if _session:
                     _filtering = True
