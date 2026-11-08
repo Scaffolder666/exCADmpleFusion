@@ -57,7 +57,10 @@ class AnimationTests(unittest.TestCase):
         pkg = open_package(source)
         meta = pkg.player_data()["steps"]
         self.assertTrue(meta[0]["animation_available"])
-        self.assertFalse(meta[1]["animation_available"])
+        self.assertTrue(meta[1]["animation_available"])
+        self.assertTrue(meta[2]["animation_available"])
+        self.assertEqual(pkg.step(1)["animation"]["type"], "revolve")
+        self.assertEqual(pkg.step(3)["animation"]["type"], "fillet")
         self.assertNotIn("animation", meta[0])
         self.assertEqual(pkg.step(0)["animation"]["type"], "extrude")
         pkg.close()

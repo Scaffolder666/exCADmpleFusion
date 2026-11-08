@@ -25,6 +25,11 @@
         <span aria-hidden="true">·</span>
         <span>Explore, borrow, or adapt</span>
       </div>
+      <div class="example-switch">
+        <label for="exampleSwitch">Open examples</label>
+        <select id="exampleSwitch" aria-label="Switch between open design examples"></select>
+        <button id="closeExample" type="button" class="text-button" title="Close this example">Close</button>
+      </div>
     </section>
 
     <div class="lesson-scroll">
@@ -44,6 +49,51 @@
       </div>
       <blockquote id="reasoning">Reasoning associated with the selected step appears here.</blockquote>
       <p class="source-explainer" id="sourceExplainer"></p>
+      <div class="cue">
+        <div class="cue-track" aria-hidden="true"><span></span></div>
+        <p id="cueText">Select a step to see its recorded operations.</p>
+      </div>
+      <div class="playback-accessibility">
+        <label><input id="captionsEnabled" type="checkbox" checked> Captions</label>
+        <label><input id="narrationEnabled" type="checkbox"> Synthetic cue narration</label>
+      </div>
+
+      <section id="decisionBox" class="decision-box" hidden aria-label="The design decision in this step">
+        <div class="section-heading detail-heading">
+          <span>The decision</span>
+          <span id="decisionTopic" class="source-tag"></span>
+        </div>
+        <p id="decisionQuestion" class="decision-question"></p>
+        <div class="decision-label">Considered</div>
+        <ul id="decisionCriteria" class="criteria"></ul>
+        <div class="decision-label">Options</div>
+        <ol id="decisionOptions" class="decision-options"></ol>
+        <button id="compareDecision" class="geometry-btn primary" type="button">Compare with my design &amp; other examples →</button>
+      </section>
+
+      <div class="section-heading detail-heading">How it was modeled</div>
+      <div class="operation-box">
+        <div class="tool-row"><span id="toolName" class="tool-tag">—</span><span id="toolInstruction"></span></div>
+        <div id="parameters" class="parameters"></div>
+      </div>
+
+      <div class="demonstration" id="demonstration">
+        <video id="video" playsinline preload="metadata" hidden></video>
+        <figure id="finalPreview" class="final-preview" hidden>
+          <img id="previewImage" alt="Preview of final shared CAD model">
+          <figcaption>FINAL MODEL ONLY — not this step's geometry</figcaption>
+        </figure>
+        <div id="noVideo" class="no-video">
+          <div class="viewport-glyph" aria-hidden="true">◇</div>
+          <strong>Reference in Fusion</strong>
+          <span>Inspect the step geometry directly in the CAD canvas.</span>
+        </div>
+      </div>
+      <audio id="audio" preload="metadata"></audio>
+      <div class="evidence-heading">
+        <span>Process evidence</span>
+        <span id="mediaEvidence" class="evidence-tag">Step metadata</span>
+      </div>
 
       <details class="geometry-link" id="geometryLink">
         <summary class="geometry-link__summary">
@@ -65,36 +115,6 @@
           <small>Focus restores original display opacity on step changes, save and exit. Avoid using other appearance-changing add-ins simultaneously.</small>
         </div>
       </details>
-
-      <div class="demonstration" id="demonstration">
-        <video id="video" playsinline preload="metadata" hidden></video>
-        <figure id="finalPreview" class="final-preview" hidden>
-          <img id="previewImage" alt="Preview of final shared CAD model">
-          <figcaption>FINAL MODEL ONLY — not this step's geometry</figcaption>
-        </figure>
-        <div id="noVideo" class="no-video">
-          <div class="viewport-glyph" aria-hidden="true">◇</div>
-          <strong>Reference in Fusion</strong>
-          <span>Inspect the step geometry directly in the CAD canvas.</span>
-        </div>
-      </div>
-      <audio id="audio" preload="metadata"></audio>
-
-      <div class="evidence-heading">
-        <span>Process evidence</span>
-        <span id="mediaEvidence" class="evidence-tag">Step metadata</span>
-      </div>
-      <div class="cue">
-        <div class="cue-track" aria-hidden="true"><span></span></div>
-        <p id="cueText">Select a step to see its recorded operations.</p>
-      </div>
-
-      <div class="section-heading detail-heading">How it was modeled</div>
-      <div class="operation-box">
-        <div class="tool-row"><span id="toolName" class="tool-tag">—</span><span id="toolInstruction"></span></div>
-        <div id="parameters" class="parameters"></div>
-      </div>
-
     </section>
 
     <footer>
@@ -107,6 +127,7 @@
       <div class="status" id="status" role="status" aria-live="polite"></div>
     </footer>
     </div>
+
     <section class="timeline-panel" aria-label="Design example steps">
       <div class="section-heading">
         <span>Explore the steps</span>
@@ -121,6 +142,13 @@
           <span class="clock" id="clock">00:00 / 00:00</span>
         </div>
         <input id="scrub" class="seek" type="range" min="0" max="1000" value="0" aria-label="Scrub within current step">
+      </div>
+      <div class="playback-options">
+        <label for="playbackScope">Play</label>
+        <select id="playbackScope"><option value="all" selected>Whole process</option><option value="step">This step only</option></select>
+        <button id="replay" class="text-button" type="button">Replay</button>
+        <label for="playbackSpeed">Speed</label>
+        <select id="playbackSpeed" aria-label="Playback speed"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="1.5">1.5×</option><option value="2">2×</option></select>
       </div>
     </section>
 

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Reasoning Reuse</title>
+  <link rel="stylesheet" href="him.css">
+</head>
+<body>
+  <main class="him">
+    <header class="him-head">
+      <div>
+        <strong>Reasoning Reuse</strong>
+        <small id="selection">Select a face, edge or vertex of <em>your</em> model.</small>
+      </div>
+      <button id="importExample" class="quiet" type="button" title="Open another design example">+ Example</button>
+    </header>
+
+    <nav class="tabs" role="tablist">
+      <button role="tab" id="tab-mine" aria-selected="true" data-panel="mine">From my model</button>
+      <button role="tab" id="tab-topics" aria-selected="false" data-panel="topics">Across examples</button>
+    </nav>
+
+    <p id="status" class="status" role="status" aria-live="polite">Waiting for a selection in your model.</p>
+
+    <section id="panel-mine" class="panel" role="tabpanel" aria-labelledby="tab-mine">
+      <p class="hint">HiM finds the features that made your selected geometry. For each one, exCADmple shows decisions other designers made with similar features — their question, the options they weighed and why they chose.</p>
+      <div id="mine"></div>
+
+      <details id="inspect" class="inspect">
+        <summary>History in Motion · inspect my features</summary>
+        <label class="toggle"><input id="inspectMode" type="checkbox"> Animate my own model's features (temporarily changes and restores parameters)</label>
+        <div class="transport" role="group" aria-label="Animation controls">
+          <button id="back" title="Step backward (reverses playback)" aria-label="Step backward">&#9198;</button>
+          <button id="playPause" title="Play / pause" aria-label="Play">&#9654;</button>
+          <button id="replay" title="Replay from the newest feature" aria-label="Replay">&#8635;</button>
+          <button id="forward" title="Step forward" aria-label="Step forward">&#9197;</button>
+        </div>
+        <ol id="features" class="rail" aria-label="Your modeling features, newest first"></ol>
+        <div id="bases" class="bases"></div>
+        <button id="showMore" class="show-more" hidden>Show more: how the sketch face was made</button>
+        <label for="speed">Seconds per feature <output id="speedValue">4</output> s</label>
+        <input id="speed" type="range" min="2" max="10" step="1" value="4">
+        <div class="options">
+          <label><input id="dim" type="checkbox" checked> Make other bodies transparent</label>
+          <label><input id="auto" type="checkbox" checked> Animate on selection</label>
+        </div>
+        <small class="note">Inspect mode changes your feature parameters during the animation and restores their original expressions afterwards (also before saving). Fusion may record undo steps.</small>
+      </details>
+    </section>
+
+    <section id="panel-topics" class="panel" role="tabpanel" aria-labelledby="tab-topics" hidden>
+      <p class="hint">The same design question, answered by different examples. Differences show the design space, not a right answer.</p>
+      <div id="topics"></div>
+    </section>
+
+  </main>
+  <script src="him.js"></script>
+</body>
+</html>

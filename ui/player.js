@@ -2,8 +2,25 @@
 "use strict";
 
 const $ = (id) => document.getElementById(id);
-const state = { example: null, index: 0, elapsed: 0, playing: false, startedAt: 0, raf: 0, cueIndex: -1, links: {}, lastAnimationFrame: -Infinity, animationInFlight: false };
+const state = { example: null, index: 0, elapsed: 0, playing: false, startedAt: 0, raf: 0, cueIndex: -1, links: {}, lastAnimationFrame: -Infinity, animationInFlight: false, filteredIndices: null };
 const video = $("video"), audio = $("audio");
+let spokenCue = -1;
+function stopNarration() {
+  spokenCue = -1;
+  if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+}
+function speakCue(index) {
+  if (!$("narrationEnabled").checked || audio.getAttribute("src") || video.getAttribute("src")) return;
+  if (!("speechSynthesis" in window) || index < 0 || index === spokenCue) return;
+  spokenCue = index;
+  window.speechSynthesis.cancel();
+  const text = step()?.cues?.[index]?.label;
+  if (!text) return;
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = "en-US";
+  utterance.rate = Math.max(0.5, Math.min(2, playbackSpeed()));
+  window.speechSynthesis.speak(utterance);
+}
 
 function bridge(action, payload = {}) {
   if (!window.adsk || typeof window.adsk.fusionSendData !== "function") {
@@ -28,6 +45,7 @@ function secs(ms) {
 }
 function step() { return state.example?.steps[state.index] || null; }
 function duration() { return step()?.duration_ms || 8000; }
+function playbackSpeed() { return Number($("playbackSpeed").value) || 1; }
 function stopMedia() {
   video.pause(); audio.pause();
   video.removeAttribute("src"); audio.removeAttribute("src");
@@ -44,6 +62,7 @@ function playMedia() {
     if (element.getAttribute("src")) {
       try {
         element.currentTime = state.elapsed / 1000;
+        element.playbackRate = playbackSpeed();
         const promise = element.play();
         if (promise && promise.catch) promise.catch(() => setStatus("Media playback unavailable; the timeline still works.", true));
       } catch (_) { /* Metadata may not have loaded yet. */ }
@@ -55,9 +74,11 @@ function renderRail() {
   rail.replaceChildren();
   if (!state.example) return;
   state.example.steps.forEach((item, i) => {
+    if (state.filteredIndices && !state.filteredIndices.includes(i)) return;
     const button = document.createElement("button");
     button.type = "button";
-    button.className = "step-card" + (i === state.index ? " active" : "");
+    button.dataset.stepIndex = String(i);
+    button.className = "step-card" + (i === state.index ? " active" : "") + (i < state.index ? " visited" : "");
     button.setAttribute("aria-current", i === state.index ? "step" : "false");
     button.setAttribute("aria-label", "Step " + (i + 1) + ": " + item.title);
     button.title = "Step " + (i + 1) + ": " + item.title;
@@ -70,20 +91,26 @@ function renderRail() {
     label.className = "label";
     label.textContent = item.title;
     labels.appendChild(label);
-    if (item.goal) {
+    if (item.operation?.tool || item.goal) {
       const sub = document.createElement("span");
       sub.className = "step-goal";
-      sub.textContent = item.goal;
+      const values = (item.operation?.parameters || []).slice(0, 2)
+        .map((p) => p.name + ": " + p.value).join(" · ");
+      sub.textContent = [item.operation?.tool, values].filter(Boolean).join(" · ") || item.goal;
       labels.appendChild(sub);
     }
     const indicator = document.createElement("span");
     indicator.className = "step-indicator";
-    indicator.textContent = i === state.index ? "VIEWING" : "›";
+    indicator.textContent = i === state.index ? "VIEWING" : i < state.index ? "✓" : "›";
+    const timing = document.createElement("span");
+    timing.className = "step-duration";
+    timing.textContent = secs(item.duration_ms || 8000);
+    labels.appendChild(timing);
     button.append(num, labels, indicator);
     button.addEventListener("click", () => selectStep(i));
     rail.appendChild(button);
   });
-  const active = rail.children[state.index];
+  const active = [...rail.children].find(node => Number(node.dataset.stepIndex) === state.index);
   if (active) {
     // Scroll only the horizontal rail, never the lesson or whole palette.
     const left = active.offsetLeft - rail.offsetLeft;
@@ -132,6 +159,45 @@ function renderGeometryLink() {
      (state.example?.preview_data_uri ? "Final preview only" : "No step geometry")));
   $("geometryStatus").classList.toggle("none", !current.has_geometry && !link?.available && !current.animation_available);
 }
+function renderDecision(current) {
+  const decision = current.decision;
+  $("decisionBox").hidden = !decision;
+  if (!decision) return;
+  $("decisionTopic").textContent = decision.topic.replace(/_/g, " ");
+  $("decisionQuestion").textContent = decision.question;
+  const criteria = $("decisionCriteria");
+  criteria.replaceChildren();
+  for (const text of decision.criteria || []) {
+    const li = document.createElement("li");
+    li.textContent = text;
+    criteria.appendChild(li);
+  }
+  const options = $("decisionOptions");
+  options.replaceChildren();
+  for (const option of decision.options || []) {
+    const li = document.createElement("li");
+    li.className = option.chosen ? "chosen" : "";
+    li.textContent = (option.chosen ? "✓ " : "") + option.label + (option.value ? " · " + option.value : "");
+    if (option.note) {
+      const note = document.createElement("small");
+      note.textContent = option.note;
+      li.appendChild(note);
+    }
+    options.appendChild(li);
+  }
+}
+function renderLibrary(examples) {
+  const select = $("exampleSwitch");
+  select.replaceChildren();
+  for (const item of examples) {
+    const option = document.createElement("option");
+    option.value = item.id;
+    option.textContent = item.title + " · step " + (item.step_index + 1) + "/" + item.steps;
+    option.selected = !!item.active;
+    select.appendChild(option);
+  }
+  $("closeExample").disabled = examples.length <= 1;
+}
 function renderDetails() {
   const current = step();
   if (!current) return;
@@ -147,6 +213,7 @@ function renderDetails() {
   $("reasonSource").textContent = rationale.label;
   $("reasonSource").classList.toggle("mock", rationale.mock);
   $("sourceExplainer").textContent = rationale.explainer;
+  renderDecision(current);
   const hasStepGeometry = !!current.has_geometry;
   renderGeometryLink();
   $("showReference").disabled = !hasStepGeometry;
@@ -175,12 +242,12 @@ function renderDetails() {
   else $("previewImage").removeAttribute("src");
   $("noVideo").hidden = !!media.video || !!preview;
   $("mediaEvidence").textContent = [
-    current.animation_available && "3D Extrude animation",
+    current.animation_available && "3D operation animation",
     media.video && "Video", media.audio && "Audio"
   ].filter(Boolean).join(" + ") || "Step metadata";
   if (!media.video && !preview) {
     $("noVideo").querySelector("strong").textContent = current.animation_available ?
-      "3D Extrude animation in Fusion" : hasStepGeometry ?
+      "3D operation animation in Fusion" : hasStepGeometry ?
       "3D reference in Fusion" : "No recorded visuals for this step";
     $("noVideo").querySelector("span").textContent = current.animation_available ?
       "Press Play or scrub to animate the reference geometry." : hasStepGeometry ?
@@ -196,17 +263,20 @@ function renderTime() {
   const total = duration();
   $("clock").textContent = secs(state.elapsed) + " / " + secs(total);
   $("scrub").value = String(Math.floor(1000 * state.elapsed / total));
+  $("scrub").setAttribute("aria-valuetext", secs(state.elapsed) + " of " + secs(total));
   const cues = step()?.cues || [];
   let active = -1;
   cues.forEach((cue, i) => { if (cue.at_ms <= state.elapsed) active = i; });
+  $("cueText").hidden = !$("captionsEnabled").checked;
   if (active !== state.cueIndex) {
     state.cueIndex = active;
+    if (state.playing) speakCue(active);
     $("cueText").textContent = active >= 0 ? cues[active].label : (step()?.operation?.instruction || "Inspect the author's actions.");
   }
 }
 function sendAnimationFrame(force = false) {
   const current = step();
-  if (!current?.animation_available) return;
+  if (!current?.animation_available && !current?.pointer_available) return;
   const now = performance.now();
   if (state.animationInFlight || (!force && now - state.lastAnimationFrame < 145)) return;
   state.lastAnimationFrame = now;
@@ -216,6 +286,7 @@ function sendAnimationFrame(force = false) {
     .finally(() => { state.animationInFlight = false; });
 }
 function pause() {
+  stopNarration();
   state.playing = false;
   cancelAnimationFrame(state.raf);
   video.pause(); audio.pause();
@@ -235,7 +306,7 @@ function selectStep(index, keepPlaying = false) {
 }
 function seek(ms) {
   state.elapsed = Math.max(0, Math.min(duration(), ms));
-  state.startedAt = performance.now() - state.elapsed;
+  state.startedAt = performance.now() - state.elapsed / playbackSpeed();
   for (const element of [video, audio]) {
     if (element.getAttribute("src")) {
       try { element.currentTime = state.elapsed / 1000; } catch (_) {}
@@ -248,10 +319,12 @@ function play() {
   if (!step()) return;
   if (state.elapsed >= duration()) seek(0);
   state.playing = true;
-  state.startedAt = performance.now() - state.elapsed;
+  state.startedAt = performance.now() - state.elapsed / playbackSpeed();
   $("play").innerHTML = "Ⅱ <span>Pause</span>";
   $("play").setAttribute("aria-label", "Pause");
   playMedia();
+  spokenCue = -1;
+  if (state.cueIndex >= 0) speakCue(state.cueIndex);
   sendAnimationFrame(true);
   tick();
 }
@@ -261,14 +334,16 @@ function tick() {
   // monotonic wall clock. Geometry only changes between steps, not at 60 fps.
   const master = mediaMaster();
   const mediaReady = master && master.readyState >= 2 && !master.paused;
-  state.elapsed = mediaReady ? master.currentTime * 1000 : performance.now() - state.startedAt;
+  if (mediaReady && master.playbackRate !== playbackSpeed()) master.playbackRate = playbackSpeed();
+  state.elapsed = mediaReady ? master.currentTime * 1000 : (performance.now() - state.startedAt) * playbackSpeed();
+  state.elapsed = Math.max(0, state.elapsed);
   if (state.elapsed >= duration() - 30) {
-    if (state.index < state.example.steps.length - 1) selectStep(state.index + 1, true);
+    if ($("playbackScope").value === "all" && state.index < state.example.steps.length - 1) selectStep(state.index + 1, true);
     else {
       state.elapsed = duration();
       renderTime();
       pause();
-      if (step()?.animation_available)
+      if (step()?.animation_available || step()?.pointer_available)
         bridge("animation_end", {step_id: step().id});
     }
     return;
@@ -285,6 +360,7 @@ function loadExample(data) {
   pause();
   state.example = data;
   state.links = {};
+  state.filteredIndices = null;
   state.index = 0;
   state.elapsed = 0;
   state.cueIndex = -1;
@@ -307,8 +383,17 @@ window.fusionJavaScriptHandler = {
       else if (action === "links") {
         state.links = payload.by_step || {};
         renderGeometryLink();
+      } else if (action === "history_filter") {
+        state.filteredIndices = payload.indices || [];
+        renderRail();
+        if (state.filteredIndices.length) selectStep(state.filteredIndices[0]);
+      } else if (action === "geometry_selection") {
+        /* handled by the Reasoning Reuse panel */
+      } else if (action === "library") {
+        renderLibrary(payload.examples || []);
       } else if (action === "step") {
-        if (payload.index !== state.index && state.example) selectStep(payload.index);
+        if (payload.play && state.example) selectStep(payload.index, true);
+        else if (payload.index !== state.index && state.example) selectStep(payload.index);
       } else if (action === "status") setStatus(payload.message, payload.error);
       return "OK";
     } catch (error) {
@@ -324,8 +409,38 @@ $("bindGeometry").addEventListener("click", () => bridge("link_selected"));
 $("locateGeometry").addEventListener("click", () => bridge("locate_linked"));
 $("removeGeometry").addEventListener("click", () => bridge("unlink_step"));
 $("import").addEventListener("click", () => { pause(); bridge("open_package"); });
+$("exampleSwitch").addEventListener("change", (event) => { pause(); bridge("switch_example", {id: event.target.value}); });
+$("closeExample").addEventListener("click", () => { pause(); bridge("close_example", {id: $("exampleSwitch").value}); });
+$("compareDecision").addEventListener("click", () => bridge("compare_decision"));
 $("demo").addEventListener("click", () => { pause(); bridge("load_demo"); });
 $("play").addEventListener("click", () => state.playing ? pause() : play());
+$("replay").addEventListener("click", () => { if (step()) { pause(); seek(0); play(); } });
+$("playbackScope").addEventListener("change", () => pause());
+$("playbackSpeed").addEventListener("change", () => {
+  state.startedAt = performance.now() - state.elapsed / playbackSpeed();
+  for (const element of [video, audio]) element.playbackRate = playbackSpeed();
+  if (state.playing && $("narrationEnabled").checked) {
+    stopNarration();
+    if (state.cueIndex >= 0) speakCue(state.cueIndex);
+  }
+});
+$("captionsEnabled").addEventListener("change", () => {
+  $("cueText").hidden = !$("captionsEnabled").checked;
+});
+$("narrationEnabled").addEventListener("change", () => {
+  stopNarration();
+  if (state.playing && state.cueIndex >= 0) speakCue(state.cueIndex);
+});
+// Keyboard navigation is scoped to the history list, so Fusion shortcuts remain untouched.
+$("stepRail").addEventListener("keydown", (event) => {
+  if (!["ArrowDown", "ArrowUp", "ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+  if (!state.example) return;
+  event.preventDefault();
+  const target = event.key === "Home" ? 0 : event.key === "End" ? state.example.steps.length - 1 :
+    Math.max(0, Math.min(state.example.steps.length - 1, state.index + (event.key === "ArrowDown" || event.key === "ArrowRight" ? 1 : -1)));
+  selectStep(target);
+  [...$("stepRail").children].find(node => Number(node.dataset.stepIndex) === target)?.focus();
+});
 $("prev").addEventListener("click", () => selectStep(state.index - 1));
 $("next").addEventListener("click", () => selectStep(state.index + 1));
 $("scrub").addEventListener("input", (e) => seek(duration() * Number(e.target.value) / 1000));

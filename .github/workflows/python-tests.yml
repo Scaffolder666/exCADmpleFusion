@@ -2,6 +2,9 @@ name: Python package tests
 on:
   push:
   pull_request:
+concurrency:
+  group: python-tests-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   unittest:
     runs-on: ubuntu-latest
@@ -13,3 +16,4 @@ jobs:
       - run: python -m compileall -q core exCADmpleFusion.py tests
       - run: python -m unittest discover -s tests -v
       - run: node --check ui/player.js
+      - run: node --check ui/him.js

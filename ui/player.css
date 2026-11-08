@@ -170,3 +170,27 @@ blockquote { background:#f0f6ff; border-left-color:var(--blue); font-size:13px; 
   .intro h1 { font-size:15px; }
   .timeline-panel { padding-top:6px; padding-bottom:6px; }
 }
+
+/* Playback options under the persistent bottom bar. */
+.playback-options { display:flex; align-items:center; gap:8px; margin:6px 0 0; color:var(--muted); font-size:11px; }
+.playback-options select { min-width:0; padding:3px 5px; border:1px solid #c6d1df; border-radius:5px; background:white; color:var(--ink); font:inherit; }
+.playback-accessibility { display:flex; gap:12px; font-size:11px; color:var(--muted); margin:2px 0 8px; }
+
+/* HiM history metadata and completed-step affordances. */
+.step-card.visited:not(.active) { border-left-color:#7da0c9; }
+.step-card.visited:not(.active) .step-indicator { color:#527ca7; }
+.step-duration { display:none; font-size:9px; color:var(--quiet); margin-top:2px; font-variant-numeric:tabular-nums; }
+.step-card:focus-visible { outline:2px solid var(--blue); outline-offset:2px; }
+
+/* Example library and decision panel */
+.example-switch { display:flex; align-items:center; gap:6px; margin-top:8px; font-size:11px; color:var(--muted); }
+.example-switch select { flex:1; min-width:0; border:1px solid #d3d8df; border-radius:5px; padding:3px 5px; font-size:11px; background:white; }
+.decision-box { margin-top:12px; padding:10px 12px; border:1px solid var(--line); border-radius:8px; background:var(--panel); }
+.decision-question { margin:4px 0 8px; font-weight:650; color:var(--ink); }
+.decision-label { font-size:10px; letter-spacing:.4px; text-transform:uppercase; color:var(--quiet); margin-top:6px; }
+.criteria { display:flex; flex-wrap:wrap; gap:4px; list-style:none; margin:4px 0; padding:0; }
+.criteria li { font-size:11px; padding:1px 7px; border-radius:9px; background:white; border:1px solid var(--line); }
+.decision-options { margin:4px 0 10px; padding-left:18px; font-size:12px; }
+.decision-options li { margin:3px 0; }
+.decision-options li.chosen { font-weight:650; color:var(--green); }
+.decision-options small { display:block; font-weight:400; color:var(--muted); }

@@ -1,0 +1,753 @@
+"""Autodesk Fusion side of History in Motion.
+
+* ``FusionTimelineModel`` implements the adapter interface of
+  ``core.him_filter`` on a live parametric Design: it rolls the timeline marker
+  to the states the algorithm asks for and always restores the marker.
+* ``HiMController`` animates the filtered features *in the user's design* by
+  temporarily varying their ModelParameters from ~0 to the actual value
+  (paper Section 6.2), dims other bodies, highlights the input edge/profile,
+  and uses a scale/opacity effect for features without parameters. Every
+  changed parameter expression is journaled and restored.
+
+The paper renders on a copy in a second Fusion instance connected with web
+sockets. Fusion offers no in-process second 3D view, so this add-in animates
+in place and restores; see README "HiM implementation notes".
+"""
+import time
+
+import adsk.core
+import adsk.fusion
+
+from . import him_filter
+from .him_filter import FeatureInfo, InputRef
+from .him_motion import (Playback, RestoreJournal, animation_mode, parameter_paths,
+                         interpolate, short_kind, PARAMETRIC, FADE, NONE)
+from .focus import OpacityFocus, FocusError
+
+GEOMETRY_TYPES = (("face", adsk.fusion.BRepFace), ("edge", adsk.fusion.BRepEdge),
+                  ("vertex", adsk.fusion.BRepVertex))
+INPUT_PROPERTIES = (
+    "profile", "profiles", "axis", "edgeSets", "inputEntities", "inputFaces",
+    "inputCylindricalFace", "mirrorPlane", "splittingTool", "splitBodies",
+    "targetBody", "toolBodies", "sketchPoints", "loftSections", "path",
+    "extentOne.toEntity", "extentTwo.toEntity", "extentDefinition.toEntity",
+    "startExtent.profilePlane", "plane", "neutralPlane",
+)
+MAX_TIMELINE = 600
+HIGHLIGHT = (37, 99, 235, 255)
+
+
+def _get_path(obj, path):
+    """Evaluate 'a.b' / 'edgeSets*.radius' safely; returns a list of values."""
+    values = [obj]
+    for part in path.split("."):
+        each = part.endswith("*")
+        name = part.rstrip("*")
+        next_values = []
+        for value in values:
+            try:
+                attr = getattr(value, name, None)
+            except Exception:
+                attr = None
+            if attr is None:
+                continue
+            if each:
+                next_values.extend(_items(attr))
+            else:
+                next_values.append(attr)
+        values = next_values
+    return values
+
+
+def _items(collection, limit=2000):
+    if collection is None:
+        return []
+    if hasattr(collection, "count") and hasattr(collection, "item"):
+        try:
+            return [collection.item(i) for i in range(min(collection.count, limit))]
+        except Exception:
+            return []
+    if isinstance(collection, (list, tuple)):
+        return list(collection)
+    return [collection]
+
+
+def _token(entity):
+    try:
+        return entity.entityToken or ""
+    except Exception:
+        return ""
+
+
+def _geometry_kind(entity):
+    for kind, cls in GEOMETRY_TYPES:
+        try:
+            if cls.cast(entity):
+                return kind
+        except Exception:
+            pass
+    return None
+
+
+def _round_point(point, digits=5):
+    return (round(point.x, digits), round(point.y, digits), round(point.z, digits))
+
+
+class FusionTimelineModel:
+    """Adapter for core.him_filter on a live Fusion Design."""
+
+    def __init__(self, design):
+        if not design:
+            raise ValueError("Open a Fusion Design first")
+        if design.designType != adsk.fusion.DesignTypes.ParametricDesignType:
+            raise ValueError("History in Motion needs a parametric design with a timeline")
+        self.design = design
+        self.timeline = design.timeline
+        if self.timeline.count > MAX_TIMELINE:
+            raise ValueError("Timeline has more than {} items".format(MAX_TIMELINE))
+        self.objects = {}
+        self._features = []
+        self._flatten(self.timeline)
+        self._end = (max(self.objects) + 1) if self.objects else 0
+        self._state = None
+        self._face_cache = {}
+        self.highlights = {}       # feature index -> list of Curve3D
+        self._original_marker = self.timeline.markerPosition
+        self._was_at_end = self._original_marker >= self.timeline.count
+
+    def _flatten(self, collection):
+        for obj in _items(collection):
+            try:
+                if obj.isGroup:
+                    self._flatten(adsk.fusion.TimelineGroup.cast(obj))
+                    continue
+            except Exception:
+                pass
+            try:
+                entity = obj.entity
+                index = obj.index
+            except Exception:
+                continue
+            if entity is None:
+                continue
+            self.objects[index] = obj
+            kind = short_kind(getattr(entity, "objectType", ""))
+            self._features.append(FeatureInfo(index, getattr(entity, "name", "") or kind,
+                                              kind, _token(entity)))
+        self._features.sort(key=lambda f: f.index)
+
+    # --- timeline state --------------------------------------------------------
+    def go(self, state):
+        if state == self._state:
+            return
+        self._face_cache.clear()
+        if state >= self._end:
+            self.timeline.moveToEnd()
+        elif state in self.objects:
+            self.objects[state].rollTo(True)
+        else:
+            earlier = [i for i in self.objects if i < state]
+            if earlier:
+                self.objects[max(earlier)].rollTo(False)
+            else:
+                self.timeline.markerPosition = 0
+        self._state = state
+
+    def restore(self):
+        """Put the marker back where the user had it."""
+        self._face_cache.clear()
+        self._state = None
+        if self._was_at_end:
+            self.timeline.moveToEnd()
+        else:
+            self.timeline.markerPosition = self._original_marker
+
+    # --- adapter interface ----------------------------------------------------
+    def end_state(self):
+        return self._end
+
+    def features(self):
+        return self._features
+
+    def entity(self, feature):
+        obj = self.objects.get(feature.index)
+        return obj.entity if obj else None
+
+    @staticmethod
+    def _ref(entity):
+        kind = _geometry_kind(entity)
+        token = _token(entity)
+        return (kind, token) if kind and token else None
+
+    def ref_of(self, entity):
+        return FusionTimelineModel._ref(entity)
+
+    def resolve(self, ref, state):
+        if not ref:
+            return None
+        kind, token = ref
+        self.go(state)
+        cls = dict(GEOMETRY_TYPES)[kind]
+        try:
+            for candidate in self.design.findEntityByToken(token) or []:
+                if cls.cast(candidate):
+                    return candidate
+        except Exception:
+            return None
+        return None
+
+    def face_key(self, ref, state):
+        return ref
+
+    def extract_faces(self, ref, state):
+        entity = self.resolve(ref, state)
+        if entity is None:
+            return []
+        faces = []
+        if ref[0] == "face":
+            faces = [entity]
+        elif ref[0] == "edge":
+            faces = _items(entity.faces)
+        else:
+            for edge in _items(entity.edges):
+                faces.extend(_items(edge.faces))
+        refs = []
+        for face in faces:
+            item = self.ref_of(face)
+            if item and item not in refs:
+                refs.append(item)
+        return refs
+
+    def created(self, feature, face_ref, state):
+        face = self.resolve(face_ref, state)
+        if face is None:
+            return False
+        key = (feature.index, state)
+        if key not in self._face_cache:
+            entity = self.entity(feature)
+            self._face_cache[key] = _items(getattr(entity, "faces", None)) if entity else []
+        for candidate in self._face_cache[key]:
+            try:
+                if candidate == face:
+                    return True
+            except Exception:
+                continue
+        return False
+
+    def _feature_info(self, entity):
+        try:
+            index = entity.timelineObject.index
+        except Exception:
+            return None
+        for feature in self._features:
+            if feature.index == index:
+                return feature
+        return None
+
+    def input_geometries(self, feature):
+        """Typed inputs, read with the marker right before the feature, as the
+        Fusion API requires for profiles and edges."""
+        self.go(feature.index)
+        entity = self.entity(feature)
+        if entity is None:
+            return []
+        values = []
+        for path in INPUT_PROPERTIES:
+            for value in _get_path(entity, path):
+                values.extend(_items(value))
+        # Edge sets and loft sections wrap their entities.
+        expanded = []
+        for value in values:
+            if _geometry_kind(value) is None:
+                inner = None
+                for attr in ("edges", "entities", "entity"):
+                    try:
+                        inner = getattr(value, attr, None)
+                    except Exception:
+                        inner = None
+                    if inner is not None:
+                        break
+                if inner is not None:
+                    expanded.extend(_items(inner))
+                    continue
+            expanded.append(value)
+        inputs, curves = [], []
+        for value in expanded:
+            kind = _geometry_kind(value)
+            if kind:
+                ref = self.ref_of(value)
+                if ref:
+                    inputs.append(InputRef(kind, ref, feature.index))
+                if kind == "edge":
+                    try:
+                        curves.append(value.geometry)
+                    except Exception:
+                        pass
+                continue
+            sketch = None
+            try:
+                sketch = adsk.fusion.Sketch.cast(value) or getattr(value, "parentSketch", None)
+            except Exception:
+                sketch = None
+            if sketch:
+                info = self._feature_info(sketch)
+                if info:
+                    inputs.append(InputRef("sketch", _token(sketch), feature.index, info))
+                curves.extend(self._profile_curves(value))
+                continue
+            try:
+                if getattr(value, "objectType", "").endswith("Feature") and value.timelineObject:
+                    info = self._feature_info(value)
+                    if info and info.index < feature.index:
+                        inputs.append(InputRef("feature", None, feature.index, info))
+                    continue
+            except Exception:
+                pass
+            try:
+                if adsk.fusion.BRepBody.cast(value):
+                    inputs.append(InputRef("body", _token(value), feature.index))
+            except Exception:
+                pass
+        if curves:
+            self.highlights[feature.index] = curves
+        return inputs
+
+    @staticmethod
+    def _profile_curves(value):
+        curves = []
+        profile = None
+        try:
+            profile = adsk.fusion.Profile.cast(value)
+        except Exception:
+            profile = None
+        if not profile:
+            return curves
+        for loop in _items(profile.profileLoops):
+            for curve in _items(loop.profileCurves):
+                try:
+                    curves.append(curve.sketchEntity.worldGeometry)
+                except Exception:
+                    pass
+        return curves
+
+    def sketch_base_face(self, sketch_token):
+        try:
+            for sketch in self.design.findEntityByToken(sketch_token) or []:
+                sketch = adsk.fusion.Sketch.cast(sketch)
+                if not sketch:
+                    continue
+                face = adsk.fusion.BRepFace.cast(sketch.referencePlane)
+                return self.ref_of(face) if face else None
+        except Exception:
+            return None
+        return None
+
+    def signature(self, ref, state):
+        entity = self.resolve(ref, state)
+        if entity is None:
+            return None
+        try:
+            if ref[0] == "face":
+                return (entity.edges.count, entity.vertices.count,
+                        round(entity.area, 6), _round_point(entity.centroid))
+            if ref[0] == "edge":
+                return (_round_point(entity.startVertex.geometry),
+                        _round_point(entity.endVertex.geometry))
+            return _round_point(entity.geometry)
+        except Exception:
+            return None
+
+
+def _model_parameters(design, feature_entity, object_type):
+    """ModelParameters to animate: the registry paths first, then every
+    length/angle ModelParameter created by the feature."""
+    params, seen = [], set()
+
+    def add(param):
+        param = adsk.fusion.ModelParameter.cast(param)
+        if not param:
+            return
+        name = param.name
+        if name not in seen:
+            seen.add(name)
+            params.append(param)
+
+    for path in parameter_paths(object_type):
+        for value in _get_path(feature_entity, path):
+            add(value)
+    if not params:
+        for param in all_feature_parameters(design, feature_entity):
+            unit = (param.unit or "").lower()
+            if unit and unit not in ("", "no units"):
+                add(param)
+            if len(params) >= 3:
+                break
+    return params
+
+
+def all_feature_parameters(design, feature_entity):
+    result = []
+    try:
+        params = design.allParameters
+        for i in range(params.count):
+            param = adsk.fusion.ModelParameter.cast(params.item(i))
+            if not param:
+                continue
+            try:
+                if param.createdBy == feature_entity:
+                    result.append(param)
+            except Exception:
+                continue
+    except Exception:
+        pass
+    return result
+
+
+class HiMController:
+    """Owns one filtering result and its animation."""
+
+    def __init__(self, app, ui, post, log=None):
+        self.app, self.ui, self.post = app, ui, post
+        self.log = log or (lambda *_: None)
+        self.result = None
+        self.clip = []
+        self.playback = Playback(0)
+        self.journal = RestoreJournal()
+        self.focus = OpacityFocus(self._resolve_body, self._document_key)
+        self.group = None
+        self.seconds = 4.0
+        self.selected_ref = None
+        self.selection_label = ""
+        self.active_position = None
+        self.active = {}            # prepared data of the feature being animated
+        self.last_frame_seconds = None
+        self.dim_others = True
+        # Inspect mode animates the *user's own* features in place (paper
+        # behaviour). Off by default: the user's model is the main line.
+        self.inspect = False
+        self.auto_play = True
+        self.busy = False
+        self.model_highlights = {}
+
+    # --- helpers --------------------------------------------------------------
+    def design(self):
+        return adsk.fusion.Design.cast(self.app.activeProduct)
+
+    def _document_key(self):
+        design = self.design()
+        try:
+            return design.rootComponent.entityToken if design else ""
+        except Exception:
+            return ""
+
+    def _resolve_body(self, token):
+        design = self.design()
+        try:
+            for body in design.findEntityByToken(token) or []:
+                if adsk.fusion.BRepBody.cast(body):
+                    return body
+        except Exception:
+            pass
+        return None
+
+    def _refresh(self):
+        try:
+            self.app.activeViewport.refresh()
+        except Exception:
+            pass
+
+    def _feature_entity(self, feature):
+        design = self.design()
+        if not design:
+            return None
+        try:
+            for entity in design.findEntityByToken(feature.key) or []:
+                return entity
+        except Exception:
+            pass
+        try:
+            return design.timeline.item(feature.index).entity
+        except Exception:
+            return None
+
+    # --- filtering ----------------------------------------------------------------
+    def explain(self, entity):
+        """Selection of a face/edge/vertex -> filtered features + animation."""
+        ref = FusionTimelineModel._ref(entity)
+        if not ref:
+            raise ValueError("Select a single face, edge or vertex")
+        if ref == self.selected_ref and self.result is not None:
+            return      # recompute during animation re-reports the selection
+        self.stop()
+        design = self.design()
+        model = FusionTimelineModel(design)
+        self.busy = True
+        started = time.time()
+        try:
+            result = him_filter.extract_relevant_features(model, ref)
+        finally:
+            try:
+                model.restore()
+            finally:
+                self.busy = False
+        self.model_highlights = model.highlights
+        self.selected_ref = ref
+        self.selection_label = ref[0].capitalize()
+        self.result = result
+        self._plan()
+        self.post("him_result", self.describe(time.time() - started))
+        if self.inspect and self.auto_play and self.clip:
+            self.command("play")
+
+    def show_more(self):
+        if not self.result:
+            raise ValueError("Select geometry first")
+        self.stop()
+        model = FusionTimelineModel(self.design())
+        self.busy = True
+        try:
+            him_filter.show_more(model, self.result)
+        finally:
+            try:
+                model.restore()
+            finally:
+                self.busy = False
+        self.model_highlights.update(model.highlights)
+        self._plan()
+        self.post("him_result", self.describe())
+
+    def _plan(self):
+        self.clip = list(self.result.features)
+        animatable = [animation_mode(f.kind) != NONE for f in self.clip]
+        self.playback = Playback(len(self.clip), self.seconds, animatable)
+
+    def describe(self, seconds=None):
+        data = self.result.as_dict() if self.result else {"features": [], "bases": []}
+        design = self.design()
+        for item, feature in zip(data["features"], self.clip):
+            item["mode"] = animation_mode(feature.kind)
+            entity = self._feature_entity(feature)
+            item["parameters"] = []
+            if entity is not None and design:
+                for param in all_feature_parameters(design, entity):
+                    item["parameters"].append({"name": param.name, "expression": param.expression,
+                                               "unit": param.unit, "value": param.value})
+            try:
+                item["suppressed"] = bool(entity.isSuppressed)
+            except Exception:
+                item["suppressed"] = False
+        data["selection"] = self.selection_label
+        data["playback"] = self.playback.as_dict()
+        data["inspect"] = self.inspect
+        if seconds is not None:
+            data["analysis_seconds"] = round(seconds, 2)
+        return data
+
+    # --- animation ---------------------------------------------------------------
+    def _prepare(self, position):
+        """Start animating clip[position]: capture params, dim, highlight."""
+        self._finish_feature()
+        feature = self.clip[position]
+        entity = self._feature_entity(feature)
+        mode = animation_mode(feature.kind)
+        prepared = {"feature": feature, "mode": mode, "params": [], "bodies": []}
+        design = self.design()
+        if entity is not None and mode == PARAMETRIC:
+            for param in _model_parameters(design, entity, feature.kind):
+                key = param.name
+                self.journal.capture(key, param)
+                prepared["params"].append((key, param, param.value))
+            if not prepared["params"]:
+                prepared["mode"] = FADE
+        try:
+            prepared["bodies"] = [b for b in _items(getattr(entity, "bodies", None)) if b]
+        except Exception:
+            prepared["bodies"] = []
+        self._apply_focus(prepared["bodies"])
+        self._draw_overlay(prepared, 0.0)
+        self.active_position = position
+        self.active = prepared
+
+    def _apply_focus(self, bodies):
+        if not self.dim_others:
+            return
+        design = self.design()
+        protected = {_token(b) for b in bodies if _token(b)}
+        if not protected:
+            return
+        from .spatial import _model_bodies
+        try:
+            self.focus.apply(self._document_key(), _model_bodies(design), protected, dim_opacity=0.2)
+        except FocusError as error:
+            self.log("HiM focus: " + str(error))
+
+    def _draw_overlay(self, prepared, progress):
+        """Highlight the input profile/edges; scale+fade for non-parametric."""
+        self._delete_group()
+        design = self.design()
+        if not design:
+            return
+        group = design.rootComponent.customGraphicsGroups.add()
+        group.isSelectable = False
+        curves = self.model_highlights.get(prepared["feature"].index, [])
+        for curve in curves:
+            try:
+                line = group.addCurve(curve)
+                line.color = adsk.fusion.CustomGraphicsSolidColorEffect.create(
+                    adsk.core.Color.create(*HIGHLIGHT))
+                line.weight = 3
+                line.depthPriority = 1
+            except Exception:
+                continue
+        if prepared["mode"] == FADE:
+            for body in prepared["bodies"]:
+                try:
+                    overlay = group.addBRepBody(body)
+                    overlay.color = adsk.fusion.CustomGraphicsSolidColorEffect.create(
+                        adsk.core.Color.create(*HIGHLIGHT))
+                    overlay.setOpacity(max(0.05, progress), True)
+                    box = body.boundingBox
+                    c = adsk.core.Point3D.create((box.minPoint.x + box.maxPoint.x) / 2,
+                                                 (box.minPoint.y + box.maxPoint.y) / 2,
+                                                 (box.minPoint.z + box.maxPoint.z) / 2)
+                    scale = 0.5 + 0.5 * progress
+                    matrix = adsk.core.Matrix3D.create()
+                    for i in range(3):
+                        matrix.setCell(i, i, scale)
+                    matrix.setCell(0, 3, c.x * (1 - scale))
+                    matrix.setCell(1, 3, c.y * (1 - scale))
+                    matrix.setCell(2, 3, c.z * (1 - scale))
+                    overlay.transform = matrix
+                    overlay.isSelectable = False
+                except Exception:
+                    continue
+        self.group = group
+
+    def _delete_group(self):
+        try:
+            if self.group and self.group.isValid:
+                self.group.deleteMe()
+        except Exception:
+            pass
+        self.group = None
+
+    def _render(self, frame):
+        if frame.position != self.active_position:
+            self._prepare(frame.position)
+        prepared = self.active
+        if prepared["mode"] == PARAMETRIC:
+            for key, param, target in prepared["params"]:
+                try:
+                    param.value = interpolate(target, frame.progress)
+                except Exception as error:
+                    self.log("HiM: cannot set {}: {}".format(key, error))
+        elif prepared["mode"] == FADE:
+            self._draw_overlay(prepared, frame.progress)
+        self._refresh()
+
+    def _finish_feature(self):
+        """Restore parameters, opacity and overlay of the active feature."""
+        errors = []
+        try:
+            self.journal.restore()
+        except Exception as error:
+            errors.append(str(error))
+        try:
+            self.focus.restore()
+        except Exception as error:
+            errors.append(str(error))
+        self._delete_group()
+        self.active_position = None
+        self.active = {}
+        if errors:
+            raise RuntimeError("; ".join(errors))
+
+    def tick(self):
+        """One animation frame; called from the add-in's custom event."""
+        if not self.playback.playing or not self.clip:
+            return False
+        started = time.perf_counter()
+        frame = self.playback.tick(self.last_frame_seconds)
+        try:
+            self._render(frame)
+        finally:
+            self.last_frame_seconds = time.perf_counter() - started
+        if frame.finished and frame.progress >= 1.0:
+            # Forward clip done: the model is back at its real state.
+            self._finish_feature()
+        self.post("him_playback", self.playback.as_dict())
+        return self.playback.playing
+
+    ANIMATING = ("play", "replay", "forward", "backward", "select")
+
+    def command(self, name, value=None):
+        if name in self.ANIMATING and not self.inspect:
+            raise ValueError("Turn on Inspect mode to animate your own model's features")
+        if name == "inspect":
+            self.inspect = bool(value)
+            if not self.inspect:
+                self.stop()
+        elif name == "play":
+            self.playback.play()
+        elif name == "pause":
+            self.playback.pause()
+        elif name == "replay":
+            self._finish_feature()
+            self.playback.replay()
+        elif name == "forward":
+            self.playback.step_forward()
+        elif name == "backward":
+            self.playback.step_backward()
+        elif name == "select":
+            self.playback.select(int(value))
+        elif name == "speed":
+            self.seconds = float(value)
+            self.playback.set_speed(self.seconds)
+        elif name == "dim":
+            self.dim_others = bool(value)
+        elif name == "auto":
+            self.auto_play = bool(value)
+        else:
+            raise ValueError("Unknown HiM command " + str(name))
+        self.last_frame_seconds = None
+        self.post("him_playback", self.playback.as_dict())
+
+    def stop(self):
+        """Stop and restore the user's model completely."""
+        self.playback.pause()
+        self._finish_feature()
+
+    # --- edit shortcuts ---------------------------------------------------------------
+    EDIT_COMMANDS = ("FusionEditFeatureCommand", "FusionEditFeatureCmd", "EditFeatureCommand")
+
+    def edit_feature(self, position):
+        self.stop()
+        feature = self.clip[int(position)]
+        entity = self._feature_entity(feature)
+        if entity is None:
+            raise ValueError("Feature no longer exists")
+        self.busy = True
+        try:
+            self.ui.activeSelections.clear()
+            self.ui.activeSelections.add(entity)
+        finally:
+            self.busy = False
+        for command_id in self.EDIT_COMMANDS:
+            definition = self.ui.commandDefinitions.itemById(command_id)
+            if definition:
+                definition.execute()
+                return "Editing " + feature.name
+        return feature.name + " selected; right-click it and choose Edit Feature, or edit its parameters below."
+
+    def set_parameter(self, position, name, expression):
+        self.stop()
+        feature = self.clip[int(position)]
+        entity = self._feature_entity(feature)
+        for param in all_feature_parameters(self.design(), entity):
+            if param.name == name:
+                if not self.design().unitsManager.isValidExpression(expression, param.unit):
+                    raise ValueError("Invalid expression for " + name)
+                param.expression = expression
+                self.post("him_result", self.describe())
+                return name + " = " + expression
+        raise ValueError("Parameter not found: " + str(name))

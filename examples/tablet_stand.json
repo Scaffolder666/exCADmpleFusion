@@ -1,0 +1,3530 @@
+{
+ "format": "excadmple",
+ "version": 1,
+ "id": "tablet-stand",
+ "title": "Tablet Stand — Heavier Device, Different Trade-offs",
+ "author": "Illustrative example (exCADmple team)",
+ "description": "Synthetic contrasting example: it answers the same design questions as the phone stand, sometimes differently. Not a recording of a real session.",
+ "reference_offset_cm": [
+  14,
+  -16,
+  0
+ ],
+ "steps": [
+  {
+   "id": "base",
+   "title": "Heavy, deep base",
+   "goal": "Carry a 700 g tablet without tipping.",
+   "duration_ms": 9000,
+   "geometry": {
+    "meshes": [
+     {
+      "vertices": [
+       [
+        0,
+        0,
+        0
+       ],
+       [
+        16,
+        0,
+        0
+       ],
+       [
+        16,
+        12,
+        0
+       ],
+       [
+        0,
+        12,
+        0
+       ],
+       [
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        16.0,
+        0.0,
+        1.0
+       ],
+       [
+        16.0,
+        12.0,
+        1.0
+       ],
+       [
+        0.0,
+        12.0,
+        1.0
+       ]
+      ],
+      "triangles": [
+       [
+        2,
+        1,
+        0
+       ],
+       [
+        4,
+        5,
+        6
+       ],
+       [
+        3,
+        2,
+        0
+       ],
+       [
+        4,
+        6,
+        7
+       ],
+       [
+        0,
+        1,
+        5
+       ],
+       [
+        0,
+        5,
+        4
+       ],
+       [
+        1,
+        2,
+        6
+       ],
+       [
+        1,
+        6,
+        5
+       ],
+       [
+        2,
+        3,
+        7
+       ],
+       [
+        2,
+        7,
+        6
+       ],
+       [
+        3,
+        0,
+        4
+       ],
+       [
+        3,
+        4,
+        7
+       ]
+      ]
+     }
+    ]
+   },
+   "media": {},
+   "operation": {
+    "tool": "Sketch → Extrude",
+    "instruction": "Sketch a 160 × 120 mm rectangle and extrude it 10 mm.",
+    "parameters": [
+     {
+      "name": "Width",
+      "value": "160 mm"
+     },
+     {
+      "name": "Depth",
+      "value": "120 mm"
+     },
+     {
+      "name": "Thickness",
+      "value": "10 mm"
+     }
+    ]
+   },
+   "reasoning": {
+    "text": "A tablet is several times heavier than a phone and its center of mass sits higher, so I make the base deeper rather than wider: tipping happens front-to-back.",
+    "source": "mockup"
+   },
+   "cues": [
+    {
+     "at_ms": 0,
+     "label": "The tablet is heavy and tall."
+    },
+    {
+     "at_ms": 3500,
+     "label": "I extrude a deep, thick base."
+    },
+    {
+     "at_ms": 7000,
+     "label": "Depth, not width, prevents tipping."
+    }
+   ],
+   "animation": {
+    "type": "extrude",
+    "profile": [
+     [
+      0,
+      0,
+      0
+     ],
+     [
+      16,
+      0,
+      0
+     ],
+     [
+      16,
+      12,
+      0
+     ],
+     [
+      0,
+      12,
+      0
+     ]
+    ],
+    "direction_cm": [
+     0,
+     0,
+     1.0
+    ],
+    "cap_triangles": [
+     [
+      0,
+      1,
+      2
+     ],
+     [
+      0,
+      2,
+      3
+     ]
+    ],
+    "context_meshes": []
+   },
+   "pointer": [
+    {
+     "at_ms": 0,
+     "xyz": [
+      -1,
+      -1,
+      0
+     ],
+     "event": "move"
+    },
+    {
+     "at_ms": 1500,
+     "xyz": [
+      0,
+      0,
+      0
+     ],
+     "event": "click"
+    },
+    {
+     "at_ms": 3000,
+     "xyz": [
+      16,
+      12,
+      0
+     ],
+     "event": "drag"
+    },
+    {
+     "at_ms": 5000,
+     "xyz": [
+      16,
+      12,
+      0.05
+     ],
+     "event": "click"
+    },
+    {
+     "at_ms": 8000,
+     "xyz": [
+      16,
+      12,
+      1.0
+     ],
+     "event": "drag"
+    },
+    {
+     "at_ms": 9000,
+     "xyz": [
+      17,
+      12.5,
+      1.2
+     ],
+     "event": "move"
+    }
+   ],
+   "decision": {
+    "topic": "footprint",
+    "question": "How deep should the base be?",
+    "criteria": [
+     "Resists tipping under a heavy device",
+     "Desk space",
+     "Material"
+    ],
+    "options": [
+     {
+      "label": "Phone-like",
+      "note": "Tips over with a 700 g tablet.",
+      "value": "80 mm"
+     },
+     {
+      "label": "Deep",
+      "note": "Stable even when drawing on the screen.",
+      "value": "120 mm",
+      "chosen": true
+     },
+     {
+      "label": "Very deep",
+      "note": "Stable but hard to fit on a crowded desk.",
+      "value": "150 mm"
+     }
+    ],
+    "applies_to": {
+     "features": [
+      "ExtrudeFeature"
+     ],
+     "tags": [
+      "base",
+      "foot",
+      "plate",
+      "footprint"
+     ]
+    },
+    "parameter": {
+     "name": "Base depth",
+     "value": "120 mm",
+     "kind": "length"
+    }
+   }
+  },
+  {
+   "id": "support",
+   "title": "Lower viewing angle",
+   "goal": "Support both watching and sketching on the tablet.",
+   "duration_ms": 9000,
+   "geometry": {
+    "meshes": [
+     {
+      "vertices": [
+       [
+        0,
+        0,
+        0
+       ],
+       [
+        16,
+        0,
+        0
+       ],
+       [
+        16,
+        12,
+        0
+       ],
+       [
+        0,
+        12,
+        0
+       ],
+       [
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        16.0,
+        0.0,
+        1.0
+       ],
+       [
+        16.0,
+        12.0,
+        1.0
+       ],
+       [
+        0.0,
+        12.0,
+        1.0
+       ]
+      ],
+      "triangles": [
+       [
+        2,
+        1,
+        0
+       ],
+       [
+        4,
+        5,
+        6
+       ],
+       [
+        3,
+        2,
+        0
+       ],
+       [
+        4,
+        6,
+        7
+       ],
+       [
+        0,
+        1,
+        5
+       ],
+       [
+        0,
+        5,
+        4
+       ],
+       [
+        1,
+        2,
+        6
+       ],
+       [
+        1,
+        6,
+        5
+       ],
+       [
+        2,
+        3,
+        7
+       ],
+       [
+        2,
+        7,
+        6
+       ],
+       [
+        3,
+        0,
+        4
+       ],
+       [
+        3,
+        4,
+        7
+       ]
+      ]
+     },
+     {
+      "vertices": [
+       [
+        1.0,
+        4.0,
+        1.0
+       ],
+       [
+        15.0,
+        4.0,
+        1.0
+       ],
+       [
+        15.0,
+        4.69282,
+        0.6
+       ],
+       [
+        1.0,
+        4.69282,
+        0.6
+       ],
+       [
+        1.0,
+        10.0,
+        11.3923
+       ],
+       [
+        15.0,
+        10.0,
+        11.3923
+       ],
+       [
+        15.0,
+        10.69282,
+        10.9923
+       ],
+       [
+        1.0,
+        10.69282,
+        10.9923
+       ]
+      ],
+      "triangles": [
+       [
+        0,
+        2,
+        1
+       ],
+       [
+        0,
+        3,
+        2
+       ],
+       [
+        4,
+        5,
+        6
+       ],
+       [
+        4,
+        6,
+        7
+       ],
+       [
+        0,
+        1,
+        5
+       ],
+       [
+        0,
+        5,
+        4
+       ],
+       [
+        1,
+        2,
+        6
+       ],
+       [
+        1,
+        6,
+        5
+       ],
+       [
+        2,
+        3,
+        7
+       ],
+       [
+        2,
+        7,
+        6
+       ],
+       [
+        3,
+        0,
+        4
+       ],
+       [
+        3,
+        4,
+        7
+       ]
+      ]
+     }
+    ]
+   },
+   "media": {},
+   "operation": {
+    "tool": "Sketch → Extrude → Rotate",
+    "instruction": "Extrude an 8 mm back and tilt it 30° back (60° from the desk).",
+    "parameters": [
+     {
+      "name": "Angle from desk",
+      "value": "60 deg"
+     },
+     {
+      "name": "Panel thickness",
+      "value": "8 mm"
+     }
+    ]
+   },
+   "reasoning": {
+    "text": "Unlike a phone, the tablet is also used for sketching, so a slightly lower angle is a compromise between watching video and resting a hand on the screen.",
+    "source": "mockup"
+   },
+   "cues": [
+    {
+     "at_ms": 0,
+     "label": "The tablet is watched and drawn on."
+    },
+    {
+     "at_ms": 3500,
+     "label": "I tilt the back a bit lower than for a phone."
+    },
+    {
+     "at_ms": 7000,
+     "label": "It is a compromise between two uses."
+    }
+   ],
+   "animation": {
+    "type": "revolve",
+    "new_meshes": [
+     {
+      "vertices": [
+       [
+        1,
+        4.0,
+        1.0
+       ],
+       [
+        15,
+        4.0,
+        1.0
+       ],
+       [
+        15,
+        4.8,
+        1.0
+       ],
+       [
+        1,
+        4.8,
+        1.0
+       ],
+       [
+        1,
+        4.0,
+        13.0
+       ],
+       [
+        15,
+        4.0,
+        13.0
+       ],
+       [
+        15,
+        4.8,
+        13.0
+       ],
+       [
+        1,
+        4.8,
+        13.0
+       ]
+      ],
+      "triangles": [
+       [
+        0,
+        2,
+        1
+       ],
+       [
+        0,
+        3,
+        2
+       ],
+       [
+        4,
+        5,
+        6
+       ],
+       [
+        4,
+        6,
+        7
+       ],
+       [
+        0,
+        1,
+        5
+       ],
+       [
+        0,
+        5,
+        4
+       ],
+       [
+        1,
+        2,
+        6
+       ],
+       [
+        1,
+        6,
+        5
+       ],
+       [
+        2,
+        3,
+        7
+       ],
+       [
+        2,
+        7,
+        6
+       ],
+       [
+        3,
+        0,
+        4
+       ],
+       [
+        3,
+        4,
+        7
+       ]
+      ]
+     }
+    ],
+    "context_meshes": [
+     {
+      "vertices": [
+       [
+        0,
+        0,
+        0
+       ],
+       [
+        16,
+        0,
+        0
+       ],
+       [
+        16,
+        12,
+        0
+       ],
+       [
+        0,
+        12,
+        0
+       ],
+       [
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        16.0,
+        0.0,
+        1.0
+       ],
+       [
+        16.0,
+        12.0,
+        1.0
+       ],
+       [
+        0.0,
+        12.0,
+        1.0
+       ]
+      ],
+      "triangles": [
+       [
+        2,
+        1,
+        0
+       ],
+       [
+        4,
+        5,
+        6
+       ],
+       [
+        3,
+        2,
+        0
+       ],
+       [
+        4,
+        6,
+        7
+       ],
+       [
+        0,
+        1,
+        5
+       ],
+       [
+        0,
+        5,
+        4
+       ],
+       [
+        1,
+        2,
+        6
+       ],
+       [
+        1,
+        6,
+        5
+       ],
+       [
+        2,
+        3,
+        7
+       ],
+       [
+        2,
+        7,
+        6
+       ],
+       [
+        3,
+        0,
+        4
+       ],
+       [
+        3,
+        4,
+        7
+       ]
+      ]
+     }
+    ],
+    "axis_origin_cm": [
+     0,
+     4.0,
+     1.0
+    ],
+    "axis_direction": [
+     1,
+     0,
+     0
+    ],
+    "angle_deg": -30
+   },
+   "pointer": [
+    {
+     "at_ms": 0,
+     "xyz": [
+      8,
+      2.5,
+      2
+     ],
+     "event": "move"
+    },
+    {
+     "at_ms": 1800,
+     "xyz": [
+      8,
+      4.4,
+      6
+     ],
+     "event": "click"
+    },
+    {
+     "at_ms": 6000,
+     "xyz": [
+      8,
+      6.5,
+      10.0
+     ],
+     "event": "drag"
+    },
+    {
+     "at_ms": 9000,
+     "xyz": [
+      8,
+      7.5,
+      11.5
+     ],
+     "event": "move"
+    }
+   ],
+   "decision": {
+    "topic": "viewing_angle",
+    "question": "How steep should the device lean?",
+    "criteria": [
+     "Watching video",
+     "Drawing on the screen",
+     "Stability under hand pressure"
+    ],
+    "options": [
+     {
+      "label": "Drawing",
+      "note": "Comfortable to draw, too flat for video.",
+      "value": "30 deg"
+     },
+     {
+      "label": "Compromise",
+      "note": "Watchable, still usable for quick sketches.",
+      "value": "60 deg",
+      "chosen": true
+     },
+     {
+      "label": "Video",
+      "note": "Best for video, tips when drawn on.",
+      "value": "70 deg"
+     }
+    ],
+    "applies_to": {
+     "features": [
+      "ExtrudeFeature",
+      "RevolveFeature",
+      "MoveFeature"
+     ],
+     "tags": [
+      "back",
+      "support",
+      "angle",
+      "tilt",
+      "panel"
+     ]
+    },
+    "parameter": {
+     "name": "Angle from desk",
+     "value": "60 deg",
+     "kind": "angle"
+    }
+   }
+  },
+  {
+   "id": "lip",
+   "title": "Tall lip for thick cases",
+   "goal": "Hold tablets in rugged cases.",
+   "duration_ms": 9000,
+   "geometry": {
+    "meshes": [
+     {
+      "vertices": [
+       [
+        0,
+        0,
+        0
+       ],
+       [
+        16,
+        0,
+        0
+       ],
+       [
+        16,
+        12,
+        0
+       ],
+       [
+        0,
+        12,
+        0
+       ],
+       [
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        16.0,
+        0.0,
+        1.0
+       ],
+       [
+        16.0,
+        12.0,
+        1.0
+       ],
+       [
+        0.0,
+        12.0,
+        1.0
+       ]
+      ],
+      "triangles": [
+       [
+        2,
+        1,
+        0
+       ],
+       [
+        4,
+        5,
+        6
+       ],
+       [
+        3,
+        2,
+        0
+       ],
+       [
+        4,
+        6,
+        7
+       ],
+       [
+        0,
+        1,
+        5
+       ],
+       [
+        0,
+        5,
+        4
+       ],
+       [
+        1,
+        2,
+        6
+       ],
+       [
+        1,
+        6,
+        5
+       ],
+       [
+        2,
+        3,
+        7
+       ],
+       [
+        2,
+        7,
+        6
+       ],
+       [
+        3,
+        0,
+        4
+       ],
+       [
+        3,
+        4,
+        7
+       ]
+      ]
+     },
+     {
+      "vertices": [
+       [
+        1.0,
+        4.0,
+        1.0
+       ],
+       [
+        15.0,
+        4.0,
+        1.0
+       ],
+       [
+        15.0,
+        4.69282,
+        0.6
+       ],
+       [
+        1.0,
+        4.69282,
+        0.6
+       ],
+       [
+        1.0,
+        10.0,
+        11.3923
+       ],
+       [
+        15.0,
+        10.0,
+        11.3923
+       ],
+       [
+        15.0,
+        10.69282,
+        10.9923
+       ],
+       [
+        1.0,
+        10.69282,
+        10.9923
+       ]
+      ],
+      "triangles": [
+       [
+        0,
+        2,
+        1
+       ],
+       [
+        0,
+        3,
+        2
+       ],
+       [
+        4,
+        5,
+        6
+       ],
+       [
+        4,
+        6,
+        7
+       ],
+       [
+        0,
+        1,
+        5
+       ],
+       [
+        0,
+        5,
+        4
+       ],
+       [
+        1,
+        2,
+        6
+       ],
+       [
+        1,
+        6,
+        5
+       ],
+       [
+        2,
+        3,
+        7
+       ],
+       [
+        2,
+        7,
+        6
+       ],
+       [
+        3,
+        0,
+        4
+       ],
+       [
+        3,
+        4,
+        7
+       ]
+      ]
+     },
+     {
+      "vertices": [
+       [
+        1,
+        0.5,
+        1.0
+       ],
+       [
+        15,
+        0.5,
+        1.0
+       ],
+       [
+        15,
+        1.5,
+        1.0
+       ],
+       [
+        1,
+        1.5,
+        1.0
+       ],
+       [
+        1.0,
+        0.5,
+        2.5
+       ],
+       [
+        15.0,
+        0.5,
+        2.5
+       ],
+       [
+        15.0,
+        1.5,
+        2.5
+       ],
+       [
+        1.0,
+        1.5,
+        2.5
+       ]
+      ],
+      "triangles": [
+       [
+        2,
+        1,
+        0
+       ],
+       [
+        4,
+        5,
+        6
+       ],
+       [
+        3,
+        2,
+        0
+       ],
+       [
+        4,
+        6,
+        7
+       ],
+       [
+        0,
+        1,
+        5
+       ],
+       [
+        0,
+        5,
+        4
+       ],
+       [
+        1,
+        2,
+        6
+       ],
+       [
+        1,
+        6,
+        5
+       ],
+       [
+        2,
+        3,
+        7
+       ],
+       [
+        2,
+        7,
+        6
+       ],
+       [
+        3,
+        0,
+        4
+       ],
+       [
+        3,
+        4,
+        7
+       ]
+      ]
+     }
+    ]
+   },
+   "media": {},
+   "operation": {
+    "tool": "Sketch → Extrude",
+    "instruction": "Sketch a 10 mm strip at the front and extrude it 15 mm.",
+    "parameters": [
+     {
+      "name": "Lip height",
+      "value": "15 mm"
+     },
+     {
+      "name": "Lip thickness",
+      "value": "10 mm"
+     }
+    ]
+   },
+   "reasoning": {
+    "text": "Tablet cases are thick, and the bezel is wide, so a taller lip does not cover the screen here — the opposite trade-off from the phone stand.",
+    "source": "mockup"
+   },
+   "cues": [
+    {
+     "at_ms": 0,
+     "label": "Tablet cases are thick."
+    },
+    {
+     "at_ms": 3500,
+     "label": "I extrude a taller lip."
+    },
+    {
+     "at_ms": 7000,
+     "label": "The wide bezel keeps the screen visible."
+    }
+   ],
+   "animation": {
+    "type": "extrude",
+    "profile": [
+     [
+      1,
+      0.5,
+      1.0
+     ],
+     [
+      15,
+      0.5,
+      1.0
+     ],
+     [
+      15,
+      1.5,
+      1.0
+     ],
+     [
+      1,
+      1.5,
+      1.0
+     ]
+    ],
+    "direction_cm": [
+     0,
+     0,
+     1.5
+    ],
+    "cap_triangles": [
+     [
+      0,
+      1,
+      2
+     ],
+     [
+      0,
+      2,
+      3
+     ]
+    ],
+    "context_meshes": [
+     {
+      "vertices": [
+       [
+        0,
+        0,
+        0
+       ],
+       [
+        16,
+        0,
+        0
+       ],
+       [
+        16,
+        12,
+        0
+       ],
+       [
+        0,
+        12,
+        0
+       ],
+       [
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        16.0,
+        0.0,
+        1.0
+       ],
+       [
+        16.0,
+        12.0,
+        1.0
+       ],
+       [
+        0.0,
+        12.0,
+        1.0
+       ]
+      ],
+      "triangles": [
+       [
+        2,
+        1,
+        0
+       ],
+       [
+        4,
+        5,
+        6
+       ],
+       [
+        3,
+        2,
+        0
+       ],
+       [
+        4,
+        6,
+        7
+       ],
+       [
+        0,
+        1,
+        5
+       ],
+       [
+        0,
+        5,
+        4
+       ],
+       [
+        1,
+        2,
+        6
+       ],
+       [
+        1,
+        6,
+        5
+       ],
+       [
+        2,
+        3,
+        7
+       ],
+       [
+        2,
+        7,
+        6
+       ],
+       [
+        3,
+        0,
+        4
+       ],
+       [
+        3,
+        4,
+        7
+       ]
+      ]
+     },
+     {
+      "vertices": [
+       [
+        1.0,
+        4.0,
+        1.0
+       ],
+       [
+        15.0,
+        4.0,
+        1.0
+       ],
+       [
+        15.0,
+        4.692820323027551,
+        0.6000000000000001
+       ],
+       [
+        1.0,
+        4.692820323027551,
+        0.6000000000000001
+       ],
+       [
+        1.0,
+        10.0,
+        11.392304845413264
+       ],
+       [
+        15.0,
+        10.0,
+        11.392304845413264
+       ],
+       [
+        15.0,
+        10.69282032302755,
+        10.992304845413264
+       ],
+       [
+        1.0,
+        10.69282032302755,
+        10.992304845413264
+       ]
+      ],
+      "triangles": [
+       [
+        0,
+        2,
+        1
+       ],
+       [
+        0,
+        3,
+        2
+       ],
+       [
+        4,
+        5,
+        6
+       ],
+       [
+        4,
+        6,
+        7
+       ],
+       [
+        0,
+        1,
+        5
+       ],
+       [
+        0,
+        5,
+        4
+       ],
+       [
+        1,
+        2,
+        6
+       ],
+       [
+        1,
+        6,
+        5
+       ],
+       [
+        2,
+        3,
+        7
+       ],
+       [
+        2,
+        7,
+        6
+       ],
+       [
+        3,
+        0,
+        4
+       ],
+       [
+        3,
+        4,
+        7
+       ]
+      ]
+     }
+    ]
+   },
+   "pointer": [
+    {
+     "at_ms": 0,
+     "xyz": [
+      -1,
+      1,
+      1
+     ],
+     "event": "move"
+    },
+    {
+     "at_ms": 1500,
+     "xyz": [
+      1,
+      0.5,
+      1.0
+     ],
+     "event": "click"
+    },
+    {
+     "at_ms": 3000,
+     "xyz": [
+      15,
+      1.5,
+      1.0
+     ],
+     "event": "drag"
+    },
+    {
+     "at_ms": 5000,
+     "xyz": [
+      15,
+      1.5,
+      1.05
+     ],
+     "event": "click"
+    },
+    {
+     "at_ms": 8000,
+     "xyz": [
+      15,
+      1.5,
+      2.5
+     ],
+     "event": "drag"
+    },
+    {
+     "at_ms": 9000,
+     "xyz": [
+      16,
+      1.5,
+      2.8
+     ],
+     "event": "move"
+    }
+   ],
+   "decision": {
+    "topic": "retaining_lip",
+    "question": "How tall should the retaining lip be?",
+    "criteria": [
+     "Holds a cased device",
+     "Does not cover the screen",
+     "Charging access"
+    ],
+    "options": [
+     {
+      "label": "Phone-like",
+      "note": "Rugged cases ride over it.",
+      "value": "10 mm"
+     },
+     {
+      "label": "Tall",
+      "note": "Holds rugged cases; the bezel keeps the screen clear.",
+      "value": "15 mm",
+      "chosen": true
+     }
+    ],
+    "applies_to": {
+     "features": [
+      "ExtrudeFeature"
+     ],
+     "tags": [
+      "lip",
+      "ledge",
+      "stop",
+      "front"
+     ]
+    },
+    "parameter": {
+     "name": "Lip height",
+     "value": "15 mm",
+     "kind": "length"
+    }
+   }
+  },
+  {
+   "id": "cork",
+   "title": "Full cork sheet underneath",
+   "goal": "Stop the heavier stand from sliding.",
+   "duration_ms": 9000,
+   "geometry": {
+    "meshes": [
+     {
+      "vertices": [
+       [
+        0,
+        0,
+        0
+       ],
+       [
+        16,
+        0,
+        0
+       ],
+       [
+        16,
+        12,
+        0
+       ],
+       [
+        0,
+        12,
+        0
+       ],
+       [
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        16.0,
+        0.0,
+        1.0
+       ],
+       [
+        16.0,
+        12.0,
+        1.0
+       ],
+       [
+        0.0,
+        12.0,
+        1.0
+       ]
+      ],
+      "triangles": [
+       [
+        2,
+        1,
+        0
+       ],
+       [
+        4,
+        5,
+        6
+       ],
+       [
+        3,
+        2,
+        0
+       ],
+       [
+        4,
+        6,
+        7
+       ],
+       [
+        0,
+        1,
+        5
+       ],
+       [
+        0,
+        5,
+        4
+       ],
+       [
+        1,
+        2,
+        6
+       ],
+       [
+        1,
+        6,
+        5
+       ],
+       [
+        2,
+        3,
+        7
+       ],
+       [
+        2,
+        7,
+        6
+       ],
+       [
+        3,
+        0,
+        4
+       ],
+       [
+        3,
+        4,
+        7
+       ]
+      ]
+     },
+     {
+      "vertices": [
+       [
+        1.0,
+        4.0,
+        1.0
+       ],
+       [
+        15.0,
+        4.0,
+        1.0
+       ],
+       [
+        15.0,
+        4.69282,
+        0.6
+       ],
+       [
+        1.0,
+        4.69282,
+        0.6
+       ],
+       [
+        1.0,
+        10.0,
+        11.3923
+       ],
+       [
+        15.0,
+        10.0,
+        11.3923
+       ],
+       [
+        15.0,
+        10.69282,
+        10.9923
+       ],
+       [
+        1.0,
+        10.69282,
+        10.9923
+       ]
+      ],
+      "triangles": [
+       [
+        0,
+        2,
+        1
+       ],
+       [
+        0,
+        3,
+        2
+       ],
+       [
+        4,
+        5,
+        6
+       ],
+       [
+        4,
+        6,
+        7
+       ],
+       [
+        0,
+        1,
+        5
+       ],
+       [
+        0,
+        5,
+        4
+       ],
+       [
+        1,
+        2,
+        6
+       ],
+       [
+        1,
+        6,
+        5
+       ],
+       [
+        2,
+        3,
+        7
+       ],
+       [
+        2,
+        7,
+        6
+       ],
+       [
+        3,
+        0,
+        4
+       ],
+       [
+        3,
+        4,
+        7
+       ]
+      ]
+     },
+     {
+      "vertices": [
+       [
+        1,
+        0.5,
+        1.0
+       ],
+       [
+        15,
+        0.5,
+        1.0
+       ],
+       [
+        15,
+        1.5,
+        1.0
+       ],
+       [
+        1,
+        1.5,
+        1.0
+       ],
+       [
+        1.0,
+        0.5,
+        2.5
+       ],
+       [
+        15.0,
+        0.5,
+        2.5
+       ],
+       [
+        15.0,
+        1.5,
+        2.5
+       ],
+       [
+        1.0,
+        1.5,
+        2.5
+       ]
+      ],
+      "triangles": [
+       [
+        2,
+        1,
+        0
+       ],
+       [
+        4,
+        5,
+        6
+       ],
+       [
+        3,
+        2,
+        0
+       ],
+       [
+        4,
+        6,
+        7
+       ],
+       [
+        0,
+        1,
+        5
+       ],
+       [
+        0,
+        5,
+        4
+       ],
+       [
+        1,
+        2,
+        6
+       ],
+       [
+        1,
+        6,
+        5
+       ],
+       [
+        2,
+        3,
+        7
+       ],
+       [
+        2,
+        7,
+        6
+       ],
+       [
+        3,
+        0,
+        4
+       ],
+       [
+        3,
+        4,
+        7
+       ]
+      ]
+     },
+     {
+      "vertices": [
+       [
+        0.3,
+        0.3,
+        -0.2
+       ],
+       [
+        15.7,
+        0.3,
+        -0.2
+       ],
+       [
+        15.7,
+        11.7,
+        -0.2
+       ],
+       [
+        0.3,
+        11.7,
+        -0.2
+       ],
+       [
+        0.3,
+        0.3,
+        0.0
+       ],
+       [
+        15.7,
+        0.3,
+        0.0
+       ],
+       [
+        15.7,
+        11.7,
+        0.0
+       ],
+       [
+        0.3,
+        11.7,
+        0.0
+       ]
+      ],
+      "triangles": [
+       [
+        0,
+        2,
+        1
+       ],
+       [
+        0,
+        3,
+        2
+       ],
+       [
+        4,
+        5,
+        6
+       ],
+       [
+        4,
+        6,
+        7
+       ],
+       [
+        0,
+        1,
+        5
+       ],
+       [
+        0,
+        5,
+        4
+       ],
+       [
+        1,
+        2,
+        6
+       ],
+       [
+        1,
+        6,
+        5
+       ],
+       [
+        2,
+        3,
+        7
+       ],
+       [
+        2,
+        7,
+        6
+       ],
+       [
+        3,
+        0,
+        4
+       ],
+       [
+        3,
+        4,
+        7
+       ]
+      ]
+     }
+    ]
+   },
+   "media": {},
+   "operation": {
+    "tool": "Extrude",
+    "instruction": "Extrude a 2 mm sheet covering the whole underside (cut later from cork).",
+    "parameters": [
+     {
+      "name": "Sheet thickness",
+      "value": "2 mm"
+     }
+    ]
+   },
+   "reasoning": {
+    "text": "With a heavy tablet the stand already presses firmly on the desk, so rocking is less of a risk than for the phone stand; a full cork sheet gives the most friction and protects the desk.",
+    "source": "mockup"
+   },
+   "cues": [
+    {
+     "at_ms": 0,
+     "label": "The heavy stand presses down firmly."
+    },
+    {
+     "at_ms": 3500,
+     "label": "I cover the whole underside."
+    },
+    {
+     "at_ms": 7000,
+     "label": "Cork adds friction and protects the desk."
+    }
+   ],
+   "animation": {
+    "type": "reveal",
+    "new_meshes": [
+     {
+      "vertices": [
+       [
+        0.3,
+        0.3,
+        -0.2
+       ],
+       [
+        15.7,
+        0.3,
+        -0.2
+       ],
+       [
+        15.7,
+        11.7,
+        -0.2
+       ],
+       [
+        0.3,
+        11.7,
+        -0.2
+       ],
+       [
+        0.3,
+        0.3,
+        0.0
+       ],
+       [
+        15.7,
+        0.3,
+        0.0
+       ],
+       [
+        15.7,
+        11.7,
+        0.0
+       ],
+       [
+        0.3,
+        11.7,
+        0.0
+       ]
+      ],
+      "triangles": [
+       [
+        0,
+        2,
+        1
+       ],
+       [
+        0,
+        3,
+        2
+       ],
+       [
+        4,
+        5,
+        6
+       ],
+       [
+        4,
+        6,
+        7
+       ],
+       [
+        0,
+        1,
+        5
+       ],
+       [
+        0,
+        5,
+        4
+       ],
+       [
+        1,
+        2,
+        6
+       ],
+       [
+        1,
+        6,
+        5
+       ],
+       [
+        2,
+        3,
+        7
+       ],
+       [
+        2,
+        7,
+        6
+       ],
+       [
+        3,
+        0,
+        4
+       ],
+       [
+        3,
+        4,
+        7
+       ]
+      ]
+     }
+    ],
+    "context_meshes": [
+     {
+      "vertices": [
+       [
+        0,
+        0,
+        0
+       ],
+       [
+        16,
+        0,
+        0
+       ],
+       [
+        16,
+        12,
+        0
+       ],
+       [
+        0,
+        12,
+        0
+       ],
+       [
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        16.0,
+        0.0,
+        1.0
+       ],
+       [
+        16.0,
+        12.0,
+        1.0
+       ],
+       [
+        0.0,
+        12.0,
+        1.0
+       ]
+      ],
+      "triangles": [
+       [
+        2,
+        1,
+        0
+       ],
+       [
+        4,
+        5,
+        6
+       ],
+       [
+        3,
+        2,
+        0
+       ],
+       [
+        4,
+        6,
+        7
+       ],
+       [
+        0,
+        1,
+        5
+       ],
+       [
+        0,
+        5,
+        4
+       ],
+       [
+        1,
+        2,
+        6
+       ],
+       [
+        1,
+        6,
+        5
+       ],
+       [
+        2,
+        3,
+        7
+       ],
+       [
+        2,
+        7,
+        6
+       ],
+       [
+        3,
+        0,
+        4
+       ],
+       [
+        3,
+        4,
+        7
+       ]
+      ]
+     },
+     {
+      "vertices": [
+       [
+        1.0,
+        4.0,
+        1.0
+       ],
+       [
+        15.0,
+        4.0,
+        1.0
+       ],
+       [
+        15.0,
+        4.692820323027551,
+        0.6000000000000001
+       ],
+       [
+        1.0,
+        4.692820323027551,
+        0.6000000000000001
+       ],
+       [
+        1.0,
+        10.0,
+        11.392304845413264
+       ],
+       [
+        15.0,
+        10.0,
+        11.392304845413264
+       ],
+       [
+        15.0,
+        10.69282032302755,
+        10.992304845413264
+       ],
+       [
+        1.0,
+        10.69282032302755,
+        10.992304845413264
+       ]
+      ],
+      "triangles": [
+       [
+        0,
+        2,
+        1
+       ],
+       [
+        0,
+        3,
+        2
+       ],
+       [
+        4,
+        5,
+        6
+       ],
+       [
+        4,
+        6,
+        7
+       ],
+       [
+        0,
+        1,
+        5
+       ],
+       [
+        0,
+        5,
+        4
+       ],
+       [
+        1,
+        2,
+        6
+       ],
+       [
+        1,
+        6,
+        5
+       ],
+       [
+        2,
+        3,
+        7
+       ],
+       [
+        2,
+        7,
+        6
+       ],
+       [
+        3,
+        0,
+        4
+       ],
+       [
+        3,
+        4,
+        7
+       ]
+      ]
+     },
+     {
+      "vertices": [
+       [
+        1,
+        0.5,
+        1.0
+       ],
+       [
+        15,
+        0.5,
+        1.0
+       ],
+       [
+        15,
+        1.5,
+        1.0
+       ],
+       [
+        1,
+        1.5,
+        1.0
+       ],
+       [
+        1.0,
+        0.5,
+        2.5
+       ],
+       [
+        15.0,
+        0.5,
+        2.5
+       ],
+       [
+        15.0,
+        1.5,
+        2.5
+       ],
+       [
+        1.0,
+        1.5,
+        2.5
+       ]
+      ],
+      "triangles": [
+       [
+        2,
+        1,
+        0
+       ],
+       [
+        4,
+        5,
+        6
+       ],
+       [
+        3,
+        2,
+        0
+       ],
+       [
+        4,
+        6,
+        7
+       ],
+       [
+        0,
+        1,
+        5
+       ],
+       [
+        0,
+        5,
+        4
+       ],
+       [
+        1,
+        2,
+        6
+       ],
+       [
+        1,
+        6,
+        5
+       ],
+       [
+        2,
+        3,
+        7
+       ],
+       [
+        2,
+        7,
+        6
+       ],
+       [
+        3,
+        0,
+        4
+       ],
+       [
+        3,
+        4,
+        7
+       ]
+      ]
+     }
+    ]
+   },
+   "pointer": [
+    {
+     "at_ms": 0,
+     "xyz": [
+      8,
+      -1.5,
+      -0.3
+     ],
+     "event": "move"
+    },
+    {
+     "at_ms": 1500,
+     "xyz": [
+      0.3,
+      0.3,
+      -0.2
+     ],
+     "event": "click"
+    },
+    {
+     "at_ms": 5000,
+     "xyz": [
+      15.7,
+      11.7,
+      -0.2
+     ],
+     "event": "drag"
+    },
+    {
+     "at_ms": 9000,
+     "xyz": [
+      16.5,
+      12.5,
+      -0.3
+     ],
+     "event": "move"
+    }
+   ],
+   "decision": {
+    "topic": "anti_slip",
+    "question": "How should the stand resist sliding?",
+    "criteria": [
+     "Friction on smooth desks",
+     "Rocking on uneven tables",
+     "Protects the desk"
+    ],
+    "options": [
+     {
+      "label": "Corner pads",
+      "note": "Less friction area; fine for light devices."
+     },
+     {
+      "label": "Full cork sheet",
+      "note": "Most friction; weight prevents rocking.",
+      "value": "2 mm",
+      "chosen": true
+     }
+    ],
+    "applies_to": {
+     "features": [
+      "ExtrudeFeature",
+      "RectangularPatternFeature"
+     ],
+     "tags": [
+      "pad",
+      "foot",
+      "grip",
+      "rubber",
+      "cork",
+      "sheet"
+     ]
+    },
+    "parameter": {
+     "name": "Sheet thickness",
+     "value": "2 mm",
+     "kind": "length"
+    }
+   }
+  },
+  {
+   "id": "solid_back",
+   "title": "Keep the back solid",
+   "goal": "Stay stiff under hand pressure while drawing.",
+   "duration_ms": 9000,
+   "geometry": {
+    "meshes": [
+     {
+      "vertices": [
+       [
+        0,
+        0,
+        0
+       ],
+       [
+        16,
+        0,
+        0
+       ],
+       [
+        16,
+        12,
+        0
+       ],
+       [
+        0,
+        12,
+        0
+       ],
+       [
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        16.0,
+        0.0,
+        1.0
+       ],
+       [
+        16.0,
+        12.0,
+        1.0
+       ],
+       [
+        0.0,
+        12.0,
+        1.0
+       ]
+      ],
+      "triangles": [
+       [
+        2,
+        1,
+        0
+       ],
+       [
+        4,
+        5,
+        6
+       ],
+       [
+        3,
+        2,
+        0
+       ],
+       [
+        4,
+        6,
+        7
+       ],
+       [
+        0,
+        1,
+        5
+       ],
+       [
+        0,
+        5,
+        4
+       ],
+       [
+        1,
+        2,
+        6
+       ],
+       [
+        1,
+        6,
+        5
+       ],
+       [
+        2,
+        3,
+        7
+       ],
+       [
+        2,
+        7,
+        6
+       ],
+       [
+        3,
+        0,
+        4
+       ],
+       [
+        3,
+        4,
+        7
+       ]
+      ]
+     },
+     {
+      "vertices": [
+       [
+        1,
+        0.5,
+        1.0
+       ],
+       [
+        15,
+        0.5,
+        1.0
+       ],
+       [
+        15,
+        1.5,
+        1.0
+       ],
+       [
+        1,
+        1.5,
+        1.0
+       ],
+       [
+        1.0,
+        0.5,
+        2.5
+       ],
+       [
+        15.0,
+        0.5,
+        2.5
+       ],
+       [
+        15.0,
+        1.5,
+        2.5
+       ],
+       [
+        1.0,
+        1.5,
+        2.5
+       ]
+      ],
+      "triangles": [
+       [
+        2,
+        1,
+        0
+       ],
+       [
+        4,
+        5,
+        6
+       ],
+       [
+        3,
+        2,
+        0
+       ],
+       [
+        4,
+        6,
+        7
+       ],
+       [
+        0,
+        1,
+        5
+       ],
+       [
+        0,
+        5,
+        4
+       ],
+       [
+        1,
+        2,
+        6
+       ],
+       [
+        1,
+        6,
+        5
+       ],
+       [
+        2,
+        3,
+        7
+       ],
+       [
+        2,
+        7,
+        6
+       ],
+       [
+        3,
+        0,
+        4
+       ],
+       [
+        3,
+        4,
+        7
+       ]
+      ]
+     },
+     {
+      "vertices": [
+       [
+        0.3,
+        0.3,
+        -0.2
+       ],
+       [
+        15.7,
+        0.3,
+        -0.2
+       ],
+       [
+        15.7,
+        11.7,
+        -0.2
+       ],
+       [
+        0.3,
+        11.7,
+        -0.2
+       ],
+       [
+        0.3,
+        0.3,
+        0.0
+       ],
+       [
+        15.7,
+        0.3,
+        0.0
+       ],
+       [
+        15.7,
+        11.7,
+        0.0
+       ],
+       [
+        0.3,
+        11.7,
+        0.0
+       ]
+      ],
+      "triangles": [
+       [
+        0,
+        2,
+        1
+       ],
+       [
+        0,
+        3,
+        2
+       ],
+       [
+        4,
+        5,
+        6
+       ],
+       [
+        4,
+        6,
+        7
+       ],
+       [
+        0,
+        1,
+        5
+       ],
+       [
+        0,
+        5,
+        4
+       ],
+       [
+        1,
+        2,
+        6
+       ],
+       [
+        1,
+        6,
+        5
+       ],
+       [
+        2,
+        3,
+        7
+       ],
+       [
+        2,
+        7,
+        6
+       ],
+       [
+        3,
+        0,
+        4
+       ],
+       [
+        3,
+        4,
+        7
+       ]
+      ]
+     },
+     {
+      "vertices": [
+       [
+        1.0,
+        4.0,
+        1.0
+       ],
+       [
+        15.0,
+        4.0,
+        1.0
+       ],
+       [
+        15.0,
+        4.69282,
+        0.6
+       ],
+       [
+        1.0,
+        4.69282,
+        0.6
+       ],
+       [
+        1.0,
+        10.0,
+        11.3923
+       ],
+       [
+        15.0,
+        10.0,
+        11.3923
+       ],
+       [
+        15.0,
+        10.69282,
+        10.9923
+       ],
+       [
+        1.0,
+        10.69282,
+        10.9923
+       ]
+      ],
+      "triangles": [
+       [
+        0,
+        2,
+        1
+       ],
+       [
+        0,
+        3,
+        2
+       ],
+       [
+        4,
+        5,
+        6
+       ],
+       [
+        4,
+        6,
+        7
+       ],
+       [
+        0,
+        1,
+        5
+       ],
+       [
+        0,
+        5,
+        4
+       ],
+       [
+        1,
+        2,
+        6
+       ],
+       [
+        1,
+        6,
+        5
+       ],
+       [
+        2,
+        3,
+        7
+       ],
+       [
+        2,
+        7,
+        6
+       ],
+       [
+        3,
+        0,
+        4
+       ],
+       [
+        3,
+        4,
+        7
+       ]
+      ]
+     }
+    ]
+   },
+   "media": {},
+   "operation": {
+    "tool": "(no operation)",
+    "instruction": "Decide not to cut a lightening window into the back panel.",
+    "parameters": [
+     {
+      "name": "Window",
+      "value": "none"
+     }
+    ]
+   },
+   "reasoning": {
+    "text": "I considered a window like on a phone stand, but drawing pushes hard on the screen. A solid back is stiffer, and the extra material is worth it for this use.",
+    "source": "mockup"
+   },
+   "cues": [
+    {
+     "at_ms": 0,
+     "label": "Should the back be lightened?"
+    },
+    {
+     "at_ms": 3500,
+     "label": "Drawing pushes hard on the screen."
+    },
+    {
+     "at_ms": 7000,
+     "label": "I keep it solid on purpose."
+    }
+   ],
+   "animation": {
+    "type": "reveal",
+    "new_meshes": [
+     {
+      "vertices": [
+       [
+        1.0,
+        4.0,
+        1.0
+       ],
+       [
+        15.0,
+        4.0,
+        1.0
+       ],
+       [
+        15.0,
+        4.692820323027551,
+        0.6000000000000001
+       ],
+       [
+        1.0,
+        4.692820323027551,
+        0.6000000000000001
+       ],
+       [
+        1.0,
+        10.0,
+        11.392304845413264
+       ],
+       [
+        15.0,
+        10.0,
+        11.392304845413264
+       ],
+       [
+        15.0,
+        10.69282032302755,
+        10.992304845413264
+       ],
+       [
+        1.0,
+        10.69282032302755,
+        10.992304845413264
+       ]
+      ],
+      "triangles": [
+       [
+        0,
+        2,
+        1
+       ],
+       [
+        0,
+        3,
+        2
+       ],
+       [
+        4,
+        5,
+        6
+       ],
+       [
+        4,
+        6,
+        7
+       ],
+       [
+        0,
+        1,
+        5
+       ],
+       [
+        0,
+        5,
+        4
+       ],
+       [
+        1,
+        2,
+        6
+       ],
+       [
+        1,
+        6,
+        5
+       ],
+       [
+        2,
+        3,
+        7
+       ],
+       [
+        2,
+        7,
+        6
+       ],
+       [
+        3,
+        0,
+        4
+       ],
+       [
+        3,
+        4,
+        7
+       ]
+      ]
+     }
+    ],
+    "context_meshes": [
+     {
+      "vertices": [
+       [
+        0,
+        0,
+        0
+       ],
+       [
+        16,
+        0,
+        0
+       ],
+       [
+        16,
+        12,
+        0
+       ],
+       [
+        0,
+        12,
+        0
+       ],
+       [
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        16.0,
+        0.0,
+        1.0
+       ],
+       [
+        16.0,
+        12.0,
+        1.0
+       ],
+       [
+        0.0,
+        12.0,
+        1.0
+       ]
+      ],
+      "triangles": [
+       [
+        2,
+        1,
+        0
+       ],
+       [
+        4,
+        5,
+        6
+       ],
+       [
+        3,
+        2,
+        0
+       ],
+       [
+        4,
+        6,
+        7
+       ],
+       [
+        0,
+        1,
+        5
+       ],
+       [
+        0,
+        5,
+        4
+       ],
+       [
+        1,
+        2,
+        6
+       ],
+       [
+        1,
+        6,
+        5
+       ],
+       [
+        2,
+        3,
+        7
+       ],
+       [
+        2,
+        7,
+        6
+       ],
+       [
+        3,
+        0,
+        4
+       ],
+       [
+        3,
+        4,
+        7
+       ]
+      ]
+     },
+     {
+      "vertices": [
+       [
+        1,
+        0.5,
+        1.0
+       ],
+       [
+        15,
+        0.5,
+        1.0
+       ],
+       [
+        15,
+        1.5,
+        1.0
+       ],
+       [
+        1,
+        1.5,
+        1.0
+       ],
+       [
+        1.0,
+        0.5,
+        2.5
+       ],
+       [
+        15.0,
+        0.5,
+        2.5
+       ],
+       [
+        15.0,
+        1.5,
+        2.5
+       ],
+       [
+        1.0,
+        1.5,
+        2.5
+       ]
+      ],
+      "triangles": [
+       [
+        2,
+        1,
+        0
+       ],
+       [
+        4,
+        5,
+        6
+       ],
+       [
+        3,
+        2,
+        0
+       ],
+       [
+        4,
+        6,
+        7
+       ],
+       [
+        0,
+        1,
+        5
+       ],
+       [
+        0,
+        5,
+        4
+       ],
+       [
+        1,
+        2,
+        6
+       ],
+       [
+        1,
+        6,
+        5
+       ],
+       [
+        2,
+        3,
+        7
+       ],
+       [
+        2,
+        7,
+        6
+       ],
+       [
+        3,
+        0,
+        4
+       ],
+       [
+        3,
+        4,
+        7
+       ]
+      ]
+     },
+     {
+      "vertices": [
+       [
+        0.3,
+        0.3,
+        -0.2
+       ],
+       [
+        15.7,
+        0.3,
+        -0.2
+       ],
+       [
+        15.7,
+        11.7,
+        -0.2
+       ],
+       [
+        0.3,
+        11.7,
+        -0.2
+       ],
+       [
+        0.3,
+        0.3,
+        0.0
+       ],
+       [
+        15.7,
+        0.3,
+        0.0
+       ],
+       [
+        15.7,
+        11.7,
+        0.0
+       ],
+       [
+        0.3,
+        11.7,
+        0.0
+       ]
+      ],
+      "triangles": [
+       [
+        0,
+        2,
+        1
+       ],
+       [
+        0,
+        3,
+        2
+       ],
+       [
+        4,
+        5,
+        6
+       ],
+       [
+        4,
+        6,
+        7
+       ],
+       [
+        0,
+        1,
+        5
+       ],
+       [
+        0,
+        5,
+        4
+       ],
+       [
+        1,
+        2,
+        6
+       ],
+       [
+        1,
+        6,
+        5
+       ],
+       [
+        2,
+        3,
+        7
+       ],
+       [
+        2,
+        7,
+        6
+       ],
+       [
+        3,
+        0,
+        4
+       ],
+       [
+        3,
+        4,
+        7
+       ]
+      ]
+     }
+    ]
+   },
+   "pointer": [
+    {
+     "at_ms": 0,
+     "xyz": [
+      8,
+      2,
+      5
+     ],
+     "event": "move"
+    },
+    {
+     "at_ms": 3000,
+     "xyz": [
+      8,
+      5.6,
+      7.0
+     ],
+     "event": "click"
+    },
+    {
+     "at_ms": 6000,
+     "xyz": [
+      8,
+      5.6,
+      7.0
+     ],
+     "event": "move"
+    },
+    {
+     "at_ms": 9000,
+     "xyz": [
+      8,
+      3,
+      8
+     ],
+     "event": "move"
+    }
+   ],
+   "decision": {
+    "topic": "material_reduction",
+    "question": "Should the back panel be lightened?",
+    "criteria": [
+     "Stiffness under hand pressure",
+     "Material",
+     "Looks"
+    ],
+    "options": [
+     {
+      "label": "Central window",
+      "note": "Saves material, flexes when drawn on.",
+      "value": "90 mm"
+     },
+     {
+      "label": "Keep it solid",
+      "note": "Stiff under pressure; worth the material.",
+      "chosen": true
+     }
+    ],
+    "applies_to": {
+     "features": [
+      "ExtrudeFeature",
+      "CombineFeature",
+      "ShellFeature"
+     ],
+     "tags": [
+      "window",
+      "lighten",
+      "cut",
+      "hole",
+      "opening",
+      "pocket"
+     ]
+    }
+   }
+  }
+ ]
+}

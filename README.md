@@ -1,10 +1,70 @@
 # exCADmple — Autodesk Fusion 原型
 
-**固定开发分支：`fusion`**
+**固定开发分支：`fusion`**（已并入 `fusion-him` 的 HiM 与 Reasoning Reuse 功能，`fusion-him` 不再单独维护。）
 
-这是 [exCADmple](https://github.com/Scaffolder666/exCADmpleFusion) 的 Autodesk Fusion 版本。项目探索如何在自己的 CAD 设计过程中，探索并复用其他设计师在预设案例中表达的 **Design Reasoning（设计推理）**。
+这是 [exCADmple](https://github.com/Scaffolder666/exCADmpleFusion) 的 Autodesk Fusion 版本：**exCADmple: Supporting Design Reasoning Through Shared CAD Models**。用户在自己的 CAD 工作空间中探索其他设计师的设计过程与推理：通过交互式时间轴播放整个过程或重访单个步骤，每一步展示模型如何演变、原设计师如何执行 CAD 操作（参考几何动画 + Ghost Pointer），并同步给出解释设计选择的语音与文字。用户可以完整跟随，也可以有选择地借鉴个别步骤，同时在同一工作空间中发展自己的设计——学习的不只是**怎么建模**，还有**怎么设计**。
 
-Fusion 相关的后续开发直接提交到 **`fusion` 分支**。另一个固定分支 [`blender`](https://github.com/Scaffolder666/exCADmpleFusion/tree/blender) 包含单视口播放器与九步骤 Phone Stand 原型；默认 [`main`](https://github.com/Scaffolder666/exCADmpleFusion) 分支用于项目总体介绍。
+另一个固定分支 [`blender`](https://github.com/Scaffolder666/exCADmpleFusion/tree/blender) 是同一研究问题的 Blender 原型；[`main`](https://github.com/Scaffolder666/exCADmpleFusion) 用于项目总体介绍。
+
+## v0.7 完整版：Design Reasoning Reuse
+
+本版本把 HiM 复现用于 `main` 分支的研究目标：**用户在设计自己的模型时，复用其他设计师在案例中表达的推理。**案例数据视为已经存在（预先制作），软件负责“找到 → 对照 → 迁移”。
+
+插件启动后有两个面板：
+
+- **左侧 · 案例播放器**：可同时打开多个案例并切换，每个案例分别记住播放到哪一步。每一步展示 **How**（参考几何动画 + Ghost Pointer）、**What**（工具与参数）、**Why**（推理），以及结构化的**设计决策**（问题、考虑因素、各选项及取舍、最终选择）。
+- **右侧 · Reasoning Reuse**：
+  1. **From my model**：在*自己的*模型上选中面、边或顶点 → HiM 算法以**只读**方式找出生成它的特征（分析后恢复时间线标记）→ 在所有打开的案例中找出相关决策，并说明**为什么推荐**（特征类型相同 / 名称含作者标签 / 参数类型相同）。每张卡片会把**你的参数值**与案例的各选项并列，并标出最接近的选项（只作参考，不判断对错）。
+  2. **Across examples**：同一个设计问题在不同案例中的回答并排比较（例如防滑：Phone Stand 用四个脚垫，Tablet Stand 用整片软木），呈现设计空间，而非唯一答案。
+  3. **History in Motion · inspect（可选，默认关闭）**：论文中的原位参数动画，只有勾选后才会临时修改用户模型的参数，结束后恢复。
+
+**附带案例（均为人工编写的示例数据，标记为 Illustrative，不是真实设计师录制）：**
+
+| 案例 | 内容 |
+|---|---|
+| `examples/phone_stand.json` | 从 Blender 分支移植的九步 Phone Stand：底座 Extrude、背板倾角（旋转）、挡边 Extrude、底座圆角（半径渐变）、充电线槽（挡边逐渐分开）、镜像支撑肋、2×2 防滑垫阵列、背板减重窗口（逐渐打开）、手机代理件装配检查。每步都有三维 Ghost Pointer 路径和结构化决策 |
+| `examples/tablet_stand.json` | 对照案例：同样的设计问题，因设备更重、用途不同而做出部分不同的选择 |
+
+两个案例由 `python tools/build_examples.py` 生成。
+
+**匹配规则透明可解释：**特征类型匹配（`decision.applies_to.features`）、名称或参数名中的作者标签（`applies_to.tags`）、参数类型（长度 / 角度）。只有类型相同的“弱匹配”默认折叠。推理文本始终来自案例作者，系统不会生成推理。
+
+### 决策数据格式（step.decision）
+
+```json
+"decision": {
+  "topic": "viewing_angle",
+  "question": "How steep should the phone lean?",
+  "criteria": ["Eye level while sitting at a desk", "Glare", "Stability when tapped"],
+  "options": [
+    {"label": "Shallow", "value": "55 deg", "note": "…"},
+    {"label": "Medium", "value": "65 deg", "note": "…", "chosen": true}
+  ],
+  "parameter": {"name": "Angle from desk", "value": "65 deg", "kind": "angle"},
+  "applies_to": {"features": ["ExtrudeFeature", "RevolveFeature"], "tags": ["back", "angle", "tilt"]}
+}
+```
+
+`topic` 相同的决策会在 Across examples 中并排显示。Ghost Pointer 写在 `step.pointer`：`[{"at_ms": 1500, "xyz": [0,0,0], "event": "click"}]`（单位 cm，位于案例局部坐标，`event` 为 move / click / drag）。
+
+### Fusion 桌面端冒烟测试（v0.7）
+
+1. 启动插件：左侧打开 Phone Stand 与 Tablet Stand；用 **Open examples** 切换，确认各自的播放进度分别保留。
+2. 播放 Phone Stand 第 4、5、8 步：圆角半径、线槽宽度和减重窗口应逐渐变化；橙色 Ghost Pointer 沿路径移动，按下时显示圆环。
+3. 自己建一个底板并加 Fillet（命名为 “Corner fillet”）；选中圆角面，右侧应显示 “Round the base edges” 决策、你的半径与各选项的比较。
+4. 点 **Watch in example**：左侧应切到对应案例和步骤并开始播放。
+5. 确认在未勾选 inspect 时，你的参数与时间线没有任何变化。
+
+## 播放器基础功能（左侧教程面板）
+
+- **左侧常驻面板**（默认宽 360 px）：先展示当前步骤的目标与 **Why**（推理文字、同步字幕、可选合成朗读），再展示**决策**（问题、考虑因素、选项与取舍）、**How**（工具与参数）、过程证据与几何关联。
+- **底部常驻播放条**：横向步骤编号、前后跳转、播放／暂停、步骤内进度；**Whole process** 连续播放整个设计过程，**This step only** 只重访当前步骤。
+- **自由探索**：可直接跳到任意决策，阅读理由并返回自己的设计，不要求按顺序完成教程。
+- **关联几何与 Focus**：沿用手动关联和高亮机制。
+
+右侧 **Reasoning Reuse** 面板与 HiM 复现见下文。
+
+**不要同时运行旧版 `fusion-him` 插件与本插件**：二者共用插件入口与会话标识。
 
 本插件允许用户**在同一个 Fusion 工作空间中，一边探索参考案例，一边继续建立自己的模型**。参考案例使用独立的数据驱动时间轴，不会移动用户原生 Fusion Feature Timeline 的历史标记。
 
@@ -21,16 +81,7 @@ Fusion 相关的后续开发直接提交到 **`fusion` 分支**。另一个固�
 - 用户可以在同一个 Fusion 文档中创建和修改自己的 Sketch、Body、Feature；切换案例步骤**不会回滚用户的 Feature Timeline**。
 - 文档保存前暂时清理参考图形，保存后恢复，避免把临时显示误留在文件里。
 
-当前附带的 Phone Stand 是**说明性质的测试案例**：包含三个网格快照和示例推理文本，**没有真实设计师录制的语音或视频**；但可用于验证播放计时与操作提示。
-
-## 白底参考教程界面
-
-- **左侧常驻面板**：默认宽 360 px，Fusion 画布自动为面板留出空间。
-- **突出当前决策**：浅蓝步骤卡固定在内容区顶部，先展示目标和 Why，再查看操作、参数、媒体与几何关联。
-- **底部常驻播放条**：横向步骤编号、前后跳转、播放／暂停、步骤内进度。长步骤列表可以横向滚动，悬停或辅助阅读可获得完整步骤标题。
-- **自由探索**：可以直接跳到任意决策，阅读理由并返回自己的设计，不要求按顺序完成教程。
-
-底部播放条位于 **exCADmple 左侧面板内部**，不是覆盖整个 Fusion 窗口，也不替换原生 Feature Timeline。当前示例仍为三步骤；这次更新同步了界面与交互组织，没有把 Blender 的九步动画冒充为 Fusion 已实现功能。
+附带的 Phone Stand（九步）与 Tablet Stand（五步）是**说明性质的示例数据**：几何、Ghost Pointer 与推理均为人工编写，**没有真实设计师录制的语音或视频**。
 
 ## 在 Autodesk Fusion 中安装
 
@@ -170,6 +221,36 @@ Veuskens 等人在 SCF 2023 的 [*History in Motion*](https://doi.org/10.1145/36
 
 exCADmple 的这个 MVP 借鉴的是**动画呈现原则**，而不是原代码实现。它直接在同一个 Fusion Canvas 中，根据验证后的数据生成临时 Mesh，而不是通过第二个 Fusion 实例修改原生 Feature 参数。这保留了用户自己的 CAD 建模历史，同时将 Feature 依赖抽取与全面的操作复现留给未来工作。
 
+## History in Motion 复现（v0.6，原生 Fusion 模型）
+
+HiM 现在位于右侧 **Reasoning Reuse** 面板（工具栏按钮 **Reasoning Reuse** 可重新打开）。选中参数化 Fusion 设计中的 Face、Edge 或 Vertex，HiM 会找到相关建模特征，用于匹配案例中的决策。论文中的原位参数动画放在可折叠的 **History in Motion · inspect** 区域，**默认关闭**，勾选后才会动画用户自己的模型。
+
+| 论文功能 | 实现位置 | 说明 |
+|---|---|---|
+| 选中几何 → 过滤特征（Algorithm 1/2） | `core/him_filter.py`、`core/him_fusion.py` | Edge 转为两侧 Face，Vertex 转为相邻 Edge 的所有 Face；先找**创建**该 Face 的特征（`feature.faces`），再沿特征的输入几何（Profile、Edge Set、输入 Face、Pattern 的种子特征等）向前追溯，直到遇到 Sketch |
+| 修改该几何的特征 | `him_filter._modified_by` | 对时间线每个状态比较前后签名：Face 用边数、顶点数、面积、质心；Edge/Vertex 用三维坐标 |
+| “Show more” | `him_filter.show_more` | Sketch 若建在模型 Face 上，继续追溯该 Face 的创建特征；直到 Sketch 位于 XY/XZ/YZ 基准平面（或其它构造平面） |
+| 逆序播放 | `him_motion.Playback` | 从最晚添加的特征开始，动画起点与当前模型状态一致 |
+| 参数动画 | `HiMController._render` | 临时把 ModelParameter 从约 0（2%）改到实际值：Extrude 距离、Revolve 角度、Fillet 半径、Chamfer 距离、Circular Pattern 总角度、Rectangular Pattern X/Y 距离等 |
+| 无参数特征 | `HiMController._draw_overlay` | Mirror、Combine、Split、Loft、Move、Import 等使用缩放 + 透明度渐入的 Custom Graphics |
+| 20 种特征 | `him_motion.FEATURES` | 未支持的特征仍显示在面板中，标为“not animated”，播放时跳过 |
+| 其它几何透明、高亮输入 | `OpacityFocus` + Custom Graphics 曲线 | 其它 Body 暂时降到 20% 透明度；Profile/Edge 以蓝色曲线高亮 |
+| 速度 2–10 秒/特征，自适应帧率 | `him_motion.AdaptiveStepper` | 起始 15 帧（2 秒）到 75 帧（10 秒），之后按上一帧实际耗时调整步长 |
+| 暂停、重播、前进、后退（后退为逆向播放）、高亮当前特征 | `ui/him.*` | 垂直胶囊式历史列表，带进度条 |
+| 编辑快捷方式 | `HiMController.edit_feature` / `set_parameter` | 选中特征并尝试打开原生编辑命令；面板内可直接修改该特征的参数表达式 |
+
+**安全与恢复：** 每个参数在第一次修改前记录原始**表达式**（`RestoreJournal`），每个特征播放完毕、选中新几何、Stop、保存前（`documentSaving`）、切换文档、停止插件时都会恢复，同时恢复透明度和时间线标记位置。
+
+**与论文的差异（须如实说明）：**
+
+- 论文在**第二个 Fusion 实例**中操作模型副本，通过 WebSocket 通信。Fusion API 无法在同一进程中打开第二个可交互三维视口，所以这里在**用户自己的模型中原位**播放，再恢复。参数修改会进入 Fusion 撤销历史；重要模型请先在副本上测试。
+- “修改”检测需要多次回滚时间线，大模型分析可能较慢（超过 600 个时间线项会拒绝分析）。
+- 原生 “Edit Feature” 对话框的命令 ID 并未公开记录：插件会尝试几个候选 ID；若都不存在，则只选中该特征，同时提供面板内的参数编辑。
+- 输入几何依赖 Fusion API 实际提供的属性（`profile`、`edgeSets`、`inputEntities` 等）；以 Body 作为输入时不再展开，避免引入整个零件的所有特征。
+- 尚未在 Fusion 桌面端实测；纯 Python 算法、动画计时与适配层（stub `adsk`）有单元测试：`tests/test_him_filter.py`、`tests/test_him_motion.py`、`tests/test_him_fusion_adapter.py`。
+
+**桌面端冒烟测试：** 建一个底板（Extrude），在其上表面建 Sketch 拉伸圆柱，加 Thread，再做 Circular Pattern；选中一根复制出的圆柱面，应得到 Pattern → Thread → Extrude，点 **Show more** 后出现底板 Extrude。播放时，Pattern 角度应从 0 逐渐展开；结束后核对参数表达式和时间线标记与原来一致。
+
 ## 代码结构
 
 ```text
@@ -177,10 +258,20 @@ exCADmpleFusion.py          Fusion 入口、HTML Bridge 与保存安全处理
 exCADmpleFusion.manifest    Fusion Add-in 元数据
 core/packages.py           案例包验证与安全 ZIP 读取
 core/renderer.py           Fusion 画布中的临时只读 Mesh
+core/him_filter.py         HiM 特征过滤算法（纯 Python）
+core/him_motion.py         HiM 动画注册表、计时与播放状态
+core/him_fusion.py         HiM 的 Fusion 适配层与动画控制
+ui/him.html|css|js         HiM 控制面板
 ui/index.html              播放器界面
 ui/player.css              界面样式
 ui/player.js               独立的播放时间轴、媒体和提示
-examples/phone_stand.json  三步骤参考几何与 Reasoning
+examples/phone_stand.json  九步 Phone Stand（几何、Ghost Pointer、决策）
+examples/tablet_stand.json 对照案例
+tools/build_examples.py    生成上述两个案例
+core/reuse.py              决策校验、匹配、数值对照、跨案例主题
+core/library.py            多案例库与各自播放进度
+core/pointer.py            Ghost Pointer 路径校验与采样
+core/reuse_fusion.py       Reuse 与 Fusion 的连接
 tests/test_packages.py     纯 Python 案例包测试
 ```
 
@@ -197,7 +288,7 @@ python -m unittest discover -s tests -v
 **Fusion 桌面端手动集成测试：**
 
 1. 新建设计文档，启动插件。
-2. 在三个步骤之间跳转，确认 Canvas 中的参考 Mesh 随之变化。
+2. 在九个步骤之间跳转，确认 Canvas 中的参考 Mesh 随之变化。
 3. 创建自己的 Sketch 与 Extrude，再次导航案例。
 4. 检查自己的 Feature History 是否保持不变。
 5. 保存、关闭、重开文档，检查是否留下临时图形。
@@ -219,3 +310,30 @@ python -m unittest discover -s tests -v
 - [Fusion Custom Graphics](https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/CustomGraphics_UM.htm)
 - [Fusion Add-In Manifest](https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/WritingDebugging_UM.htm)
 - [Fusion Document Save Events](https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/core_Application_documentSaving.htm)
+
+
+### HiM-style 操作动画实现状态（2026-11）
+
+- 已接入 Fusion Custom Graphics：Extrude、Mesh Reveal、Revolve（现有网格绕轴旋转）、Circular Pattern（实例逐个出现）、Mirror（镜像几何渐变）、Transform（平移）。
+- 新增纯 Python 回归测试：`tests/test_operation_previews.py`。测试已提交，尚未在 Fusion 桌面端执行。
+- **精度边界**：Revolve 不是草图截面扫掠生成 BRep；Mirror、Fillet、Boolean 等为网格预览或同拓扑插值，不是 BRep 重算。（原生 Fusion 模型上的参数动画见“History in Motion 复现”；Ghost Pointer 见 v0.7。）
+- 所有预览使用临时网格，不会重算或修改原生 Fusion Timeline。
+
+
+### HiM 论文界面视觉基准（用户提供截图，2026-11-07）
+
+- **白色界面**；左侧为主要 CAD 模型视图，右侧为狭窄的**垂直建模历史**，不是横向时间线。
+- 历史节点使用彩色描边的圆角胶囊卡片，连接在一条垂直时间轴上，标注 Chamfer / Thread / Fillet / Extrude / Revolve 等操作及状态。
+- 历史顶部提供返回/暂停/播放控制；底部有动画速度调节和向下导航。
+- exCADmple 在保留 HiM 历史回放交互的同时，额外展示每一步的设计理由、操作参数、字幕和可复用的 CAD 示例；模型在 Fusion 原生视口内展示，不要伪造一个替代视口。
+- 该截图是**视觉与交互参考**，不是所有论文动画能力已经实现的证明。
+
+
+### 分支对齐进度（2026-11-07）
+
+已直接核对 `blender/blender/excadmple_blender/demo.json`：该示例有九步，Fusion-HiM 目前仅移植了三步。已在 Fusion-HiM 播放器加入 0.25× / 0.5× / 1× / 1.5× / 2× 速度控制，作用于非媒体播放时钟、媒体播放速率及合成旁白速率；在 Fusion WebView 中的实际效果仍需桌面测试。（v0.7 更新：九步数据和三维 Ghost Pointer 已移植，见上文。）
+
+
+### 补充操作预览（2026-11-08）
+
+`core/animation.py` 和 `core/renderer.py` 新增 Rectangular Pattern（有上限的二维实例阵列），以及 Fillet / Chamfer / Boolean / Split / Combine / Loft / Shell / Thread / Import / Export 的**显式 before/after 网格预览协议**。若网格顶点和三角拓扑相同，按进度插值；拓扑不同则在中点切换状态，**不提供真实 Feature 参数动画或 BRep Boolean 重算**。案例包必须提供合法的 `before_meshes` 和 `after_meshes`。新增 `tests/test_transition_previews.py`，尚待 GitHub CI 验证。（v0.7 更新：九步案例与 Ghost Pointer 已完成。）
