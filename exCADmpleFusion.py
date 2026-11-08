@@ -441,12 +441,12 @@ def _create_palette():
         _palette.deleteMe()          # the layout may have changed
     if ROLE == REFERENCE:
         # Version A: HiM control panel beside the reference instance's canvas.
-        _palette = _ui.palettes.add2(PALETTE_ID, "exCADmple · History in Motion", str(ROOT / "ui" / "reference.html"),
+        _palette = _ui.palettes.add2(PALETTE_ID, "exCADmple · History in Motion", (ROOT / "ui" / "reference.html").resolve().as_uri(),
                                      True, True, True, 340, 740)
         _palette.dockingState = adsk.core.PaletteDockingStates.PaletteDockStateRight
     else:
         # Version B: a compact tutorial floating over the Fusion canvas.
-        _palette = _ui.palettes.add2(PALETTE_ID, "exCADmple · Tutorial", str(ROOT / "ui" / "index.html"),
+        _palette = _ui.palettes.add2(PALETTE_ID, "exCADmple · Tutorial", (ROOT / "ui" / "index.html").resolve().as_uri(),
                                      True, True, True, 340, 640)
         _palette.dockingState = adsk.core.PaletteDockingStates.PaletteDockStateFloating
         try:
