@@ -148,6 +148,9 @@ def _set_step(index):
             _session.show_result(index)          # the designer's model after this step
         else:
             _renderer.render(step, [0, 0, 0], _previous_geometry(index))    # recorded geometry only
+        # Current Fusion tool(s), shown in the viewport rather than adding UI controls.
+        _renderer.clear_pointer()
+        _renderer.render_command(step)
     else:
         if not _renderer.render(step, _package.data.get("reference_offset_cm"), _previous_geometry(index)):
             _status("Open or create a Fusion Design to see the reference model.", True)
@@ -294,8 +297,8 @@ class PaletteHandler(adsk.core.HTMLEventHandler):
                             _post("animation", shown)
                     elif step.get("animation"):
                         _renderer.render_animation(step, [0, 0, 0], value, _previous_geometry(index))
-                    if step.get("pointer"):
-                        _renderer.render_pointer(step, [0, 0, 0], value)
+                    # HiM reference playback uses the precise target arrow instead
+                    # of replaying a potentially incomplete ghost mouse trajectory.
             elif command == "show_more":
                 if _session:
                     _filtering = True
