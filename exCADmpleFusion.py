@@ -251,8 +251,8 @@ def run(_context):
         _palette = _ui.palettes.itemById(PALETTE_ID)
         if not _palette:
             _palette = _ui.palettes.add2(
-                PALETTE_ID, "exCADmple", str(ROOT / "ui" / "index.html"),
-                True, True, True, 360, 760
+                PALETTE_ID, "exCADmple · HiM Explorer", str(ROOT / "ui" / "index.html"),
+                True, True, True, 390, 800
             )
         _palette.isDockedInCanvas = False
         _palette.dockingState = adsk.core.PaletteDockingStates.PaletteDockStateLeft
