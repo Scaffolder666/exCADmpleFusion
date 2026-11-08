@@ -887,11 +887,15 @@ class HiMController:
             self.log("HiM restore: " + str(error))
         prepared["mode"] = FADE
         prepared["fallback"] = reason
-        try:
-            self.focus.restore()
-        except Exception:
-            pass
-        self._apply_focus(prepared["bodies"], hide_result=True)
+        if not prepared.get("wireframe"):
+            try:
+                self.focus.restore()
+            except Exception as error:
+                self.log("HiM focus restore before fallback: " + str(error))
+            self._apply_focus(prepared["bodies"], hide_result=True)
+        # With an active ghost, keep the real model almost invisible and
+        # switch ONLY the feature-owned overlay to the visual fade. Mixing
+        # opaque source bodies with the ghost would break the isolation.
 
     def status(self):
         """What the active feature is doing: parameter animation or visual."""
