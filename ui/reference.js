@@ -279,6 +279,13 @@ function card(item) {
       const live = S.shown && S.shown.step === S.index && S.shown.feature === p.feature ? S.shown : null;
       let text = p.feature + " · ";
       if (live && live.fallback) text += "visual fallback (" + live.fallback + ")";
+      else if (live && live.wireframe && live.mode === "parameter")
+        text += "native reconstruction · ghost wireframe · " + (live.parameters || []).join(", ");
+      else if (live && live.wireframe && live.mode === "visual")
+        text += "ghost wireframe · feature fade (no suitable numeric parameter)";
+      else if (live && live.mode === "parameter")
+        text += "native reconstruction · translucent context (exact isolation unavailable) · " +
+                (live.parameters || []).join(", ");
       else if (p.mode === "parameter") text += "parameter animation: " + p.parameters.join(", ");
       else if (p.mode === "visual") text += "visual fade (no parameter to animate)";
       else text += "timeline state";
