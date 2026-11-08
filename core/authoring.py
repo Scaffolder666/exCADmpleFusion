@@ -125,14 +125,12 @@ def build_manifest(extract, annotation, segments, offset_cm=None, source_model=N
         _require(rec["start_ms"] >= last_end, "Step %s starts before the previous step ends" % item["id"])
         earlier = [f for f in features if f["index"] < feats[0]["index"]]
         before = _state(extract, earlier[-1].get("state", [])) if earlier else []
-        # HiM animation recorded at extraction: for each feature, the frames
-        # of its parameters growing, then its final state.
+        # The model before the step, then after each of its features.
         states = [before]
         for feature in feats:
-            for ids in list(feature.get("frames", [])) + [feature.get("state", [])]:
-                state = _state(extract, ids)
-                if state != states[-1]:
-                    states.append(state)
+            state = _state(extract, feature.get("state", []))
+            if state != states[-1]:
+                states.append(state)
         if len(states) == 1:
             states.append(states[0])        # e.g. a sketch-only step
         step = {

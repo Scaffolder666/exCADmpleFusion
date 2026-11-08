@@ -8,7 +8,7 @@
 ## 制作
 
 ```text
-设计师的 .f3d ──(Fusion: Extract tutorial draft…)──► draft.extract.json   每个特征的 HiM 动画帧和完成后的模型
+设计师的 .f3d ──(Fusion: Extract tutorial draft…)──► draft.extract.json   每个特征完成后的模型
 录音          ──(任意转写工具)────────────────────► transcript.srt       说了什么，带时间
 研究者        ──(标注工具)─────────────────────────► annotation.json      步骤怎么切分
 
@@ -37,9 +37,9 @@ python tools/build_package.py draft.extract.json annotation.json transcript.srt 
 
 `.srt`、`.vtt` 或 JSON：`[{"start_ms": 0, "end_ms": 4200, "text": "I start with a wide base."}]`，时间以整段录音为准。
 
-### 提取草稿里的动画
+### 提取草稿
 
-对每个时间轴特征，提取工具把时间轴回滚到它之后，然后按 *History in Motion* 的做法把它的参数（拉伸距离、旋转角度、圆角半径、阵列间距……）从约 0 逐步增长到实际值，每一步由 Fusion 重算并记录模型（`frames`，每个特征 8 帧），最后记录完成后的模型（`state`），再恢复全部参数。没有参数的特征只有 `state`。相同的网格只存一次（`meshes` 网格库，按 id 引用）。
+对每个时间轴特征，提取工具把时间轴回滚到它之后，记录此时的模型（`state`）、它的参数和它用到的草图与特征。每个特征只记一份模型；相同的网格只存一次（`meshes` 网格库，按 id 引用）。
 
 ## 教程包 `*.excadmple`
 
@@ -57,7 +57,7 @@ ZIP：`manifest.json`，加上录音／录屏（`media/`）和设计师的 `.f3d
     "cues": [{"at_ms": 1000, "label": "I start with a wide base."}],
     "media": {"video": "media/session.mp4", "offset_ms": 0},
     "geometry": {"meshes": ["mesh-id", "…"]},
-    "animation": {"type": "snapshots", "states": [["…这一步之前…"], ["…各特征的 HiM 动画帧…"], ["…完成后…"]]},
+    "animation": {"type": "snapshots", "states": [["…这一步之前…"], ["…每个特征完成后…"]]},
     "source_features": [{"index": 1, "name": "Extrude1", "kind": "ExtrudeFeature"}],
     "pointer": [{"at_ms": 1500, "xyz": [0, 0, 0], "event": "click"}]
   }]
@@ -70,7 +70,7 @@ ZIP：`manifest.json`，加上录音／录屏（`media/`）和设计师的 `.f3d
 | `cues` | 文字稿中落在这一步时间段里的句子 | 设计师说的话，与声音同步；没有录音时可用电子音朗读 |
 | `media` + `offset_ms` | 录制 | 播放这一步对应的那一段录音／录屏 |
 | `tools` | 提取（或标注） | 用了哪些工具 |
-| `geometry`、`animation` | 提取（含 HiM 参数动画各帧） | 版本 B 和 Blender：按帧播放模型的变化 |
+| `geometry`、`animation` | 提取 | 版本 B 和 Blender：这一步前后的模型，用户可以旋转查看 |
 | `source_features` + `source_model` | 提取 | 版本 A：在设计师的模型上按 HiM 的方式播放 |
 | `pointer` | 记录（可选） | 鼠标轨迹（Ghost Pointer） |
 

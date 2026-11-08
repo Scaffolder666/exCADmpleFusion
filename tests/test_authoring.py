@@ -141,12 +141,3 @@ class SourceModelTests(unittest.TestCase):
             finally:
                 package.close()
 
-
-class HiMFramesTests(unittest.TestCase):
-    def test_recorded_parameter_frames_play_before_each_final_state(self):
-        extract = copy.deepcopy(EXTRACT)
-        extract["meshes"].update({"r1": tri(0.03), "r2": tri(0.06)})
-        extract["features"][2]["frames"] = [["base"], ["r1"], ["r2"]]     # fillet radius growing
-        m = build_manifest(extract, ANNOTATION, [])
-        self.assertEqual(m["steps"][0]["animation"]["states"],
-                         [[], ["base"], ["r1"], ["r2"], ["base_round"]])
