@@ -42,7 +42,7 @@
 | 分支 | 职责 |
 |---|---|
 | `main` | 本页：项目介绍与共同研究目标 |
-| [`fusion-him`](https://github.com/Scaffolder666/exCADmpleFusion/tree/fusion-him) | **版本 A：独立参考视口**（参考 *History in Motion*）。参考案例在单独窗口的交互式 3D 视口中播放，右侧是纵向历史；点击案例模型可找出制作这部分的步骤并播放。用户在 Fusion 原生画布中继续建模 |
+| [`fusion-him`](https://github.com/Scaffolder666/exCADmpleFusion/tree/fusion-him) | **版本 A：独立参考视口**，按 *History in Motion* 的做法：第二个 Fusion 实例打开设计师 `.f3d` 的副本，在真实的参数化模型上播放（时间轴回滚、参数从 0 变到实际值）；右侧是 HiM 式纵向历史；在参考模型上选中几何，用 HiM 算法找出相关步骤并播放。用户在第一个 Fusion 窗口中继续建模，两个窗口通过本机连接互通 |
 | [`fusion`](https://github.com/Scaffolder666/exCADmpleFusion/tree/fusion) | **版本 B：Fusion 视口内 Overlay**。参考模型与用户模型同在 Fusion 画布中；教程以浮在画布上的紧凑面板和固定在画布角落的 HUD 文字呈现。[说明](https://github.com/Scaffolder666/exCADmpleFusion/blob/fusion/README.md) |
 | [`blender`](https://github.com/Scaffolder666/exCADmpleFusion/tree/blender) | Blender 原生 Overlay 原型：单视口 GPU 教程栏、独立的案例播放时钟、多案例切换，读取同一种案例包。[说明](https://github.com/Scaffolder666/exCADmpleFusion/blob/blender/blender/README.md) |
 | [`authoring-plan`](https://github.com/Scaffolder666/exCADmpleFusion/tree/authoring-plan) | 所有版本共用的真实案例制作流程（标注工具） |
@@ -53,7 +53,7 @@
 - 同一视口是否更容易把参考信息与自己的设计联系起来；
 - 两种界面如何影响用户在看教程和继续建模之间的切换。
 
-技术上，Fusion 原生画布不允许插件叠加可交互的 HTML，所以版本 B 用浮动面板加画布内的 Custom Graphics（参考模型、Ghost Pointer、HUD 文字）尽量接近 Overlay；Blender 则可以直接在视口中绘制并接收点击。
+技术上，Fusion 原生画布不允许插件叠加可交互的 HTML，所以版本 B 用浮动面板加画布内的 Custom Graphics（参考模型、Ghost Pointer、HUD 文字）尽量接近 Overlay；Blender 则可以直接在视口中绘制并接收点击。版本 A 需要案例包中带有设计师的 `.f3d`。
 
 ## 当前状态
 
