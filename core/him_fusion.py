@@ -636,7 +636,7 @@ class HiMController:
                     if prepared["mode"] == PARAMETRIC:
                         overlay.setOpacity(0.18, True)
                     else:
-                        overlay.setOpacity(max(0.05, progress * 0.65), True)
+                        overlay.setOpacity(progress, True)
                         box = body.boundingBox
                         center = adsk.core.Point3D.create(
                             (box.minPoint.x + box.maxPoint.x) / 2,
