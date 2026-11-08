@@ -160,6 +160,7 @@ class ReferenceRenderer:
         self.hud_group = None
         self.command_group = None
         self.command_name = None
+        self.last_command_error = None
         self.guidance_group = None
         self.visible = True
         self.last_step = None
@@ -234,6 +235,7 @@ class ReferenceRenderer:
         Billboard + view scaling keep a 0.32 cm text at ~14 px rather than
         creating enormous lettering over the design when zoomed.
         """
+        self.last_command_error = None
         command = active_fusion_command(step, feature_kind)
         if not command or not self.visible:
             self.clear_command()
@@ -262,7 +264,14 @@ class ReferenceRenderer:
             billboard = adsk.fusion.CustomGraphicsBillBoard.create(anchor)
             billboard.billBoardStyle = adsk.fusion.CustomGraphicsBillBoardStyles.ScreenBillBoardStyle
             graphic.billBoarding = billboard
-        except Exception:
+        except Exception as error:
+            # Do not silently swallow API failures: users and CI need the
+            # specific reason a command caption could not be drawn.
+            self.last_command_error = "{}: {}".format(type(error).__name__, error)
+            try:
+                self.app.log("exCADmple command label: " + self.last_command_error)
+            except Exception:
+                pass
             self._delete(group)
             return False
         self.command_group = group
