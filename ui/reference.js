@@ -23,7 +23,7 @@ const S = { plan: [], shown: null,
 
 function bridge(action, payload = {}) {
   if (!window.adsk || typeof window.adsk.fusionSendData !== "function") return Promise.resolve();
-  return Promise.resolve(window.adsk.fusionSendData(action, JSON.stringify(payload))).catch((e) => status(String(e), true));
+  return Promise.resolve(window.adsk.fusionSendData(action, JSON.stringify(payload))).then((reply) => { if (reply && reply !== "response" && reply !== "OK") { try { const data = JSON.parse(reply); if (data && data.error) status(data.error, true); } catch (_) {} } }).catch((e) => status(String(e), true));
 }
 function status(message, error = false) {
   $("status").textContent = message || "";
@@ -69,10 +69,21 @@ function setIndex(i) {
   if (i === S.index && S.example) return;
   S.index = i;
   S.cue = -1;
+  stopSpeech();
   S.fresh = true;     // selected but not played yet: show the step's result
   bridge("set_step", { index: i });
 }
 function stopAudio() { audio.pause(); }
+function stopSpeech() { if ("speechSynthesis" in window) speechSynthesis.cancel(); }
+function speakCue(item, index) {
+  if (!S.playing || S.direction < 0 || index < 0 || (item.media && item.media.audio) || !("speechSynthesis" in window)) return;
+  stopSpeech();
+  const cue = (item.cues || [])[index];
+  if (!cue || !cue.label) return;
+  const utterance = new SpeechSynthesisUtterance(cue.label);
+  utterance.rate = Math.max(0.5, Math.min(2, S.speed));
+  speechSynthesis.speak(utterance);
+}
 function syncAudio(force) {
   const media = step() && step().media;
   if (!media || !media.audio) { stopAudio(); return; }
@@ -87,6 +98,7 @@ function play(continuous = true) {
   if (!S.clip.length) return;
   if (S.direction > 0 && S.elapsed >= duration() && S.pos >= S.clip.length - 1) { replay(); return; }
   S.playing = true;
+  S.cue = -1;
   S.fresh = false;
   S.continuous = continuous;
   S.last = performance.now();
@@ -96,7 +108,7 @@ function play(continuous = true) {
 function pause() {
   S.playing = false;
   stopAudio();
-  if ("speechSynthesis" in window) speechSynthesis.cancel();
+  stopSpeech();
   render();
 }
 function replay() {
@@ -112,6 +124,8 @@ function forward() {
     if (S.pos < S.clip.length - 1) { S.pos++; setIndex(S.clip[S.pos]); }
   }
   S.elapsed = 0;
+  S.cue = -1;
+  stopSpeech();
   S.direction = 1;
   play(false);
 }
@@ -228,7 +242,10 @@ function card(item) {
     if (!cues.length) list.appendChild(el("li", {}, "Nothing was said in this step."));
     box.appendChild(list);
   }
-  S.cue = active;
+  if (active !== S.cue) {
+    S.cue = active;
+    speakCue(item, active);
+  }
   return box;
 }
 function render() {
