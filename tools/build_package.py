@@ -1,7 +1,7 @@
 """Assemble an .excadmple package (version 2) from the three source files.
 
     python tools/build_package.py draft.extract.json annotation.json transcript.srt \
-        --media session.m4a --media session.mp4 -o phone-stand.excadmple
+        --media session.m4a --media session.mp4 --source PhoneStand.f3d -o phone-stand.excadmple
 
 See docs/EXAMPLE_FORMAT.md.
 """
@@ -22,17 +22,19 @@ def main(argv=None):
     parser.add_argument("annotation", help="researcher's annotation.json")
     parser.add_argument("transcript", help="think-aloud transcript (.srt, .vtt or .json)")
     parser.add_argument("--media", action="append", default=[], help="recording file referenced by the annotation")
+    parser.add_argument("--source", help="the designer's .f3d (version A plays the tutorial on a copy of it)")
     parser.add_argument("-o", "--output", required=True, help="output .excadmple (or .json for no media)")
     args = parser.parse_args(argv)
     try:
         extract = json.loads(Path(args.extract).read_text(encoding="utf-8"))
         annotation = json.loads(Path(args.annotation).read_text(encoding="utf-8"))
-        manifest = build_manifest(extract, annotation, transcript.load(args.transcript))
+        manifest = build_manifest(extract, annotation, transcript.load(args.transcript),
+                                  source_model=args.source)
         out = Path(args.output)
         if out.suffix.lower() == ".json":
             out.write_text(json.dumps(manifest, ensure_ascii=False), encoding="utf-8")
         else:
-            write_package(manifest, out, args.media)
+            write_package(manifest, out, args.media, args.source)
     except (AuthoringError, transcript.TranscriptError, ValueError, OSError) as error:
         print("error:", error, file=sys.stderr)
         return 1

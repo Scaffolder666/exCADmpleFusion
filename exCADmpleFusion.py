@@ -1,9 +1,18 @@
-"""exCADmple MVP: design-process player in Autodesk Fusion.
+"""exCADmple: design examples and their reasoning inside Autodesk Fusion.
 
 Start by running this Add-In from Utilities > Scripts and Add-Ins.
-Only Custom Graphics are changed; no native feature history is replayed.
+
+Two tutorial layouts share all features (config.json "layout"):
+* "overlay"  — version B: the reference model is drawn in the user's canvas
+  (Custom Graphics) and the tutorial floats over it;
+* "reference" — version A, as in History in Motion: a second Fusion
+  instance opens a copy of the designer's .f3d and plays the tutorial on it
+  by animating feature parameters; the user's instance keeps their design
+  and the Reasoning Reuse panel. The instances talk over a local socket.
 """
 import json
+import os
+import subprocess
 import threading
 import traceback
 import sys
@@ -24,6 +33,8 @@ from core.him_fusion import HiMController
 from core.library import ExampleLibrary
 from core.reuse_fusion import ReuseController
 from core.extract_fusion import extract_with_dialog
+from core.link import InstanceLink, WORKSPACE, REFERENCE
+from core.him_reference import ReferenceSession
 
 PALETTE_ID = "excadmple.fusion.player"
 
@@ -40,6 +51,15 @@ def _read_layout():
 
 
 LAYOUT = _read_layout()
+LINK_EVENT = "excadmple.fusion.link"
+REFERENCE_COMMAND_ID = "excadmple.fusion.reference.open"
+ROLE = "overlay"            # overlay | workspace | reference (decided in run)
+_link = None
+_link_event = None
+_session = None
+_filtering = False
+_reference_command_def = None
+_reference_command_control = None
 COMMAND_ID = "excadmple.fusion.open"
 HIM_PALETTE_ID = "excadmple.fusion.reuse"
 HIM_COMMAND_ID = "excadmple.fusion.him.open"
@@ -187,8 +207,12 @@ def _set_step(index, announce=False):
     _step_index = index
     _library.remember_step(index)
     step = _package.step(index)
-    if LAYOUT == "reference":
-        success = True        # the example plays in its own viewport, not in the canvas
+    if ROLE == "reference":
+        success = True
+        if _session and _session.live:
+            _session.show_result(index)               # the designer's model after this step
+        else:
+            success = _renderer.render(step, [0, 0, 0])   # recorded geometry only
     else:
         success = _renderer.render(step, _package.data.get("reference_offset_cm"))
         _show_hud(index, 0.0)
@@ -214,7 +238,7 @@ def _set_step(index, announce=False):
 def _show_hud(index, progress):
     """Version B: step title, current caption and the Why, pinned to the
     corner of the Fusion canvas with Custom Graphics."""
-    if LAYOUT != "overlay" or not _package or not _renderer:
+    if ROLE != "overlay" or not _package or not _renderer:
         return
     step = _package.step(index)
     elapsed = progress * step.get("duration_ms", 8000)
@@ -234,15 +258,122 @@ def _show_hud(index, progress):
         _log_error()      # the HUD is an aid; never block playback
 
 
-def _post_reference_geometry():
-    if LAYOUT == "reference" and _package:
-        _post("reference_geometry", _package.reference_geometry())
-
-
 def _post_library():
     _post("library", {"examples": _library.listing()})
     if _reuse:
         _reuse.publish()
+    _send_examples()
+
+
+# --- version A: the two instances -------------------------------------------------------
+def _send_examples():
+    """Reference instance -> workspace: which examples are open (for Reuse)."""
+    if ROLE != REFERENCE or not _link:
+        return
+    examples = []
+    for item in _library.listing():
+        package = _library.package(item["id"])
+        if package and package.source_path:
+            examples.append({"id": item["id"], "path": str(package.source_path)})
+    _link.send({"cmd": "examples", "examples": examples, "active": _library.active_id})
+
+
+def _workspace_examples(message):
+    """Workspace: mirror the reference instance's examples for Reasoning Reuse."""
+    _library.close()
+    for item in message.get("examples", []):
+        try:
+            _library.add(open_package(item["path"]))
+        except Exception:
+            _log_error()
+    if message.get("active") in [e["id"] for e in _library.listing()]:
+        _library.activate(message["active"])
+    if _reuse:
+        _reuse.publish()
+
+
+def _open_reference_session():
+    """Reference instance: open a copy of the active example's .f3d."""
+    if ROLE != REFERENCE or not _session or not _package:
+        return
+    try:
+        live = _session.open(_package)
+    except Exception as error:
+        live = False
+        _status("Could not open the designer's model: " + str(error), True)
+        _log_error()
+    if not live:
+        if not adsk.fusion.Design.cast(_app.activeProduct):
+            _app.documents.add(adsk.core.DocumentTypes.FusionDesignDocumentType)
+    _post("source", {"live": live, "file": _session.source_name, "unmatched": _session.unmatched})
+
+
+def _on_link_message(message):
+    """Main thread: a message from the other Fusion instance."""
+    command = message.get("cmd")
+    if ROLE == WORKSPACE:
+        if command == "examples":
+            _workspace_examples(message)
+        elif command == "focus_decision":
+            if _him_palette and _him_palette.isValid:
+                _him_palette.isVisible = True
+            if _reuse:
+                _reuse.publish({"focus": {k: message.get(k) for k in ("example_id", "step_id", "topic")}})
+        elif command == "_connected":
+            _him_status("Reference window connected.")
+        elif command == "_disconnected":
+            _him_status("The reference window closed.")
+    elif ROLE == REFERENCE:
+        if command == "watch":
+            _activate(str(message.get("example_id")), int(message.get("step_index", 0)), play=True)
+        elif command == "_connected":
+            _send_examples()
+        elif command == "_disconnected":
+            _status("The workspace instance is not connected.")
+
+
+class LinkEventHandler(adsk.core.CustomEventHandler):
+    def notify(self, args):
+        try:
+            _on_link_message(json.loads(args.additionalInfo or "{}"))
+        except Exception:
+            _log_error()
+
+
+def _launch_reference_instance():
+    """Start the second Fusion instance (as HiM does). It runs this add-in,
+    finds the workspace already listening and becomes the reference."""
+    try:
+        if sys.platform == "darwin":
+            subprocess.Popen(["open", "-n", "-a", "Autodesk Fusion"])
+            return True
+        if os.name == "nt":
+            base = Path(sys.executable).resolve().parent
+            for candidate in (base.parent / "Fusion360.exe", base / "Fusion360.exe", base.parent.parent / "Fusion360.exe"):
+                if candidate.is_file():
+                    subprocess.Popen([str(candidate)])
+                    return True
+    except Exception:
+        _log_error()
+    return False
+
+
+class ReferenceCommandCreated(adsk.core.CommandCreatedEventHandler):
+    def notify(self, args):
+        handler = ReferenceCommandExecute()
+        args.command.execute.add(handler)
+        _handlers.append(handler)
+
+
+class ReferenceCommandExecute(adsk.core.CommandEventHandler):
+    def notify(self, args):
+        if _link and _link.connected:
+            _him_status("The reference window is already open.")
+        elif _launch_reference_instance():
+            _him_status("Starting the reference window (a second Fusion)… Run the exCADmple add-in there if it does not start automatically.")
+        else:
+            _ui.messageBox("Start a second Fusion and run the exCADmple add-in in it. "
+                           "It will connect to this window and show the reference example.")
 
 
 def _activate(example_id, step_index=None, play=False):
@@ -256,7 +387,7 @@ def _activate(example_id, step_index=None, play=False):
         _spatial.reset_example()
     _package = _library.package()
     _post("example", _package.player_data())
-    _post_reference_geometry()
+    _open_reference_session()
     index = _library.step_index() if step_index is None else int(step_index)
     _set_step(index, True)
     if play:
@@ -323,8 +454,21 @@ def _selected_geometry(args):
 class ActiveGeometrySelection(adsk.core.ActiveSelectionEventHandler):
     def notify(self, args):
         try:
+            global _filtering
             selected = _selected_geometry(args)
-            if _him and _him.busy:
+            if (_him and _him.busy) or _filtering:
+                return
+            if ROLE == REFERENCE:
+                # HiM: selecting the reference model filters the tutorial.
+                entity = _selected_native_entity()
+                if selected["selected"] and entity is not None and _session and _session.live:
+                    _filtering = True
+                    try:
+                        result = _session.filter(entity)
+                    finally:
+                        _filtering = False
+                    if result:
+                        _post("filter", result)
                 return
             _post("geometry_selection", selected)
             if selected["selected"]:
@@ -335,13 +479,16 @@ class ActiveGeometrySelection(adsk.core.ActiveSelectionEventHandler):
 
 class PaletteHandler(adsk.core.HTMLEventHandler):
     def notify(self, args):
+        global _step_index, _filtering
         try:
             command = args.action
             body = json.loads(args.data or "{}")
             if command == "ready":
                 if _package:
                     _post("example", _package.player_data())
-                    _post_reference_geometry()
+                    if _session:
+                        _post("source", {"live": _session.live, "file": _session.source_name,
+                                         "unmatched": _session.unmatched})
                     _post("step", {"index": _step_index})
                     _post_links()
                 _post_library()
@@ -373,12 +520,50 @@ class PaletteHandler(adsk.core.HTMLEventHandler):
                 else:
                     _post_library()
             elif command == "compare_decision":
+                step = _package.step(_step_index)
+                if ROLE == REFERENCE:
+                    # Reasoning Reuse lives with the user's design, in the workspace instance.
+                    sent = _link and _link.send({"cmd": "focus_decision", "example_id": _library.active_id,
+                                                 "step_id": step["id"],
+                                                 "topic": (step.get("decision") or {}).get("topic")})
+                    _status("Shown in the Reasoning Reuse panel of your own Fusion window." if sent
+                            else "Your own Fusion window is not connected.", not sent)
                 if _him_palette and _him_palette.isValid:
                     _him_palette.isVisible = True
-                step = _package.step(_step_index)
                 if _reuse:
                     _reuse.publish({"focus": {"example_id": _library.active_id, "step_id": step["id"],
                                               "topic": (step.get("decision") or {}).get("topic")}})
+            elif command == "ref_frame":
+                # Version A: one HiM frame on the designer's model; the panel
+                # asks for the next frame only after this one is computed.
+                index, value = body.get("index"), body.get("progress")
+                if (_package and isinstance(index, int) and 0 <= index < len(_package.data["steps"])
+                        and isinstance(value, (int, float)) and not isinstance(value, bool)):
+                    _step_index = index
+                    value = max(0.0, min(1.0, float(value)))
+                    step = _package.step(index)
+                    if _session and _session.live:
+                        _session.frame(index, value)
+                    elif step.get("animation"):
+                        _renderer.render_animation(step, [0, 0, 0], value)
+                    if step.get("pointer"):
+                        _renderer.render_pointer(step, [0, 0, 0], value)
+            elif command == "show_more":
+                if _session:
+                    _filtering = True
+                    try:
+                        result = _session.show_more()
+                    finally:
+                        _filtering = False
+                    if result:
+                        _post("filter", result)
+            elif command == "clear_filter":
+                _ui.activeSelections.clear()
+            elif command == "fit_view":
+                _app.activeViewport.fit()
+            elif command == "him_dim":
+                if _session:
+                    _session.set_dim(bool(body.get("enabled", True)))
             elif command == "extract_draft":
                 _status(extract_with_dialog(_app, _ui))
             elif command == "open_package":
@@ -539,12 +724,21 @@ def _log_error():
             pass
 
 
+def _watch_in_example(example_id, index):
+    """Reuse panel -> play that step: in the reference window (version A)
+    or in this window's tutorial (version B)."""
+    if ROLE == WORKSPACE:
+        if not (_link and _link.send({"cmd": "watch", "example_id": example_id, "step_index": index})):
+            _him_status("Open the reference window first (toolbar: exCADmple Reference window).", True)
+        return
+    _activate(example_id, index, play=True)
+
+
 def _start_him():
     global _him, _him_palette, _him_event, _him_ticker, _him_command_def, _him_command_control
     global _reuse
     _him = HiMController(_app, _ui, _post_him, lambda message: _app.log("exCADmple HiM: " + message))
-    _reuse = ReuseController(_app, _ui, _him, _library, _post_him,
-                             lambda example_id, index: _activate(example_id, index, play=True))
+    _reuse = ReuseController(_app, _ui, _him, _library, _post_him, _watch_in_example)
     _him_palette = _ui.palettes.itemById(HIM_PALETTE_ID)
     if not _him_palette:
         _him_palette = _ui.palettes.add2(
@@ -615,55 +809,83 @@ def _stop_him():
             pass
 
 
+def _start_link():
+    """Version A: the first Fusion instance becomes the workspace, the second
+    the reference (HiM's two-instance setup)."""
+    global ROLE, _link, _link_event, _session
+    try:
+        _app.unregisterCustomEvent(LINK_EVENT)
+    except Exception:
+        pass
+    _link_event = _app.registerCustomEvent(LINK_EVENT)
+    handler = LinkEventHandler()
+    _link_event.add(handler)
+    _handlers.append(handler)
+    forward = lambda message: _app.fireCustomEvent(LINK_EVENT, json.dumps(message))
+    _link = InstanceLink(forward)
+    _link.on_connect = lambda: forward({"cmd": "_connected"})
+    ROLE = _link.start()
+    if ROLE == REFERENCE:
+        _session = ReferenceSession(_app, _ui, lambda message: _app.log("exCADmple reference: " + message))
+
+
+def _create_tutorial_palette():
+    global _palette
+    _palette = _ui.palettes.itemById(PALETTE_ID)
+    if _palette:
+        _palette.deleteMe()          # the layout may have changed
+    if ROLE == REFERENCE:
+        # Version A: HiM control panel beside the reference instance's canvas.
+        _palette = _ui.palettes.add2(
+            PALETTE_ID, "exCADmple · Reference example", str(ROOT / "ui" / "reference.html"),
+            True, True, True, 400, 820)
+        _palette.dockingState = adsk.core.PaletteDockingStates.PaletteDockStateRight
+    else:
+        # Version B: a compact tutorial floating over the Fusion canvas.
+        _palette = _ui.palettes.add2(
+            PALETTE_ID, "exCADmple · Tutorial", str(ROOT / "ui" / "index.html"),
+            True, True, True, 340, 640)
+        _palette.dockingState = adsk.core.PaletteDockingStates.PaletteDockStateFloating
+        try:
+            _palette.setPosition(80, 160)   # over the left part of the canvas
+        except Exception:
+            pass
+    handler = PaletteHandler()
+    _palette.incomingFromHTML.add(handler)
+    _handlers.append(handler)
+    _palette.isVisible = True
+
+
+def _add_button(command_id, name, tooltip, created_handler):
+    definition = _ui.commandDefinitions.itemById(command_id)
+    if not definition:
+        definition = _ui.commandDefinitions.addButtonDefinition(command_id, name, tooltip)
+    definition.commandCreated.add(created_handler)
+    _handlers.append(created_handler)
+    control = None
+    for panel_id in ("SolidScriptsAddinsPanel", "ToolsScriptsAddinsPanel"):
+        panel = _ui.allToolbarPanels.itemById(panel_id)
+        if panel:
+            control = panel.controls.itemById(command_id) or panel.controls.addCommand(definition)
+            break
+    return definition, control
+
+
 def run(_context):
-    global _app, _ui, _palette, _renderer, _spatial, _command_def, _command_control
+    global _app, _ui, _renderer, _spatial, _command_def, _command_control
+    global _reference_command_def, _reference_command_control
     try:
         _app = adsk.core.Application.get()
         _ui = _app.userInterface
         _renderer = ReferenceRenderer(_app)
         _spatial = SpatialLinkController(_app, _ui)
-
-        _palette = _ui.palettes.itemById(PALETTE_ID)
-        if _palette:
-            _palette.deleteMe()          # the layout may have changed
         if LAYOUT == "reference":
-            # Version A: a separate window with the interactive reference viewport.
-            _palette = _ui.palettes.add2(
-                PALETTE_ID, "exCADmple · Reference example", str(ROOT / "ui" / "reference.html"),
-                True, True, True, 1180, 760)
-        else:
-            # Version B: a compact tutorial floating over the Fusion canvas.
-            _palette = _ui.palettes.add2(
-                PALETTE_ID, "exCADmple · Tutorial", str(ROOT / "ui" / "index.html"),
-                True, True, True, 340, 640)
-        _palette.dockingState = adsk.core.PaletteDockingStates.PaletteDockStateFloating
-        try:
-            if LAYOUT == "reference":
-                _palette.setPosition(60, 80)
-            else:
-                _palette.setPosition(80, 160)   # over the left part of the canvas
-        except Exception:
-            pass
-        handler = PaletteHandler()
-        _palette.incomingFromHTML.add(handler)
-        _handlers.append(handler)
-        _palette.isVisible = True
+            _start_link()
 
-        _command_def = _ui.commandDefinitions.itemById(COMMAND_ID)
-        if not _command_def:
-            _command_def = _ui.commandDefinitions.addButtonDefinition(
-                COMMAND_ID, "exCADmple Player", "Open the explorable design example player"
-            )
-        created = ShowCommandCreated()
-        _command_def.commandCreated.add(created)
-        _handlers.append(created)
-        for panel_id in ("SolidScriptsAddinsPanel", "ToolsScriptsAddinsPanel"):
-            panel = _ui.allToolbarPanels.itemById(panel_id)
-            if panel:
-                _command_control = panel.controls.itemById(COMMAND_ID)
-                if not _command_control:
-                    _command_control = panel.controls.addCommand(_command_def)
-                break
+        if ROLE in ("overlay", REFERENCE):
+            _create_tutorial_palette()
+            _command_def, _command_control = _add_button(
+                COMMAND_ID, "exCADmple Player", "Open the design example tutorial", ShowCommandCreated())
 
         before = BeforeSave()
         after = AfterSave()
@@ -677,12 +899,22 @@ def run(_context):
         selection_handler = ActiveGeometrySelection()
         _ui.activeSelectionChanged.add(selection_handler)
         _handlers.append(selection_handler)
-        _post("geometry_selection", _selected_geometry_from_ui())
-        _start_him()
 
-        # Deterministic, clearly labeled illustrative examples.
-        _load(str(ROOT / "examples" / "tablet_stand.json"))
-        _load(str(ROOT / "examples" / "phone_stand.json"))
+        if ROLE in ("overlay", WORKSPACE):
+            # The user's own design: Reasoning Reuse (and HiM inspect) panel.
+            _post("geometry_selection", _selected_geometry_from_ui())
+            _start_him()
+        if ROLE == WORKSPACE:
+            _reference_command_def, _reference_command_control = _add_button(
+                REFERENCE_COMMAND_ID, "exCADmple Reference window",
+                "Open the reference example in a second Fusion window (History in Motion style)",
+                ReferenceCommandCreated())
+            _him_status("Your design stays in this window. Use 'exCADmple Reference window' to open the example.")
+
+        if ROLE in ("overlay", REFERENCE):
+            # Deterministic, clearly labeled illustrative examples.
+            _load(str(ROOT / "examples" / "tablet_stand.json"))
+            _load(str(ROOT / "examples" / "phone_stand.json"))
     except Exception:
         _log_error()
         if _ui:
@@ -691,6 +923,26 @@ def run(_context):
 
 def stop(_context):
     global _palette, _renderer, _package, _command_control, _command_def
+    global _link, _session
+    try:
+        if _session:
+            _session.close()
+            _session = None
+        if _link:
+            _link.stop()
+            _link = None
+        try:
+            _app.unregisterCustomEvent(LINK_EVENT)
+        except Exception:
+            pass
+        for control in (_reference_command_control, _reference_command_def):
+            try:
+                if control and control.isValid:
+                    control.deleteMe()
+            except Exception:
+                pass
+    except Exception:
+        _log_error()
     try:
         _stop_him()
         if _renderer:

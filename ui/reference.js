@@ -1,25 +1,25 @@
-/* Version A — History in Motion style tutorial.
+/* Version A — History in Motion control panel (reference instance).
    Same examples, reasoning and playback abilities as version B; different
-   organisation: the example plays in its own interactive 3D viewport and a
-   narrow vertical history panel controls it.
+   organisation: the example plays on the designer's own Fusion model in a
+   second Fusion instance, whose canvas is the reference viewport.
 
    Playback follows HiM (Veuskens et al., SCF 2023):
    * no selection: the whole design process plays in order (the tutorial);
-   * clicking the reference model filters the history to the steps that made
-     or changed that part, and plays them newest first, so the clip starts
-     from the model the user is looking at;
-   * "Show more" adds the steps those build on, one level per click;
+   * selecting geometry of the reference model runs HiM's filtering in
+     Python and plays the matching steps newest first;
+   * "Show more" follows the supporting sketches' faces (HiM show more);
    * step backward plays the current step in reverse;
-   * geometry the current step did not change is drawn transparent. */
+   * each frame sets the feature's parameters in Fusion; the next frame is
+     requested when the previous one has been computed, so the frame rate
+     adapts to the model, as in HiM. */
 "use strict";
 const $ = (id) => document.getElementById(id);
 const audio = $("audio");
 const S = {
   example: null, geometry: [], index: 0, clip: [], pos: 0, elapsed: 0, playing: false,
   direction: 1, continuous: true, speed: 1, filtered: false, changed: [], more: [], picked: null,
-  last: 0, cue: -1, filterIndex: null, fresh: true,
+  last: 0, cue: -1, fresh: true, tags: {}, inFlight: false,
 };
-let viewer = null;
 
 function bridge(action, payload = {}) {
   if (!window.adsk || typeof window.adsk.fusionSendData !== "function") return Promise.resolve();
@@ -164,35 +164,30 @@ function tick(now) {
   requestAnimationFrame(tick);
 }
 
-/* ---------- HiM filtering by picking the reference model ---------- */
-function onPick(point) {
-  if (!point || !S.filterIndex) return;
-  // Compare only the steps up to the state on screen, as HiM does for the current model.
-  const changed = ExcadmpleHistoryFilter.changedAt(S.filterIndex, point, S.index);
-  if (!changed.length) { status("No step changed the geometry at that point."); return; }
+/* ---------- HiM filtering (computed on the real model in Python) ---------- */
+function applyFilter(result) {
+  if (!result || !(result.steps || []).length) {
+    status("No step of this example made the selected geometry.");
+    return;
+  }
   S.filtered = true;
-  S.picked = point;
-  S.changed = changed;
-  S.more = [];
+  S.tags = result.tags || {};
+  S.changed = result.steps.filter((i) => S.tags[i] !== "builds on");
+  S.more = result.steps.filter((i) => S.tags[i] === "builds on");
+  S.canMore = !!result.can_show_more;
   setClip(false);
   S.elapsed = 0;
   S.direction = 1;
-  status("");
+  status("HiM: " + (result.features || []).length + " feature(s) made or changed the selection.");
   play(true);       // HiM renders the clip immediately upon selection
-}
-function showMore() {
-  const more = ExcadmpleHistoryFilter.buildsOn(S.filterIndex, S.changed.concat(S.more));
-  if (!more.length) { status("Nothing earlier to add: these steps build on no other step."); return; }
-  S.more = S.more.concat(more);
-  setClip(true);
-  render();
 }
 function showAll() {
   S.filtered = false;
   S.changed = [];
   S.more = [];
-  if (viewer) viewer.clearPick();
+  S.tags = {};
   setClip(true);
+  bridge("clear_filter");
   render();
 }
 
@@ -271,9 +266,9 @@ function card(item) {
 function render() {
   if (!S.example) return;
   const progress = Math.max(0, Math.min(1, S.elapsed / duration()));
-  if (viewer) {
-    viewer.setGhost($("ghost").checked);
-    viewer.show(S.index, S.fresh ? 1 : progress, S.fresh ? null : S.elapsed);
+  if (!S.fresh && !S.inFlight) {
+    S.inFlight = true;
+    bridge("ref_frame", { index: S.index, progress, elapsed: S.elapsed }).finally(() => { S.inFlight = false; });
   }
   $("play").innerHTML = S.playing ? "&#10074;&#10074;" : "&#9654;";
   $("play").setAttribute("aria-label", S.playing ? "Pause" : "Play");
@@ -281,9 +276,9 @@ function render() {
   const mode = $("mode");
   mode.classList.toggle("filtered", S.filtered);
   $("modeText").textContent = S.filtered
-    ? S.clip.length + " step(s) made or changed the picked part · newest first"
+    ? S.clip.length + " step(s) made or changed the selected geometry · newest first"
     : "Whole design process · " + steps().length + " steps";
-  $("showMore").hidden = !S.filtered;
+  $("showMore").hidden = !S.filtered || !S.canMore;
   $("showAll").hidden = !S.filtered;
   const rail = $("rail");
   rail.replaceChildren();
@@ -292,7 +287,7 @@ function render() {
     const li = el("li", { class: "step" + (i === S.index ? " current" : ""), "data-kind": kindOf(item) });
     const button = el("button", { class: "capsule", type: "button" });
     const name = el("span", { class: "name" }, (i + 1) + "  " + item.title);
-    if (S.filtered) name.appendChild(el("span", { class: "tag" }, S.changed.includes(i) ? "changed here" : "builds on"));
+    if (S.filtered) name.appendChild(el("span", { class: "tag" }, S.tags[i] || "changed here"));
     button.append(name, el("span", { class: "meta" }, (item.operation && item.operation.tool) || ""));
     button.addEventListener("click", () => selectStep(i));
     li.appendChild(button);
@@ -332,13 +327,14 @@ window.fusionJavaScriptHandler = {
     try {
       const payload = JSON.parse(raw || "{}");
       if (action === "example") loadExample(payload);
-      else if (action === "reference_geometry") {
-        S.geometry = payload.steps || [];
-        S.filterIndex = ExcadmpleHistoryFilter.buildIndex(
-          S.geometry.map((g, i) => Object.assign({}, g, { id: steps()[i] ? steps()[i].id : String(i),
-            depends_on: steps()[i] && steps()[i].depends_on, depends_on_derived: steps()[i] && steps()[i].depends_on_derived })));
-        if (viewer) viewer.setExample(S.geometry);
-        render();
+      else if (action === "filter") applyFilter(payload);
+      else if (action === "source") {
+        const line = $("source");
+        line.classList.toggle("recorded", !payload.live);
+        line.textContent = payload.live
+          ? "Playing on the designer's model " + payload.file + (payload.unmatched && payload.unmatched.length
+              ? " · not found in the model: " + payload.unmatched.join(", ") : "")
+          : "No source model in this example: showing its recorded geometry. HiM selection needs the designer's .f3d.";
       } else if (action === "library") {
         const select = $("exampleSwitch");
         select.replaceChildren();
@@ -367,11 +363,11 @@ $("play").addEventListener("click", () => (S.playing ? pause() : play(true)));
 $("replay").addEventListener("click", replay);
 $("forward").addEventListener("click", forward);
 $("back").addEventListener("click", backward);
-$("showMore").addEventListener("click", showMore);
+$("showMore").addEventListener("click", () => bridge("show_more"));
 $("showAll").addEventListener("click", showAll);
-$("resetView").addEventListener("click", () => viewer && viewer.resetView());
+$("fit").addEventListener("click", () => bridge("fit_view"));
 $("speed").addEventListener("input", () => { S.speed = Number($("speed").value); $("speedValue").textContent = S.speed + "×"; syncAudio(true); });
-$("ghost").addEventListener("change", render);
+$("dim").addEventListener("change", () => bridge("him_dim", { enabled: $("dim").checked }));
 $("captions").addEventListener("change", render);
 $("narration").addEventListener("change", () => { if ("speechSynthesis" in window) speechSynthesis.cancel(); });
 $("exampleSwitch").addEventListener("change", (e) => { pause(); bridge("switch_example", { id: e.target.value }); });
@@ -380,11 +376,5 @@ $("import").addEventListener("click", () => { pause(); bridge("open_package"); }
 $("demo").addEventListener("click", () => { pause(); bridge("load_demo"); });
 $("extractDraft").addEventListener("click", () => { pause(); bridge("extract_draft"); });
 
-try {
-  viewer = new window.ReferenceViewer($("viewer"));
-  viewer.onPick = onPick;
-} catch (error) {
-  status("3D reference viewport unavailable: " + error.message, true);
-}
 requestAnimationFrame(tick);
 bridge("ready");

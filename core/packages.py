@@ -162,10 +162,21 @@ def _validate(data):
 
 
 class ExamplePackage:
-    def __init__(self, data, asset_root, temporary=None):
+    def __init__(self, data, asset_root, temporary=None, source_path=None):
         self.data = _validate(data)
         self.asset_root = Path(asset_root).resolve()
         self.temporary = temporary
+        self.source_path = Path(source_path).resolve() if source_path else None
+
+    def source_model_path(self):
+        """The designer's .f3d shipped with the example, if any."""
+        relative = self.data.get("source_model")
+        if not relative:
+            return None
+        path = (self.asset_root / str(_relative_path(relative))).resolve()
+        if not path.is_relative_to(self.asset_root) or not path.is_file() or path.suffix.lower() != ".f3d":
+            return None
+        return path
 
     def close(self):
         if self.temporary:
@@ -218,16 +229,6 @@ class ExamplePackage:
             result["steps"].append(meta)
         return result
 
-    def reference_geometry(self):
-        """Geometry, animation and ghost pointer of every step, for the
-        separate reference viewport (version A). Package-local centimeters."""
-        return {"steps": [{
-            "geometry": {"meshes": step.get("geometry", {}).get("meshes", [])},
-            "animation": step.get("animation"),
-            "pointer": step.get("pointer") or [],
-            "duration_ms": step.get("duration_ms", 8000),
-        } for step in self.data["steps"]]}
-
     def step(self, index):
         if not isinstance(index, int) or not 0 <= index < len(self.data["steps"]):
             raise PackageError("Step index out of range")
@@ -241,7 +242,7 @@ def open_package(filename):
     if source.suffix.lower() == ".json":
         if source.stat().st_size > 8 * 1024 * 1024:
             raise PackageError("JSON file is too large")
-        return ExamplePackage(json.loads(source.read_text(encoding="utf-8")), source.parent)
+        return ExamplePackage(json.loads(source.read_text(encoding="utf-8")), source.parent, source_path=source)
     if source.suffix.lower() != ".excadmple":
         raise PackageError("Choose a .json or .excadmple file")
     temp = None
@@ -262,9 +263,12 @@ def open_package(filename):
             needed = set()
             if manifest.get("preview"):
                 needed.add(str(_relative_path(manifest["preview"])))
-            # The F3D remains in the ZIP and is not imported into the active design.
-            if manifest.get("source_model") and manifest["source_model"] not in archive.namelist():
-                raise PackageError("Missing source model in package")
+            # The designer's .f3d is extracted so the reference instance (version A)
+            # can open a copy of it; it is never imported into the user's design.
+            if manifest.get("source_model"):
+                if manifest["source_model"] not in archive.namelist():
+                    raise PackageError("Missing source model in package")
+                needed.add(str(_relative_path(manifest["source_model"])))
             for step in manifest["steps"]:
                 for kind in ("audio", "video"):
                     relative = step.get("media", {}).get(kind)
@@ -277,7 +281,7 @@ def open_package(filename):
                 dest.parent.mkdir(parents=True, exist_ok=True)
                 with archive.open(filename) as src, open(dest, "wb") as dst:
                     shutil.copyfileobj(src, dst)
-            return ExamplePackage(manifest, temp, temporary=temp)
+            return ExamplePackage(manifest, temp, temporary=temp, source_path=source)
     except (zipfile.BadZipFile, json.JSONDecodeError) as error:
         raise PackageError("Invalid example package: " + str(error)) from error
     except Exception:
