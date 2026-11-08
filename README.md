@@ -12,6 +12,30 @@
 
 项目概况见 [`main`](https://github.com/Scaffolder666/exCADmpleFusion)；Blender 版本见 [`blender`](https://github.com/Scaffolder666/exCADmpleFusion/tree/blender)。
 
+## 新的播放交互：完整模型 → 当前 Feature → 完整模型
+
+这里的重点不是让模型一直保持线框，而是让用户看清 **为什么改，
+又是怎么改的**：
+
+- **刚加载 Example 或单纯选中步骤（未播放）**：整个真实 `.f3d`
+  显示成正常、完整、实心的模型；尚不执行任何参数动画。
+- **按 Play / 拖动 Feature Progress 到中间**：聚焦当前 Feature，
+  其他几何尽量变成灰色线框；选定 Feature 有可动画的数值参数时，
+  根据进度实时修改 Fusion 原生参数并重算几何。
+- **没有可动画数值参数**：例如 Mirror、Combine，以及某些
+  “To Object” Extrude，直接显示实际几何，没有假造的缩放或淡入动画。
+  该步骤可以停留供右侧 Transcript / Reasoning 解释、朗读。
+- **Feature Progress 拖到 0% 或 100%**：都显示完整实心模型。
+  100% 是交互终点的展示状态，而不是一个永久保留的灰色线框。
+- **整个教程或过滤后的 Clip 播完**：恢复完整的模型，原来临时调节的
+  参数、透明度和线框会恢复/清理。连续播放的步骤之间不会闪回完整
+  模型；只有开始、完成、或用户主动预览时才显示 Overview。
+- **右侧面板**：同步显示解释文字、语音/Transcript 和当前步骤。
+  自动生成的设计解释仍明确标注为模拟推测，不冒充原作者意图。
+
+交互状态回归测试：`node tests/test_reference_scrubbing.js`。
+真实 Fusion Desktop 几何重建与显示仍需实测。
+
 ## HiM 式逐 Feature 重建：背景灰线框 + 当前几何实体
 
 `fusion-him` 现在增加了 **Ghost Wireframe** 显示模式，仅用于独立的
