@@ -9,7 +9,8 @@ from pathlib import Path
 
 from core.packages import open_package
 from tests.test_authoring import EXTRACT
-from tools.build_native_validation import make_annotation, make_package
+from tools.build_native_validation import (make_annotation, make_package,
+                                           hypothetical_reasoning, synthetic_reasoning_segments)
 
 
 class NativeValidationTests(unittest.TestCase):
@@ -40,6 +41,37 @@ class NativeValidationTests(unittest.TestCase):
                                     for step in package.data["steps"]))
                 self.assertEqual([step["source_features"][0]["index"]
                                   for step in package.data["steps"]], [0, 1, 2, 3, 4])
+            finally:
+                package.close()
+
+    def test_synthetic_reasoning_uses_real_feature_metadata_not_claimed_intent(self):
+        cues = synthetic_reasoning_segments(EXTRACT)
+        self.assertEqual(len(cues), len(EXTRACT["features"]))
+        self.assertEqual(cues[0]["start_ms"], 250)
+        self.assertEqual(cues[-1]["start_ms"], 4 * 4000 + 250)
+        for cue in cues:
+            self.assertIn("SIMULATED TEST REASONING", cue["text"])
+            self.assertIn("not the designer's words", cue["text"])
+        extrude = hypothetical_reasoning(EXTRACT["features"][1])
+        self.assertIn("Extrude1", extrude)
+        self.assertIn("d1 = 7 mm", extrude)
+        self.assertIn("Earlier timeline references: 0", extrude)
+        self.assertIn("possible consideration", extrude.lower())
+
+    def test_synthetic_reasoning_is_separate_from_original_recording(self):
+        with tempfile.TemporaryDirectory() as folder:
+            source = Path(folder) / "fusion.f3d"
+            source.write_bytes(b"unchanged source model")
+            destination = Path(folder) / "native-reasoning.excadmple"
+            make_package(EXTRACT, source, destination, synthetic_reasoning=True)
+            package = open_package(destination)
+            try:
+                steps = package.data["steps"]
+                self.assertEqual(len(steps), 5)
+                self.assertEqual([len(s["cues"]) for s in steps], [1] * 5)
+                self.assertTrue(all(s["media"] == {} for s in steps))
+                self.assertIn("hypothesis-only", package.data["description"])
+                self.assertEqual(package.source_model_path().read_bytes(), source.read_bytes())
             finally:
                 package.close()
 
