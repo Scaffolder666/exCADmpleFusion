@@ -21,6 +21,7 @@ class ReferenceRenderer:
         self.group = None
         self.animation_group = None
         self.pointer_group = None
+        self.hud_group = None
         self.visible = True
         self.last_step = None
         self.last_offset = None
@@ -43,7 +44,40 @@ class ReferenceRenderer:
         self._delete(self.pointer_group)
         self.pointer_group = None
 
+    def clear_hud(self):
+        self._delete(self.hud_group)
+        self.hud_group = None
+
+    def render_hud(self, lines):
+        """Text pinned to the upper-left corner of the canvas (Custom Graphics
+        view placement), so the tutorial is visible inside the viewport."""
+        self.clear_hud()
+        design = adsk.fusion.Design.cast(self.app.activeProduct)
+        if not design or not self.visible or not lines:
+            return False
+        group = design.rootComponent.customGraphicsGroups.add()
+        group.isSelectable = False
+        origin = adsk.core.Point3D.create(0, 0, 0)
+        try:
+            for row, line in enumerate(lines):
+                text = group.addText(line, "Arial", 15 if row == 0 else 13,
+                                     adsk.core.Matrix3D.create())
+                text.color = adsk.fusion.CustomGraphicsSolidColorEffect.create(
+                    adsk.core.Color.create(*((37, 99, 235, 255) if row == 0 else (40, 48, 60, 255))))
+                text.isSelectable = False
+                text.depthPriority = 3
+                text.viewPlacement = adsk.fusion.CustomGraphicsViewPlacement.create(
+                    origin, adsk.fusion.ViewCorners.upperLeftViewCorner,
+                    adsk.core.Point2D.create(24, 70 + 24 * row))
+        except Exception:
+            self._delete(group)
+            raise
+        self.hud_group = group
+        self._refresh()
+        return True
+
     def clear(self):
+        self.clear_hud()
         self.clear_pointer()
         self._delete(self.animation_group)
         self.animation_group = None
@@ -184,6 +218,7 @@ class ReferenceRenderer:
         self.visible = bool(visible)
         if not self.visible:
             self.clear_pointer()
+            self.clear_hud()
             if self.group and self.group.isValid:
                 self.group.isVisible = False
             if self.animation_group and self.animation_group.isValid:

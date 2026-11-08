@@ -6,11 +6,26 @@
 
 项目概况见 [`main`](https://github.com/Scaffolder666/exCADmpleFusion)；Blender 版本见 [`blender`](https://github.com/Scaffolder666/exCADmpleFusion/tree/blender)。
 
-## 界面
+## 两个界面版本（用于比较）
 
-插件打开两个面板，用户的模型留在中间的 Fusion 画布中。
+两个版本**功能相同**：相同的案例、推理内容和播放能力（整个过程／单步、速度、字幕、语音、决策、多案例、Reasoning Reuse 面板、案例提取）。区别只在**界面如何组织**，以及用户如何在参考案例和自己的建模之间切换。两个分支共用同一份代码，由 `config.json` 的 `layout` 选择：
 
-### 左侧：案例教程
+| | 版本 A：独立参考视口（`fusion-him` 分支，`"layout": "reference"`） | 版本 B：视口内 Overlay（本分支，`"layout": "overlay"`） |
+|---|---|---|
+| 参考案例在哪里播放 | 单独窗口中的**交互式 3D 参考视口**（可旋转、平移、缩放）；Fusion 画布里只有用户自己的模型 | 直接在 **Fusion 画布**中，作为只读的 Custom Graphics，放在用户模型旁边 |
+| 教程信息 | 窗口右侧的**纵向历史面板**（参考 *History in Motion*）：彩色胶囊步骤，当前步骤展开显示 Why、决策、How、同步字幕 | 浮在画布上的紧凑面板（可收起为只剩步骤条），以及固定在画布左上角的 HUD 文字：步骤标题、Why、当前字幕 |
+| 按几何探索历史 | 在参考视口里**点击案例模型**的某处 → 找出制作或改变这里的步骤（比较每一步前后的几何），从最新的开始播放；**Show more** 往前追依赖步骤；其余几何半透明，最终模型以淡影显示 | 选择步骤后在画布中查看；按几何探索通过右侧 Reasoning Reuse 面板（作用于用户自己的模型） |
+| 后退 | 倒放当前步骤（HiM 的做法） | 跳到上一步 |
+
+技术说明：Fusion 不允许在原生画布上叠加可交互的 HTML。版本 B 用"浮动 Palette + 画布内的 Custom Graphics（参考模型、Ghost Pointer、HUD 文字）"尽量接近 Overlay；HUD 只能显示，不能点击。版本 A 的参考视口用打包在插件内的 three.js（`ui/vendor/`，MIT 许可）在 Palette 中渲染，不需要网络。
+
+研究上可以比较：独立视口是否更利于专注理解参考设计；同一视口是否更利于把参考信息与自己的设计联系起来；两种界面如何影响用户在看教程和继续建模之间的切换。
+
+## 界面（两个版本共有的部分）
+
+插件打开教程窗口和右侧 Reasoning Reuse 面板，用户的模型留在 Fusion 画布中。下面以版本 B 为例；版本 A 的教程内容相同，只是排在参考视口右侧的纵向历史中。
+
+### 教程
 
 - **案例**：标题、**原设计师的设计目标**（为谁、在什么约束下）、来源说明；可同时打开多个案例并切换，各自记住进度。
 - **当前步骤**：
@@ -33,7 +48,7 @@
 | 步骤 | 工具 | 产出 |
 |---|---|---|
 | 1. 录制 | Fusion + 任意录屏软件 | 设计师的 `.f3d`、录屏、录音 |
-| 2. 提取 | 本插件左侧面板底部 **Extract example draft…**：逐项回滚时间轴，记录每个特征之后的几何、参数，以及它使用的草图和特征 | `*.extract.json` |
+| 2. 提取 | 教程窗口底部的 **Extract example draft…**：逐项回滚时间轴，记录每个特征之后的几何、参数，以及它使用的草图和特征 | `*.extract.json` |
 | 3. 转写 | 任意转写工具 | 带时间戳的文字稿（`.srt` / `.vtt` / `.json`） |
 | 4. 标注 | **案例标注工具**：边看录像边切分步骤、勾选对应特征、整理推理摘要；可选填写决策、适用范围、依赖 | `annotation.json` |
 | 5. 合成 | `python tools/build_package.py draft.extract.json annotation.json transcript.srt --media session.m4a -o example.excadmple` | `.excadmple` 案例包 |
@@ -51,7 +66,7 @@
 1. 下载本分支 ZIP 并解压，保持整个 `exCADmpleFusion` 文件夹完整（含 `exCADmpleFusion.py` 与 `exCADmpleFusion.manifest`）。
 2. Fusion 中打开或新建一个 **Design**。
 3. **Utilities → Scripts and Add-Ins → Add-Ins**，点 **+**，选中整个文件夹并运行。
-4. 左侧出现案例教程，右侧出现 Reasoning Reuse；示例自动打开。**Import** 打开 `.excadmple` / `.json` 案例包。关闭面板后可从工具栏的 **exCADmple Player** / **Reasoning Reuse** 按钮重新打开。
+4. 出现教程窗口（版本 B 浮在画布上；版本 A 为带参考视口的独立窗口）和右侧 Reasoning Reuse；示例自动打开。**Import** 打开 `.excadmple` / `.json` 案例包。关闭面板后可从工具栏的 **exCADmple Player** / **Reasoning Reuse** 按钮重新打开。
 
 环境：Fusion Desktop（Windows／macOS），Fusion Python API；界面为本地 HTML/CSS/JS，无服务器、无外部前端库。
 
@@ -94,7 +109,13 @@ core/extract_fusion.py    从 .f3d 提取案例草稿
 core/authoring.py         草稿 + 标注 + 文字稿 → 案例包
 core/transcript.py        读取 .srt / .vtt / .json 文字稿
 core/spatial.py, focus.py, geometry_links.py   关联几何与 Focus Mode
-ui/index.html|player.*    左侧案例教程
+config.json               选择界面版本（overlay = B，reference = A）
+ui/index.html|player.*    版本 B 的教程面板
+ui/reference.*            版本 A 的 HiM 风格窗口（参考视口 + 纵向历史）
+ui/shared/viewer.js       版本 A 的 3D 参考视口（three.js）
+ui/shared/animation.js    几何动画的 JS 版本（与 core/animation.py 一致，有测试保证）
+ui/shared/history_filter.js  版本 A 的按几何过滤历史
+ui/vendor/                three.js r147（MIT）
 ui/him.*                  右侧 Reasoning Reuse
 tools/build_package.py    合成案例包
 tools/build_examples.py   生成附带示例

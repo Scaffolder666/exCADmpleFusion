@@ -26,6 +26,20 @@ from core.reuse_fusion import ReuseController
 from core.extract_fusion import extract_with_dialog
 
 PALETTE_ID = "excadmple.fusion.player"
+
+
+def _read_layout():
+    """'overlay' (version B: tutorial over the Fusion canvas, reference model
+    in the canvas) or 'reference' (version A: History in Motion style, the
+    example plays in a separate interactive 3D viewport). Set in config.json."""
+    try:
+        value = json.loads((ROOT / "config.json").read_text(encoding="utf-8")).get("layout", "overlay")
+    except Exception:
+        value = "overlay"
+    return value if value in ("overlay", "reference") else "overlay"
+
+
+LAYOUT = _read_layout()
 COMMAND_ID = "excadmple.fusion.open"
 HIM_PALETTE_ID = "excadmple.fusion.reuse"
 HIM_COMMAND_ID = "excadmple.fusion.him.open"
@@ -173,7 +187,11 @@ def _set_step(index, announce=False):
     _step_index = index
     _library.remember_step(index)
     step = _package.step(index)
-    success = _renderer.render(step, _package.data.get("reference_offset_cm"))
+    if LAYOUT == "reference":
+        success = True        # the example plays in its own viewport, not in the canvas
+    else:
+        success = _renderer.render(step, _package.data.get("reference_offset_cm"))
+        _show_hud(index, 0.0)
     if _spatial:
         linked = _spatial.links.get(step["id"], _spatial.document_key())
         if linked:
@@ -193,6 +211,34 @@ def _set_step(index, announce=False):
     _post("step", {"index": index})
 
 
+def _show_hud(index, progress):
+    """Version B: step title, current caption and the Why, pinned to the
+    corner of the Fusion canvas with Custom Graphics."""
+    if LAYOUT != "overlay" or not _package or not _renderer:
+        return
+    step = _package.step(index)
+    elapsed = progress * step.get("duration_ms", 8000)
+    cue = ""
+    for item in step.get("cues", []):
+        if item["at_ms"] <= elapsed:
+            cue = item["label"]
+    lines = ["exCADmple  ·  Step %d / %d  ·  %s" % (index + 1, len(_package.data["steps"]), step["title"])]
+    why = (step.get("reasoning") or {}).get("text", "")
+    if why:
+        lines.append("Why: " + (why if len(why) <= 110 else why[:107].rstrip() + "…"))
+    if cue:
+        lines.append("“" + cue + "”")
+    try:
+        _renderer.render_hud(lines)
+    except Exception:
+        _log_error()      # the HUD is an aid; never block playback
+
+
+def _post_reference_geometry():
+    if LAYOUT == "reference" and _package:
+        _post("reference_geometry", _package.reference_geometry())
+
+
 def _post_library():
     _post("library", {"examples": _library.listing()})
     if _reuse:
@@ -210,6 +256,7 @@ def _activate(example_id, step_index=None, play=False):
         _spatial.reset_example()
     _package = _library.package()
     _post("example", _package.player_data())
+    _post_reference_geometry()
     index = _library.step_index() if step_index is None else int(step_index)
     _set_step(index, True)
     if play:
@@ -294,6 +341,7 @@ class PaletteHandler(adsk.core.HTMLEventHandler):
             if command == "ready":
                 if _package:
                     _post("example", _package.player_data())
+                    _post_reference_geometry()
                     _post("step", {"index": _step_index})
                     _post_links()
                 _post_library()
@@ -350,6 +398,7 @@ class PaletteHandler(adsk.core.HTMLEventHandler):
                             _renderer.render_animation(step, offset, value)
                         if step.get("pointer"):
                             _renderer.render_pointer(step, offset, value)
+                        _show_hud(_step_index, value)
             elif command == "animation_end":
                 if _package and _package.step(_step_index)["id"] == body.get("step_id"):
                     _renderer.finish_animation()
@@ -575,13 +624,26 @@ def run(_context):
         _spatial = SpatialLinkController(_app, _ui)
 
         _palette = _ui.palettes.itemById(PALETTE_ID)
-        if not _palette:
+        if _palette:
+            _palette.deleteMe()          # the layout may have changed
+        if LAYOUT == "reference":
+            # Version A: a separate window with the interactive reference viewport.
             _palette = _ui.palettes.add2(
-                PALETTE_ID, "exCADmple · HiM Explorer", str(ROOT / "ui" / "index.html"),
-                True, True, True, 360, 760
-            )
-        _palette.isDockedInCanvas = False
-        _palette.dockingState = adsk.core.PaletteDockingStates.PaletteDockStateLeft
+                PALETTE_ID, "exCADmple · Reference example", str(ROOT / "ui" / "reference.html"),
+                True, True, True, 1180, 760)
+        else:
+            # Version B: a compact tutorial floating over the Fusion canvas.
+            _palette = _ui.palettes.add2(
+                PALETTE_ID, "exCADmple · Tutorial", str(ROOT / "ui" / "index.html"),
+                True, True, True, 340, 640)
+        _palette.dockingState = adsk.core.PaletteDockingStates.PaletteDockStateFloating
+        try:
+            if LAYOUT == "reference":
+                _palette.setPosition(60, 80)
+            else:
+                _palette.setPosition(80, 160)   # over the left part of the canvas
+        except Exception:
+            pass
         handler = PaletteHandler()
         _palette.incomingFromHTML.add(handler)
         _handlers.append(handler)

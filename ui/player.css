@@ -203,3 +203,11 @@ blockquote { background:#f0f6ff; border-left-color:var(--blue); font-size:13px; 
 .decision-scope b { color:var(--blue); }
 .decision-deps { margin:4px 0 0; font-size:11px; color:var(--muted); }
 .brief p { white-space:normal; overflow:visible; text-overflow:clip; }
+
+/* ---- Layout B: compact tutorial floating over the Fusion canvas ---------- */
+.topbar-actions { display:flex; gap:6px; }
+.intro p#exampleDescription { display:none; }
+body.collapsed .intro, body.collapsed .lesson-scroll { display:none; }
+.brief p { display:block; -webkit-line-clamp:unset; }
+.brief summary { cursor:pointer; font-size:10px; letter-spacing:.4px; text-transform:uppercase; color:var(--quiet); }
+.example-meta { display:none; }

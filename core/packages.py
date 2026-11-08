@@ -218,6 +218,16 @@ class ExamplePackage:
             result["steps"].append(meta)
         return result
 
+    def reference_geometry(self):
+        """Geometry, animation and ghost pointer of every step, for the
+        separate reference viewport (version A). Package-local centimeters."""
+        return {"steps": [{
+            "geometry": {"meshes": step.get("geometry", {}).get("meshes", [])},
+            "animation": step.get("animation"),
+            "pointer": step.get("pointer") or [],
+            "duration_ms": step.get("duration_ms", 8000),
+        } for step in self.data["steps"]]}
+
     def step(self, index):
         if not isinstance(index, int) or not 0 <= index < len(self.data["steps"]):
             raise PackageError("Step index out of range")

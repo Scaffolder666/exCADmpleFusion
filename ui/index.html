@@ -13,18 +13,22 @@
         <span class="brand-icon" aria-hidden="true">e</span>
         <div><strong>exCADmple</strong><small>Design reasoning in your workspace</small></div>
       </div>
-      <button id="import" class="btn btn-quiet" title="Open a .json or .excadmple package">+ Import</button>
+      <div class="topbar-actions">
+        <button id="import" class="btn btn-quiet" title="Open a .json or .excadmple package">+ Import</button>
+        <button id="collapse" class="btn btn-quiet" type="button" title="Show only the step bar" aria-pressed="false">▾</button>
+      </div>
     </header>
+
 
     <section class="intro">
       <div class="overline">REFERENCE EXAMPLE <span id="exampleType" class="type-note">Design process</span></div>
       <h1 id="exampleTitle">Loading example…</h1>
       <p id="exampleDescription">Explore the original design, then continue with your own.</p>
-      <div id="brief" class="brief" hidden>
-        <div class="decision-label">The designer's goal</div>
+      <details id="brief" class="brief" hidden>
+        <summary>The designer's goal</summary>
         <p id="briefGoal"></p>
         <p id="briefMore" class="brief-more"></p>
-      </div>
+      </details>
       <div class="example-meta">
         <span id="exampleSteps">—</span>
         <span aria-hidden="true">·</span>

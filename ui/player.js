@@ -452,6 +452,11 @@ $("import").addEventListener("click", () => { pause(); bridge("open_package"); }
 $("exampleSwitch").addEventListener("change", (event) => { pause(); bridge("switch_example", {id: event.target.value}); });
 $("closeExample").addEventListener("click", () => { pause(); bridge("close_example", {id: $("exampleSwitch").value}); });
 $("compareDecision").addEventListener("click", () => bridge("compare_decision"));
+$("collapse").addEventListener("click", () => {
+  const collapsed = document.body.classList.toggle("collapsed");
+  $("collapse").setAttribute("aria-pressed", String(collapsed));
+  $("collapse").textContent = collapsed ? "▴" : "▾";
+});
 $("extractDraft").addEventListener("click", () => { pause(); bridge("extract_draft"); });
 $("demo").addEventListener("click", () => { pause(); bridge("load_demo"); });
 $("play").addEventListener("click", () => state.playing ? pause() : play());
