@@ -347,6 +347,9 @@ window.fusionJavaScriptHandler = {
         state.filteredIndices = payload.indices || [];
         renderRail();
         if (state.filteredIndices.length) selectStep(state.filteredIndices[0]);
+      } else if (action === "geometry_selection") {
+        $("selectionStatus").textContent = payload.selected ? payload.kind + " selected in Fusion" : "Select a face, edge or vertex in Fusion.";
+        $("entityFilter").value = payload.selected ? (payload.entity_id || "") : "";
       } else if (action === "step") {
         if (payload.index !== state.index && state.example) selectStep(payload.index);
       } else if (action === "status") setStatus(payload.message, payload.error);
