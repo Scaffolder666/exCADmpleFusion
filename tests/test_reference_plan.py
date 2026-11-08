@@ -18,7 +18,17 @@ class ReferencePlanTests(unittest.TestCase):
         mapped, missing = map_steps(STEPS, F)
         self.assertEqual([[f.name for f in m] for m in mapped],
                          [["Sketch1", "Extrude1", "Fillet1"], ["Sketch2", "Extrude2"], []])
-        self.assertEqual(missing, ["Gone"])
+        self.assertEqual(missing, ["step ?: Gone (index 9)"])
+
+    def test_duplicate_feature_names_require_exact_index(self):
+        features = [FeatureInfo(1, "Extrude", "ExtrudeFeature"),
+                    FeatureInfo(2, "Extrude", "ExtrudeFeature")]
+        steps = [{"id": "ambiguous", "source_features": [{"name": "Extrude", "index": 9}]},
+                 {"id": "exact", "source_features": [{"name": "Extrude", "index": 2}]}]
+        mapped, missing = map_steps(steps, features)
+        self.assertEqual(mapped[0], [])
+        self.assertEqual([f.index for f in mapped[1]], [2])
+        self.assertEqual(missing, ["step ambiguous: Extrude (index 9)"])
 
     def test_frame_target_splits_time_between_animated_features(self):
         mapped, _ = map_steps(STEPS, F)
