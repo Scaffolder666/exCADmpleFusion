@@ -62,6 +62,7 @@ class ReferenceSession:
         design = adsk.fusion.Design.cast(document.products.itemByProductType("DesignProductType"))
         self.document = document
         self.model = FusionTimelineModel(design)
+        self.him.model_highlights = self.model.highlights     # blue inputs per feature
         self.mapped, self.unmatched = map_steps(package.data["steps"], self.model.features())
         self.source_name = path.name
         self.plan = self.animation_plan()
@@ -149,6 +150,7 @@ class ReferenceSession:
         try:
             if key != self.current:
                 self.stop()
+                self._read_inputs([items[position]])
                 self._roll_after(items[position])
                 self.him.clip = [items[position]]
                 self.him.active_position = None
@@ -170,14 +172,34 @@ class ReferenceSession:
         return status
 
     def show_result(self, step_index):
-        """The model as it is after this step (timeline rolled, nothing animated)."""
+        """The model as it is after this step (timeline rolled, nothing
+        animated), with the step's geometry highlighted."""
         if not self.live:
             return
         self.stop()
+        features = animated(self.mapped[step_index]) if 0 <= step_index < len(self.mapped) else []
+        self._read_inputs(features)
         if step_index >= len(self.mapped) - 1:
             self.model.go(self.model.end_state())        # the finished model
         elif self.mapped[step_index]:
             self._roll_after(self.mapped[step_index][-1])
+        try:
+            self.him.draw_guidance(features)
+        except Exception as error:
+            self.log("HiM geometry guidance: " + str(error))
+
+    def _read_inputs(self, features):
+        """Record each feature's input profile/edges (blue), once. The
+        Fusion API reads them with the marker just before the feature."""
+        self.him.model_highlights = self.model.highlights
+        for feature in features:
+            if feature.index in self.model.highlights:
+                continue
+            try:
+                self.model.input_geometries(feature)
+            except Exception as error:
+                self.log("HiM inputs of {}: {}".format(feature.name, error))
+            self.model.highlights.setdefault(feature.index, [])
 
     def set_dim(self, enabled):
         self.him.dim_others = bool(enabled)

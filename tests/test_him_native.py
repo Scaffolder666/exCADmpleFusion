@@ -182,7 +182,13 @@ class NativePlaybackTests(unittest.TestCase):
         self.assertAlmostEqual(self.d1.value, 1.0)
         self.assertAlmostEqual(self.d2.value, 0.2)
         self.assertEqual(len(self.session.him.journal), 0)
-        self.assertTrue(all(not g.isValid for g in self.groups))
+        # Animation overlays are gone. A finished step keeps exactly one
+        # guidance group (its highlighted geometry), never selectable.
+        alive = [g for g in self.groups if g.isValid]
+        self.assertLessEqual(len(alive), 1)
+        if alive:
+            self.assertIs(alive[0], self.session.him.group)
+            self.assertFalse(alive[0].isSelectable)
 
     def test_parameter_grows_with_progress_and_ends_at_its_value(self):
         for progress in (0.0, 0.25, 0.5, 0.99):
@@ -248,6 +254,11 @@ class NativePlaybackTests(unittest.TestCase):
         self.assertEqual(len(group.bodies), 1)
         self.assertAlmostEqual(group.bodies[0].opacity, 0.5)
         self.session.frame(3, 1.0)
+        self.assertFalse(group.isValid)                                     # fade overlay removed
+        guidance = self.session.him.group                                   # the result stays marked
+        self.assertTrue(guidance.isValid)
+        self.assertEqual(len(guidance.bodies), 1)                           # Mirror1's result body
+        self.session.stop()
         self.assertTrue(all(not g.isValid for g in self.groups))
         self.assertEqual(self.d1.writes, [])                                # model untouched
 

@@ -106,6 +106,12 @@
 
 **最终验收待 Fusion Desktop 实测。** 验收模型和步骤：`tools/fusion_demo`（在 Fusion 里运行，生成 Sketch → Extrude → Fillet → Sketch → Extrude → 构造平面 → Mirror 的真实 `.f3d` 和教程包），按 [`docs/FUSION_DESKTOP_TEST.md`](docs/FUSION_DESKTOP_TEST.md) 逐项检查。该脚本本身也尚未在 Fusion 里运行过。
 
+## 空间引导（这一步改了哪里）
+
+- **记录的模型**（没有 `.f3d`，例如附带的 Phone Stand）：把这一步的模型与上一步的模型按几何比较：与上一步完全相同的网格（顶点、三角形顺序不同也算相同，带容差）不变；其余网格里，落在上一步模型表面上的三角形不变（重新三角化不算改动），其余三角形就是这一步新增或修改的，用青色画出，其余部分照常灰色。第一步整个模型都是新的。只删除了几何的步骤不标记任何东西。播放中每一帧同样比较（超过 6000 个三角形时不逐帧比较）；暂停时保持；切换步骤、换教程、关闭时清除。
+- **设计师的 `.f3d`**：青色画特征自己报告的面（`Feature.faces`，用临时 BRep 复制后绘制）；没有面时才画整个结果 Body；蓝色画从 API 读到的输入草图轮廓和边。步骤结束或选中某一步时保持，下一帧、切换步骤、停止和关闭时清除。
+- 教程包没有记录实体引用，所以不使用；找不到对应关系时不标记。颜色没有设置项。高亮都是不可选的 Custom Graphics，不改动模型。
+
 ## 测试
 
 ```bash
@@ -131,6 +137,7 @@ core/him_filter.py, him_motion.py, him_fusion.py   History in Motion 的过滤�
 core/extract_fusion.py    从 .f3d 提取教程草稿
 core/authoring.py, transcript.py   合成教程包、读取文字稿
 core/spatial.py, focus.py, geometry_links.py      关联几何
+core/step_changes.py      空间引导：比较相邻两步的记录模型，找出这一步新增或修改的三角形（青色）
 ui/index.html, player.*   版本 B 的面板
 ui/reference.*            版本 A 的控制面板
 core/session_log.py, session_recorder.py   制作：录制时记录工具、特征时间、选中位置

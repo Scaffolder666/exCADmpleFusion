@@ -10,8 +10,13 @@ import math
 
 from .animation import animation_meshes
 from .pointer import sample as sample_pointer
+from .step_changes import ChangeDetector, MAX_EXAMINED
 
 POINTER_COLOR = (245, 140, 20, 255)
+# Spatial guidance: the triangles this step created or modified (compared
+# with the previous step's snapshot) are drawn teal, the rest unchanged.
+CHANGE_COLOR = (20, 184, 166, 255)
+FRAME_BUDGET = 6000      # triangles compared per animation frame
 TRAIL_COLOR = (250, 190, 90, 255)
 
 
@@ -25,6 +30,8 @@ class ReferenceRenderer:
         self.visible = True
         self.last_step = None
         self.last_offset = None
+        self.last_previous = None
+        self._detectors = {}
 
     def _delete(self, group):
         try:
@@ -97,7 +104,48 @@ class ReferenceRenderer:
             return value
         return [15.0, 0.0, 0.0]
 
-    def _create_group(self, meshes, offset, name):
+    # --- spatial guidance --------------------------------------------------------------
+    def _detector(self, step, previous):
+        key = (step.get("id"), id(previous))
+        entry = self._detectors.get(key)
+        if entry is None or entry[0] is not previous:
+            if len(self._detectors) > 64:
+                self._detectors.clear()
+            entry = (previous, ChangeDetector(previous, step.get("geometry", {}).get("meshes", [])), {})
+            self._detectors[key] = entry
+        return entry
+
+    def guided(self, step, meshes, previous, budget=MAX_EXAMINED):
+        """(unchanged meshes, changed meshes). No previous snapshot known or
+        too much geometry to compare: nothing is marked as changed."""
+        if previous is None or not meshes:
+            return meshes, []
+        try:
+            _, detector, cache = self._detector(step, previous)
+            if id(meshes) in cache and cache[id(meshes)][0] is meshes:
+                return cache[id(meshes)][1]
+            if detector.examined_count(meshes) > budget:
+                return meshes, []
+            split = detector.split(meshes)
+        except Exception:
+            return meshes, []
+        if split is None:
+            return meshes, []
+        if budget >= MAX_EXAMINED:
+            cache[id(meshes)] = (meshes, split)       # the step's final snapshot
+        return split
+
+    @staticmethod
+    def _change_effect():
+        color = adsk.core.Color.create(*CHANGE_COLOR)
+        try:
+            return adsk.fusion.CustomGraphicsBasicMaterialColorEffect.create(
+                color, adsk.core.Color.create(10, 92, 83, 255), adsk.core.Color.create(60, 60, 60, 255),
+                adsk.core.Color.create(0, 0, 0, 255), 5.0, 1.0)
+        except Exception:
+            return adsk.fusion.CustomGraphicsSolidColorEffect.create(color)
+
+    def _create_group(self, meshes, offset, name, changed=()):
         design = adsk.fusion.Design.cast(self.app.activeProduct)
         if not design:
             return None
@@ -116,27 +164,43 @@ class ReferenceRenderer:
                 if not entity:
                     raise RuntimeError("Fusion refused to draw the animation/reference mesh")
                 entity.isSelectable = False
+            if changed:
+                effect = self._change_effect()
+                for mesh_data in changed:
+                    flat = []
+                    for x, y, z in mesh_data["vertices"]:
+                        flat.extend((x + offset[0], y + offset[1], z + offset[2]))
+                    triangles = [index for face in mesh_data["triangles"] for index in face]
+                    entity = group.addMesh(adsk.fusion.CustomGraphicsCoordinates.create(flat), triangles, [], [])
+                    if not entity:
+                        raise RuntimeError("Fusion refused to draw the step highlight")
+                    entity.color = effect
+                    entity.isSelectable = False
         except Exception:
             self._delete(group)
             raise
         return group
 
-    def render(self, step, offset=None):
+    def render(self, step, offset=None, previous=None):
+        """Draw the step's snapshot. With ``previous`` (the previous step's
+        snapshot, [] for the first step) what this step changed is teal."""
         self.clear()
         design = adsk.fusion.Design.cast(self.app.activeProduct)
         if not design:
             return False
         self.last_step = step
         self.last_offset = offset
+        self.last_previous = previous
         if not self.visible:
             return True
         meshes = step.get("geometry", {}).get("meshes", [])
         if meshes:
-            self.group = self._create_group(meshes, self._offset(offset), "exCADmple reference (read-only)")
+            plain, changed = self.guided(step, meshes, previous)
+            self.group = self._create_group(plain, self._offset(offset), "exCADmple reference (read-only)", changed)
         self._refresh()
         return True
 
-    def render_animation(self, step, offset, progress):
+    def render_animation(self, step, offset, progress, previous=None):
         """Redraw only the transient animation group at a requested progress.
 
         A live Fusion Python event is required; this cannot be tested with the
@@ -147,6 +211,7 @@ class ReferenceRenderer:
         if not self.visible:
             return True
         meshes = animation_meshes(step["animation"], progress)
+        plain, changed = self.guided(step, meshes, previous, FRAME_BUDGET)
         # Hide the completed reference mesh before rendering partial geometry.
         if self.group and self.group.isValid:
             self.group.isVisible = False
@@ -154,8 +219,8 @@ class ReferenceRenderer:
         self.animation_group = None
         try:
             self.animation_group = self._create_group(
-                meshes, self._offset(offset),
-                "exCADmple step animation (temporary)"
+                plain, self._offset(offset),
+                "exCADmple step animation (temporary)", changed
             )
             self._refresh()
             return True
@@ -228,6 +293,6 @@ class ReferenceRenderer:
         elif self.group and self.group.isValid:
             self.group.isVisible = True
         elif self.visible and self.last_step:
-            self.render(self.last_step, self.last_offset)
+            self.render(self.last_step, self.last_offset, self.last_previous)
             return
         self._refresh()

@@ -413,6 +413,22 @@ def all_feature_parameters(design, feature_entity):
     return result
 
 
+def _center(bodies):
+    """Centre of the union of the bodies' bounding boxes."""
+    lo, hi = [float("inf")] * 3, [float("-inf")] * 3
+    for body in bodies:
+        try:
+            box = body.boundingBox
+            for i, attr in enumerate("xyz"):
+                lo[i] = min(lo[i], getattr(box.minPoint, attr))
+                hi[i] = max(hi[i], getattr(box.maxPoint, attr))
+        except Exception:
+            continue
+    if lo[0] == float("inf"):
+        return (0.0, 0.0, 0.0)
+    return tuple((lo[i] + hi[i]) / 2 for i in range(3))
+
+
 class HiMController:
     """Owns one filtering result and its animation."""
 
@@ -623,37 +639,90 @@ class HiMController:
                 line.depthPriority = 1
             except Exception:
                 continue
-        # Only feature-owned result bodies are marked as changing. Do not
-        # pretend to know which face was selected when source inputs are absent.
-        # The low-opacity overlay for native parameters remains stationary;
-        # the underlying Fusion feature itself supplies the actual motion.
+        # Teal marks what the feature changed: the faces the feature itself
+        # reports (Feature.faces), copied as temporary bodies so only they are
+        # drawn; the whole result body only when no face is reported. Do not
+        # pretend to know which face was selected when source inputs are
+        # absent. The native feature itself supplies the actual motion.
         if prepared["mode"] in (FADE, PARAMETRIC):
-            for body in prepared["bodies"]:
+            targets = self._change_targets(prepared)
+            center = _center(targets) if prepared["mode"] == FADE else None
+            for body in targets:
                 try:
                     overlay = group.addBRepBody(body)
                     overlay.color = adsk.fusion.CustomGraphicsSolidColorEffect.create(
                         adsk.core.Color.create(*CHANGE_HIGHLIGHT))
                     if prepared["mode"] == PARAMETRIC:
-                        overlay.setOpacity(0.18, True)
+                        overlay.setOpacity(0.18 if body in prepared["bodies"] else 0.6, True)
                     else:
                         overlay.setOpacity(progress, True)
-                        box = body.boundingBox
-                        center = adsk.core.Point3D.create(
-                            (box.minPoint.x + box.maxPoint.x) / 2,
-                            (box.minPoint.y + box.maxPoint.y) / 2,
-                            (box.minPoint.z + box.maxPoint.z) / 2)
                         scale = 0.5 + 0.5 * progress
                         matrix = adsk.core.Matrix3D.create()
                         for axis in range(3):
                             matrix.setCell(axis, axis, scale)
-                        matrix.setCell(0, 3, center.x * (1 - scale))
-                        matrix.setCell(1, 3, center.y * (1 - scale))
-                        matrix.setCell(2, 3, center.z * (1 - scale))
+                        matrix.setCell(0, 3, center[0] * (1 - scale))
+                        matrix.setCell(1, 3, center[1] * (1 - scale))
+                        matrix.setCell(2, 3, center[2] * (1 - scale))
                         overlay.transform = matrix
+                    overlay.depthPriority = 1
                     overlay.isSelectable = False
                 except Exception as error:
                     self.log("HiM geometry guidance: " + str(error))
         self.group = group
+
+    MAX_FACE_HIGHLIGHTS = 200
+
+    def draw_guidance(self, features):
+        """Spatial guidance for a finished step, kept until the next frame,
+        step change or stop: blue input profile/edges (when the feature's
+        inputs were read), teal faces the features created or modified."""
+        self._delete_group()
+        design = self.design()
+        if not design or not features:
+            return None
+        group = design.rootComponent.customGraphicsGroups.add()
+        group.isSelectable = False
+        for feature in features:
+            for curve in self.model_highlights.get(feature.index, []):
+                try:
+                    line = group.addCurve(curve)
+                    line.color = adsk.fusion.CustomGraphicsSolidColorEffect.create(
+                        adsk.core.Color.create(*HIGHLIGHT))
+                    line.weight = 3
+                    line.depthPriority = 2
+                except Exception:
+                    continue
+            entity = self._feature_entity(feature)
+            bodies = [b for b in _items(getattr(entity, "bodies", None)) if b] if entity is not None else []
+            for body in self._change_targets({"entity": entity, "bodies": bodies}):
+                try:
+                    overlay = group.addBRepBody(body)
+                    overlay.color = adsk.fusion.CustomGraphicsSolidColorEffect.create(
+                        adsk.core.Color.create(*CHANGE_HIGHLIGHT))
+                    overlay.setOpacity(0.18 if body in bodies else 0.6, True)
+                    overlay.depthPriority = 1
+                    overlay.isSelectable = False
+                except Exception as error:
+                    self.log("HiM geometry guidance: " + str(error))
+        self.group = group
+        self._refresh()
+        return group
+
+    def _change_targets(self, prepared):
+        """Temporary copies of the faces this feature created or modified
+        (read every frame: parameter changes recompute them); else its
+        result bodies."""
+        faces = _items(getattr(prepared.get("entity"), "faces", None), self.MAX_FACE_HIGHLIGHTS + 1)
+        if faces and len(faces) <= self.MAX_FACE_HIGHLIGHTS:
+            try:
+                manager = adsk.fusion.TemporaryBRepManager.get()
+                copies = [manager.copy(face) for face in faces]
+                copies = [c for c in copies if c]
+                if copies:
+                    return copies
+            except Exception as error:
+                self.log("HiM geometry guidance: " + str(error))
+        return list(prepared["bodies"])
 
     def _delete_group(self):
         try:

@@ -121,6 +121,13 @@ def _show_hud(index, progress):
         _log_error()      # the HUD is an aid; never block playback
 
 
+def _previous_geometry(index):
+    """The snapshot before step ``index`` (spatial guidance compares with it)."""
+    if not _package or index <= 0:
+        return []
+    return _package.step(index - 1).get("geometry", {}).get("meshes", [])
+
+
 def _set_step(index):
     global _step_index
     if not _package:
@@ -133,9 +140,9 @@ def _set_step(index):
         if _session and _session.live:
             _session.show_result(index)          # the designer's model after this step
         else:
-            _renderer.render(step, [0, 0, 0])    # recorded geometry only
+            _renderer.render(step, [0, 0, 0], _previous_geometry(index))    # recorded geometry only
     else:
-        if not _renderer.render(step, _package.data.get("reference_offset_cm")):
+        if not _renderer.render(step, _package.data.get("reference_offset_cm"), _previous_geometry(index)):
             _status("Open or create a Fusion Design to see the reference model.", True)
         _show_hud(index, 0.0)
     if _spatial:
@@ -256,7 +263,7 @@ class PaletteHandler(adsk.core.HTMLEventHandler):
                             raise ValueError("Animation progress must be in [0,1]")
                         offset = _package.data.get("reference_offset_cm")
                         if step.get("animation"):
-                            _renderer.render_animation(step, offset, value)
+                            _renderer.render_animation(step, offset, value, _previous_geometry(_step_index))
                         if step.get("pointer"):
                             _renderer.render_pointer(step, offset, value)
                         _show_hud(_step_index, value)
@@ -279,7 +286,7 @@ class PaletteHandler(adsk.core.HTMLEventHandler):
                             _last_shown = shown
                             _post("animation", shown)
                     elif step.get("animation"):
-                        _renderer.render_animation(step, [0, 0, 0], value)
+                        _renderer.render_animation(step, [0, 0, 0], value, _previous_geometry(index))
                     if step.get("pointer"):
                         _renderer.render_pointer(step, [0, 0, 0], value)
             elif command == "show_more":
