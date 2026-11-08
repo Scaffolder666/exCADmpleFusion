@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>History in Motion</title>
+  <link rel="stylesheet" href="him.css">
+</head>
+<body>
+  <main class="him">
+    <header class="him-head">
+      <div>
+        <strong>History in Motion</strong>
+        <small id="selection">Select a face, edge or vertex in your model.</small>
+      </div>
+      <div class="transport" role="group" aria-label="Animation controls">
+        <button id="back" title="Step backward (reverses playback)" aria-label="Step backward">&#9198;</button>
+        <button id="playPause" title="Play / pause" aria-label="Play">&#9654;</button>
+        <button id="replay" title="Replay from the newest feature" aria-label="Replay">&#8635;</button>
+        <button id="forward" title="Step forward" aria-label="Step forward">&#9197;</button>
+      </div>
+    </header>
+
+    <p id="status" class="status" role="status" aria-live="polite">Waiting for a selection.</p>
+
+    <ol id="features" class="rail" aria-label="Modeling features of the selected geometry, newest first"></ol>
+
+    <div id="bases" class="bases"></div>
+    <button id="showMore" class="show-more" hidden>Show more: how the sketch face was made</button>
+
+    <footer class="him-foot">
+      <label for="speed">Seconds per feature <output id="speedValue">4</output> s</label>
+      <input id="speed" type="range" min="2" max="10" step="1" value="4">
+      <div class="options">
+        <label><input id="dim" type="checkbox" checked> Make other bodies transparent</label>
+        <label><input id="auto" type="checkbox" checked> Animate on selection</label>
+      </div>
+      <small class="note">Animations temporarily vary feature parameters in your design and always restore them. Undo entries may appear; try HiM on a copy of important models first.</small>
+    </footer>
+  </main>
+  <script src="him.js"></script>
+</body>
+</html>

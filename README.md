@@ -23,7 +23,7 @@
 - **Replay step**：从当前步骤起点重新播放，保留当前播放范围选择。
 - **关联几何与 Focus**：沿用 Fusion 版已有的手动关联和高亮机制。
 
-参考 [History in Motion, SCF 2023](https://doi.org/10.1145/3623263.3623358) 的历史探索思路。此版本不是 HiM 复刻：没有从选中 Face/Edge 自动追溯特征依赖，也没有新增 Revolve、Fillet、Pattern 的原生参数动画。已有预计算 Extrude 与步骤快照继续工作。Reasoning 仍保留，因为 exCADmple 关注操作与设计理由的复用。
+参考 [History in Motion, SCF 2023](https://doi.org/10.1145/3623263.3623358)。自 v0.6 起，插件另含一个**原生 HiM 面板**（见下文“History in Motion 复现”），可对任意参数化 Fusion 模型按选中的 Face/Edge/Vertex 过滤特征，并以原生参数动画回放。示例播放器与 Reasoning 保持不变。
 
 **切换版本时先停止另一个 Fusion 插件版本。** 两个分支共用插件入口与会话标识，不应同时运行。
 
@@ -182,6 +182,36 @@ Veuskens 等人在 SCF 2023 的 [*History in Motion*](https://doi.org/10.1145/36
 
 exCADmple 的这个 MVP 借鉴的是**动画呈现原则**，而不是原代码实现。它直接在同一个 Fusion Canvas 中，根据验证后的数据生成临时 Mesh，而不是通过第二个 Fusion 实例修改原生 Feature 参数。这保留了用户自己的 CAD 建模历史，同时将 Feature 依赖抽取与全面的操作复现留给未来工作。
 
+## History in Motion 复现（v0.6，原生 Fusion 模型）
+
+启动插件后，右侧会出现 **History in Motion** 面板（工具栏 **History in Motion** 按钮可重新打开）。打开任意**参数化** Fusion 设计，选中一个 Face、Edge 或 Vertex，HiM 会自动找到相关建模特征，并在模型上播放动画。
+
+| 论文功能 | 实现位置 | 说明 |
+|---|---|---|
+| 选中几何 → 过滤特征（Algorithm 1/2） | `core/him_filter.py`、`core/him_fusion.py` | Edge 转为两侧 Face，Vertex 转为相邻 Edge 的所有 Face；先找**创建**该 Face 的特征（`feature.faces`），再沿特征的输入几何（Profile、Edge Set、输入 Face、Pattern 的种子特征等）向前追溯，直到遇到 Sketch |
+| 修改该几何的特征 | `him_filter._modified_by` | 对时间线每个状态比较前后签名：Face 用边数、顶点数、面积、质心；Edge/Vertex 用三维坐标 |
+| “Show more” | `him_filter.show_more` | Sketch 若建在模型 Face 上，继续追溯该 Face 的创建特征；直到 Sketch 位于 XY/XZ/YZ 基准平面（或其它构造平面） |
+| 逆序播放 | `him_motion.Playback` | 从最晚添加的特征开始，动画起点与当前模型状态一致 |
+| 参数动画 | `HiMController._render` | 临时把 ModelParameter 从约 0（2%）改到实际值：Extrude 距离、Revolve 角度、Fillet 半径、Chamfer 距离、Circular Pattern 总角度、Rectangular Pattern X/Y 距离等 |
+| 无参数特征 | `HiMController._draw_overlay` | Mirror、Combine、Split、Loft、Move、Import 等使用缩放 + 透明度渐入的 Custom Graphics |
+| 20 种特征 | `him_motion.FEATURES` | 未支持的特征仍显示在面板中，标为“not animated”，播放时跳过 |
+| 其它几何透明、高亮输入 | `OpacityFocus` + Custom Graphics 曲线 | 其它 Body 暂时降到 20% 透明度；Profile/Edge 以蓝色曲线高亮 |
+| 速度 2–10 秒/特征，自适应帧率 | `him_motion.AdaptiveStepper` | 起始 15 帧（2 秒）到 75 帧（10 秒），之后按上一帧实际耗时调整步长 |
+| 暂停、重播、前进、后退（后退为逆向播放）、高亮当前特征 | `ui/him.*` | 垂直胶囊式历史列表，带进度条 |
+| 编辑快捷方式 | `HiMController.edit_feature` / `set_parameter` | 选中特征并尝试打开原生编辑命令；面板内可直接修改该特征的参数表达式 |
+
+**安全与恢复：** 每个参数在第一次修改前记录原始**表达式**（`RestoreJournal`），每个特征播放完毕、选中新几何、Stop、保存前（`documentSaving`）、切换文档、停止插件时都会恢复，同时恢复透明度和时间线标记位置。
+
+**与论文的差异（须如实说明）：**
+
+- 论文在**第二个 Fusion 实例**中操作模型副本，通过 WebSocket 通信。Fusion API 无法在同一进程中打开第二个可交互三维视口，所以这里在**用户自己的模型中原位**播放，再恢复。参数修改会进入 Fusion 撤销历史；重要模型请先在副本上测试。
+- “修改”检测需要多次回滚时间线，大模型分析可能较慢（超过 600 个时间线项会拒绝分析）。
+- 原生 “Edit Feature” 对话框的命令 ID 并未公开记录：插件会尝试几个候选 ID；若都不存在，则只选中该特征，同时提供面板内的参数编辑。
+- 输入几何依赖 Fusion API 实际提供的属性（`profile`、`edgeSets`、`inputEntities` 等）；以 Body 作为输入时不再展开，避免引入整个零件的所有特征。
+- 尚未在 Fusion 桌面端实测；纯 Python 算法、动画计时与适配层（stub `adsk`）有单元测试：`tests/test_him_filter.py`、`tests/test_him_motion.py`、`tests/test_him_fusion_adapter.py`。
+
+**桌面端冒烟测试：** 建一个底板（Extrude），在其上表面建 Sketch 拉伸圆柱，加 Thread，再做 Circular Pattern；选中一根复制出的圆柱面，应得到 Pattern → Thread → Extrude，点 **Show more** 后出现底板 Extrude。播放时，Pattern 角度应从 0 逐渐展开；结束后核对参数表达式和时间线标记与原来一致。
+
 ## 代码结构
 
 ```text
@@ -189,6 +219,10 @@ exCADmpleFusion.py          Fusion 入口、HTML Bridge 与保存安全处理
 exCADmpleFusion.manifest    Fusion Add-in 元数据
 core/packages.py           案例包验证与安全 ZIP 读取
 core/renderer.py           Fusion 画布中的临时只读 Mesh
+core/him_filter.py         HiM 特征过滤算法（纯 Python）
+core/him_motion.py         HiM 动画注册表、计时与播放状态
+core/him_fusion.py         HiM 的 Fusion 适配层与动画控制
+ui/him.html|css|js         HiM 控制面板
 ui/index.html              播放器界面
 ui/player.css              界面样式
 ui/player.js               独立的播放时间轴、媒体和提示

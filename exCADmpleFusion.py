@@ -4,6 +4,7 @@ Start by running this Add-In from Utilities > Scripts and Add-Ins.
 Only Custom Graphics are changed; no native feature history is replayed.
 """
 import json
+import threading
 import traceback
 import sys
 from pathlib import Path
@@ -20,9 +21,19 @@ from core.renderer import ReferenceRenderer
 from core.history import history_step_indices, HistoryError
 from core.fusion_history import scan_candidate_features, trace_direct_creators, trace_feature_inputs
 from core.spatial import SpatialLinkController
+from core.him_fusion import HiMController
 
 PALETTE_ID = "excadmple.fusion.player"
 COMMAND_ID = "excadmple.fusion.open"
+HIM_PALETTE_ID = "excadmple.fusion.him"
+HIM_COMMAND_ID = "excadmple.fusion.him.open"
+HIM_TICK_EVENT = "excadmple.fusion.him.tick"
+_him = None
+_him_palette = None
+_him_event = None
+_him_ticker = None
+_him_command_def = None
+_him_command_control = None
 _app = None
 _ui = None
 _palette = None
@@ -39,6 +50,96 @@ _saving_document = False
 def _post(action, payload):
     if _palette and _palette.isValid:
         _palette.sendInfoToHTML(action, json.dumps(payload))
+
+
+def _post_him(action, payload):
+    if _him_palette and _him_palette.isValid:
+        _him_palette.sendInfoToHTML(action, json.dumps(payload))
+
+
+def _him_status(message, is_error=False):
+    _post_him("status", {"message": message, "error": is_error})
+
+
+class _HiMTicker(threading.Thread):
+    """Requests animation frames on Fusion's main thread via a custom event.
+    A new frame is only requested after the previous one was rendered, so the
+    frame rate adapts to how long Fusion needs to recompute the model."""
+
+    def __init__(self):
+        super().__init__(daemon=True)
+        self.stopped = threading.Event()
+        self.idle = threading.Event()
+        self.idle.set()
+
+    def run(self):
+        while not self.stopped.wait(0.01):
+            if _him and _him.playback.playing and self.idle.is_set():
+                self.idle.clear()
+                try:
+                    _app.fireCustomEvent(HIM_TICK_EVENT, "")
+                except Exception:
+                    self.idle.set()
+
+
+class HiMTickHandler(adsk.core.CustomEventHandler):
+    def notify(self, args):
+        try:
+            if _him:
+                _him.tick()
+        except Exception as error:
+            try:
+                _him.stop()
+            except Exception:
+                pass
+            _him_status("Animation stopped: " + str(error), True)
+            _log_error()
+        finally:
+            if _him_ticker:
+                _him_ticker.idle.set()
+
+
+def _him_explain(entity):
+    if not _him or _him.busy:
+        return
+    if not (_him_palette and _him_palette.isValid and _him_palette.isVisible):
+        return
+    try:
+        _him_status("Analysing the modeling history…")
+        _him.explain(entity)
+    except Exception as error:
+        _him_status(str(error), True)
+        _log_error()
+
+
+class HiMPaletteHandler(adsk.core.HTMLEventHandler):
+    def notify(self, args):
+        try:
+            command = args.action
+            body = json.loads(args.data or "{}")
+            if command == "him_ready":
+                if _him and _him.result:
+                    _post_him("him_result", _him.describe())
+                else:
+                    entity = _selected_native_entity()
+                    if entity:
+                        _him_explain(entity)
+            elif command == "him_command":
+                _him.command(body.get("name"), body.get("value"))
+            elif command == "him_show_more":
+                _him.show_more()
+            elif command == "him_edit":
+                _him_status(_him.edit_feature(int(body["position"])))
+            elif command == "him_set_parameter":
+                _him_status(_him.set_parameter(int(body["position"]), str(body["name"]),
+                                               str(body["expression"])))
+            else:
+                raise ValueError("Unknown action: " + str(command))
+            args.returnData = json.dumps({"ok": True})
+        except Exception as error:
+            _him_status(str(error), True)
+            args.returnData = json.dumps({"ok": False, "error": str(error)})
+            _log_error()
 
 
 def _status(message, is_error=False):
@@ -141,7 +242,11 @@ class ActiveGeometrySelection(adsk.core.ActiveSelectionEventHandler):
     def notify(self, args):
         try:
             selected = _selected_geometry(args)
+            if _him and _him.busy:
+                return
             _post("geometry_selection", selected)
+            if selected["selected"]:
+                _him_explain(_selected_native_entity())
             if selected["selected"]:
                 design = adsk.fusion.Design.cast(_app.activeProduct)
                 candidates = scan_candidate_features(design, _selected_native_entity())
@@ -253,10 +358,26 @@ class ShowCommandExecute(adsk.core.CommandEventHandler):
             _palette.isVisible = True
 
 
+class ShowHiMCreated(adsk.core.CommandCreatedEventHandler):
+    def notify(self, args):
+        handler = ShowHiMExecute()
+        args.command.execute.add(handler)
+        _handlers.append(handler)
+
+
+class ShowHiMExecute(adsk.core.CommandEventHandler):
+    def notify(self, args):
+        if _him_palette:
+            _him_palette.isVisible = True
+
+
 class BeforeSave(adsk.core.DocumentEventHandler):
     def notify(self, args):
         global _saving_document
         try:
+            # Never save a temporarily animated parameter or opacity.
+            if _him:
+                _him.stop()
             # Restore the exact user-authored opacities before Fusion serializes.
             if _spatial:
                 _spatial.clear_overlay()
@@ -277,6 +398,8 @@ class BeforeSave(adsk.core.DocumentEventHandler):
 class BeforeDeactivate(adsk.core.DocumentEventHandler):
     def notify(self, args):
         try:
+            if _him:
+                _him.stop()
             if _spatial:
                 _spatial.clear_overlay()
             if _renderer:
@@ -303,6 +426,78 @@ def _log_error():
     if _app:
         try:
             _app.log("exCADmple: " + traceback.format_exc())
+        except Exception:
+            pass
+
+
+def _start_him():
+    global _him, _him_palette, _him_event, _him_ticker, _him_command_def, _him_command_control
+    _him = HiMController(_app, _ui, _post_him, lambda message: _app.log("exCADmple HiM: " + message))
+    _him_palette = _ui.palettes.itemById(HIM_PALETTE_ID)
+    if not _him_palette:
+        _him_palette = _ui.palettes.add2(
+            HIM_PALETTE_ID, "History in Motion", str(ROOT / "ui" / "him.html"),
+            True, True, True, 340, 760)
+    _him_palette.dockingState = adsk.core.PaletteDockingStates.PaletteDockStateRight
+    handler = HiMPaletteHandler()
+    _him_palette.incomingFromHTML.add(handler)
+    _handlers.append(handler)
+    _him_palette.isVisible = True
+    try:
+        _app.unregisterCustomEvent(HIM_TICK_EVENT)
+    except Exception:
+        pass
+    _him_event = _app.registerCustomEvent(HIM_TICK_EVENT)
+    tick = HiMTickHandler()
+    _him_event.add(tick)
+    _handlers.append(tick)
+    _him_ticker = _HiMTicker()
+    _him_ticker.start()
+    _him_command_def = _ui.commandDefinitions.itemById(HIM_COMMAND_ID)
+    if not _him_command_def:
+        _him_command_def = _ui.commandDefinitions.addButtonDefinition(
+            HIM_COMMAND_ID, "History in Motion",
+            "Explain how the selected face, edge or vertex was modeled")
+    created = ShowHiMCreated()
+    _him_command_def.commandCreated.add(created)
+    _handlers.append(created)
+    for panel_id in ("SolidScriptsAddinsPanel", "ToolsScriptsAddinsPanel"):
+        panel = _ui.allToolbarPanels.itemById(panel_id)
+        if panel:
+            _him_command_control = panel.controls.itemById(HIM_COMMAND_ID) or panel.controls.addCommand(_him_command_def)
+            break
+
+
+def _stop_him():
+    global _him, _him_palette, _him_ticker, _him_event
+    if _him_ticker:
+        _him_ticker.stopped.set()
+        _him_ticker = None
+    if _him:
+        try:
+            _him.stop()
+        except Exception:
+            _log_error()
+        _him = None
+    if _him_event:
+        for handler in _handlers:
+            if isinstance(handler, HiMTickHandler):
+                try:
+                    _him_event.remove(handler)
+                except Exception:
+                    pass
+        try:
+            _app.unregisterCustomEvent(HIM_TICK_EVENT)
+        except Exception:
+            pass
+        _him_event = None
+    if _him_palette and _him_palette.isValid:
+        _him_palette.deleteMe()
+    _him_palette = None
+    for control in (_him_command_control, _him_command_def):
+        try:
+            if control and control.isValid:
+                control.deleteMe()
         except Exception:
             pass
 
@@ -355,6 +550,7 @@ def run(_context):
         _ui.activeSelectionChanged.add(selection_handler)
         _handlers.append(selection_handler)
         _post("geometry_selection", _selected_geometry_from_ui())
+        _start_him()
 
         # A deterministic, clearly labeled illustrative example.
         _load(str(ROOT / "examples" / "phone_stand.json"))
@@ -367,6 +563,7 @@ def run(_context):
 def stop(_context):
     global _palette, _renderer, _package, _command_control, _command_def
     try:
+        _stop_him()
         if _renderer:
             _renderer.clear()
         if _spatial:
