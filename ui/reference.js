@@ -46,8 +46,8 @@ function kindOf(item) {
   const tool = (recorded + " " + (item.tools || []).join(" ")).toLowerCase();
   if (/cut|boolean|hole|window/.test(tool)) return "cut";
   if (/fillet|chamfer|round|bevel/.test(tool)) return "fillet";
-  if (/pattern/.test(tool)) return "pattern";
   if (/mirror/.test(tool)) return "mirror";
+  if (/pattern/.test(tool)) return "pattern";
   if (/revolve|rotate/.test(tool)) return "revolve";
   if (/combine/.test(tool)) return "combine";
   if (/offset|shell|thicken|draft|sweep|loft/.test(tool)) return "modify";
