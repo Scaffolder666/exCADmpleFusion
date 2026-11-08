@@ -29,7 +29,7 @@
 | 1. 录制 | 设计师在 Fusion 里建模，边做边说（think-aloud），同时录屏 |
 | 2. 提取 | exCADmple 插件从设计师的 `.f3d` 导出时间轴上每个特征之后的模型 |
 | 3. 转写 | 录音转成带时间的文字稿 |
-| 4. 切分步骤 | 用标注工具标出每一步的标题、时间段和对应的特征（见 [`authoring-plan`](https://github.com/Scaffolder666/exCADmpleFusion/tree/authoring-plan)） |
+| 4. 切分步骤 | 录制时插件已记下每个特征出现的时间和用到的工具；AI（Claude）据此和文字稿提议怎么切分、每步叫什么，研究者在浏览器里对着录像检查调整（`fusion` 分支的 `tools/author.py`、`ui/author.html`） |
 | 5. 合成 | 生成 `.excadmple` 教程包，Fusion 和 Blender 都能播放 |
 
 ## 分支
@@ -42,7 +42,7 @@
 | [`fusion-him`](https://github.com/Scaffolder666/exCADmpleFusion/tree/fusion-him) | **版本 A：独立参考视口**，按 *History in Motion* 的做法：第二个 Fusion 实例打开设计师 `.f3d` 的副本，按 HiM 的方式在真实的参数化模型上展示每一步（时间轴回滚到当前特征，参数从约 0 实时增长到实际值，其他 Body 半透明），用户可以随时旋转查看；右侧是 HiM 式纵向步骤列表；在参考模型上选中几何，用 HiM 算法找出做出它的步骤并播放。用户在第一个 Fusion 窗口中继续建模，两个窗口通过本机连接互通 |
 | [`fusion`](https://github.com/Scaffolder666/exCADmpleFusion/tree/fusion) | **版本 B：Fusion 视口内 Overlay**。参考模型与用户模型同在 Fusion 画布中；教程以浮在画布上的紧凑面板和固定在画布角落的 HUD 文字呈现。[说明](https://github.com/Scaffolder666/exCADmpleFusion/blob/fusion/README.md) |
 | [`blender`](https://github.com/Scaffolder666/exCADmpleFusion/tree/blender) | Blender 原生 Overlay 原型：单视口 GPU 教程栏、独立的案例播放时钟、多案例切换，读取同一种案例包。[说明](https://github.com/Scaffolder666/exCADmpleFusion/blob/blender/blender/README.md) |
-| [`authoring-plan`](https://github.com/Scaffolder666/exCADmpleFusion/tree/authoring-plan) | 所有版本共用的真实案例制作流程（标注工具） |
+| [`authoring-plan`](https://github.com/Scaffolder666/exCADmpleFusion/tree/authoring-plan) | 制作工具的设计记录（工具本身已实现在 `fusion` 分支） |
 
 两个 Fusion 版本使用相同的案例、相同的推理内容和相同的播放能力，共用同一份代码，只由 `config.json` 中的 `layout` 区分。可以比较：
 
