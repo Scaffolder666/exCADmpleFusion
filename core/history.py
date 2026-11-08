@@ -58,3 +58,13 @@ def relevant_history(features, entity_id, expand=False):
         support_ids = {f.get("sketch_plane_feature") for f in ordered if f.get("type", "").lower() == "sketch"}
         ordered = [f for f in ordered if f["id"] not in support_ids] + [f for f in ordered if f["id"] in support_ids]
     return ordered
+
+
+def history_step_indices(features, steps, entity_id, expand=False):
+    """Map filtered feature ids to authored tutorial steps in reverse order."""
+    relevant = relevant_history(features, entity_id, expand)
+    ids = {feature["id"] for feature in relevant}
+    step_by_feature = {step.get("feature_id"): index for index, step in enumerate(steps)
+                       if isinstance(step.get("feature_id"), str)}
+    return [step_by_feature[feature["id"]] for feature in relevant
+            if feature["id"] in ids and feature["id"] in step_by_feature]
