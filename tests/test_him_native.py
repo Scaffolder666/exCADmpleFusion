@@ -275,14 +275,29 @@ class ParameterDiscoveryTests(unittest.TestCase):
         _, session = session_for(design)
         modes = [[(i["feature"], i["mode"], i["parameters"]) for i in step] for step in session.plan]
         self.assertEqual(modes, [
-            [("Sketch1", "timeline", []), ("Extrude1", "parameter", ["d1"])],
+            [("Sketch1", "instant", []), ("Extrude1", "parameter", ["d1"])],
             [("Fillet1", "parameter", ["d2"])],
-            [("Sketch2", "timeline", []), ("Extrude2", "instant", [])],
+            [("Sketch2", "instant", []), ("Extrude2", "instant", [])],
             [("Mirror1", "instant", [])],
         ])
 
 
 class NativePlaybackTests(unittest.TestCase):
+    def test_sketch_only_step_is_instant_not_fake_parametric_growth(self):
+        design, entities, _ = build()
+        _, session = session_for(design)
+        session.mapped = [[session.model.features()[0]],
+                          [session.model.features()[1]]]
+        session.plan = session.animation_plan()
+        self.assertEqual(session.plan[0][0]["mode"], "instant")
+        shown = session.frame(0, 0.4)
+        self.assertEqual(shown["mode"], "instant")
+        self.assertEqual(shown["feature"], "Sketch1")
+        self.assertEqual(design.timeline.markerPosition, 1)
+        self.assertEqual(entities["ex1"].extentOne.distance.writes, [])
+        session.show_overview()
+        self.assertEqual(design.timeline.markerPosition, design.timeline.count)
+
     def test_overview_before_play_and_after_final_feature(self):
         design, entities, groups = build()
         _, session = session_for(design, dim=True)
