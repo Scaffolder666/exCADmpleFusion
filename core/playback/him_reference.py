@@ -283,38 +283,37 @@ class ReferenceSession:
         if not self.live or not 0 <= step_index < len(self.mapped) or not self._active():
             return None
         items = animated(self.mapped[step_index])
-        if not items and progress < 1.0:
+        last = step_index == len(self.mapped) - 1
+        if progress >= 1.0 and last:
+            # The end of the tutorial returns to the entire shaded model.
+            if self.current != ("overview",):
+                self.show_overview()
+            return {"step": step_index, "feature": None, "mode": "overview"}
+        if not items:
             # Sketch/construction-only steps have no BRep parameter to grow.
             # Roll to their real completed Timeline state; sketches are drawn
-            # line by line from their actual curves (no invented geometry).
+            # line by line from their actual curves (no invented geometry),
+            # with the rest of the model dimmed like any other step. At the
+            # step's end the finished sketch stays outlined until the next step.
             sketches = self._sketch_entities(step_index)
             if self.current != (step_index, "sketch"):
                 self.show_result(step_index, guidance=False)
+                self.him.dim_context()
                 self.current = (step_index, "sketch")
             if sketches:
                 try:
-                    self.him.draw_sketch(sketches, progress)
+                    self.him.draw_sketch(sketches, min(progress, 1.0))
                 except Exception as error:
                     self.log("HiM sketch drawing: " + str(error))
-                self.present()
+            self.present()
             features = self.mapped[step_index]
             return {"step": step_index,
                     "feature": features[-1].name if features else None,
                     "kind": features[-1].kind if features else None,
                     "mode": "instant", "parameters": [], "drawing": bool(sketches)}
-        if progress >= 1.0:
-            # The FINAL step returns to the entire shaded model, not a
-            # ghost/partial-timeline state. Intermediate steps preserve the
-            # actual post-step model until the following Feature begins.
-            if step_index == len(self.mapped) - 1:
-                if self.current != ("overview",):
-                    self.show_overview()
-                return {"step": step_index, "feature": None, "mode": "overview"}
-            if self.current != (step_index, "result"):
-                self.show_result(step_index)
-                self.current = (step_index, "result")
-                self.present()
-            return {"step": step_index, "feature": None, "mode": "result"}
+        # An intermediate step that has finished keeps its last animation
+        # frame (the feature at 100%, same look) until the next step begins,
+        # instead of switching to a differently styled result view.
         position, local = frame_target(self.mapped[step_index], progress)
         key = (step_index, position)
         try:

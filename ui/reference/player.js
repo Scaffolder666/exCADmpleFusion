@@ -22,6 +22,7 @@ const S = { tools: null, plan: [], shown: null,
   frameClock: null, nextFrameAt: 0, epoch: 0, manualFrame: false,
   stepPending: false, stepRequest: 0, overviewPending: false, overviewInFlight: false,
   waitingForNarration: false, speechPending: false, speechToken: 0,
+  stepClock: 0,           // time spent in this step (geometry AND narration), 1x content time
 };
 
 function bridge(action, payload = {}) {
@@ -69,6 +70,44 @@ function narrationPending() {
     : Infinity;
   return !audio.ended && audio.currentTime < audioEnd - 0.03;
 }
+// A step lasts as long as its geometry animation OR its narration,
+// whichever is longer; the step's progress bar and the overall clock use it.
+const WORDS_PER_MINUTE = 165;
+function speechEstimateMs(item) {
+  let end = 0;
+  for (const cue of item.cues || []) {
+    const words = String(cue.label || "").trim().split(/\s+/).filter(Boolean).length;
+    if (words) end = Math.max(end, (cue.at_ms || 0) + words * 60000 / WORDS_PER_MINUTE + 400);
+  }
+  return end;
+}
+function narrationMs(index) {
+  const item = steps()[index];
+  if (!item) return 0;
+  const media = item.media || {};
+  if (media.audio) {
+    if (index === S.index && audio.dataset.src === media.audio && Number.isFinite(audio.duration)) {
+      const offset = (media.offset_ms || 0) / 1000;
+      const length = offset > 0 ? Math.min(audio.duration - offset, (item.duration_ms || 8000) / 1000)
+                                : audio.duration;
+      return Math.max(0, length * 1000);
+    }
+    return 0;
+  }
+  return "speechSynthesis" in window ? speechEstimateMs(item) : 0;   // read aloud only where available
+}
+function stepTotal(index) {
+  const item = steps()[index];
+  return Math.max((item && item.duration_ms) || 8000, narrationMs(index));
+}
+function stepProgress() {
+  if (S.direction < 0) return Math.max(0, Math.min(1, S.elapsed / duration()));
+  if (S.fresh && S.elapsed >= duration()) return 1;
+  let p = S.stepClock / stepTotal(S.index);
+  // Never show a finished bar while the geometry or the narration is still going.
+  if (p >= 1 && (S.playing || S.waitingForNarration)) p = 0.99;
+  return Math.max(0, Math.min(1, p));
+}
 function completeAfterNarration() {
   if (!S.playing || !S.waitingForNarration || narrationPending()) return;
   S.waitingForNarration = false;
@@ -77,13 +116,13 @@ function completeAfterNarration() {
 function clipTiming() {
   let total = 0;
   const spans = S.clip.map((index, pos) => {
-    const length = steps()[index].duration_ms || 8000;
+    const length = stepTotal(index);
     const span = {index, pos, start:total, length};
     total += length;
     return span;
   });
   const current = spans.find(span => span.index === S.index);
-  const elapsed = current ? current.start + Math.max(0, Math.min(current.length, S.elapsed)) : 0;
+  const elapsed = current ? current.start + stepProgress() * current.length : 0;
   return {spans, total, elapsed};
 }
 function seekClip(fraction) {
@@ -96,7 +135,8 @@ function seekClip(fraction) {
   S.epoch++;
   S.pos = target.pos;
   setIndex(target.index, false);
-  S.elapsed = Math.max(0, Math.min(target.length, time - target.start));
+  S.stepClock = Math.max(0, Math.min(target.length, time - target.start));
+  S.elapsed = Math.min(steps()[target.index].duration_ms || 8000, S.stepClock);
   S.direction = 1;
   S.frameClock = null;
   S.cue = -1;
@@ -147,6 +187,7 @@ function setIndex(i, preview = true) {
   if (i === S.index && S.example) return;
   S.index = i;
   S.shown = null;
+  S.stepClock = 0;
   S.epoch++;              // stale native frame replies cannot move a new step
   S.frameClock = null;
   S.waitingForNarration = false;
@@ -248,6 +289,7 @@ function forward() {
     if (S.pos < S.clip.length - 1) { S.pos++; setIndex(S.clip[S.pos]); }
   }
   S.elapsed = 0;
+  S.stepClock = 0;
   S.cue = -1;
   stopSpeech();
   S.direction = 1;
@@ -281,6 +323,7 @@ function selectStep(i, autoplay = false) {
     S.overviewPending = true;
   } else setIndex(i);
   S.elapsed = 0;
+  S.stepClock = 0;
   S.direction = 1;
   if (autoplay) play(false);
   else render();
@@ -323,6 +366,7 @@ function tick(now) {
     // Feature duration starts after Fusion acknowledges the Timeline
     // transition, not while a complex model is still loading that step.
     if (S.frameClock && !S.stepPending && !S.waitingForNarration) S.frameClock.tick(dt, S.speed);
+    if (!S.stepPending && S.direction > 0) S.stepClock += dt * S.speed;
     // Do not rebuild up to 150 timeline cards at 60 FPS while the CAD
     // kernel is busy computing a single native animation frame.
     if (!S.inFlight) render(true);
@@ -389,7 +433,7 @@ function card(item) {
     const list = el("ol", { class: "said" });
     group.cues.forEach(({cue:c, index:i}) => {
       const li = el("li", { class: i === active ? "current" : (i < active ? "before" : "") }, c.label);
-      li.addEventListener("click", (e) => { e.stopPropagation(); S.elapsed = c.at_ms; S.fresh = false; S.epoch++; S.manualFrame = true; resetNativeClock(); syncAudio(true); render(); });
+      li.addEventListener("click", (e) => { e.stopPropagation(); S.elapsed = c.at_ms; S.stepClock = c.at_ms; S.fresh = false; S.epoch++; S.manualFrame = true; resetNativeClock(); syncAudio(true); render(); });
       list.appendChild(li);
     });
     if (!group.cues.length) list.appendChild(el("li", {}, "No transcript available."));
@@ -439,7 +483,8 @@ function railKey() {
 }
 function render(light = false) {
   if (!S.example) return;
-  const progress = Math.max(0, Math.min(1, S.elapsed / duration()));
+  const progress = Math.max(0, Math.min(1, S.elapsed / duration()));   // geometry: drives frames
+  const shownProgress = stepProgress();                                 // the whole step: shown on the bar
   const timing = clipTiming();
   const overall = timing.total ? timing.elapsed / timing.total : 0;
   $("scrub").value = Math.round(overall * 200) / 2;
@@ -492,8 +537,14 @@ function render(light = false) {
       if (S.manualFrame || S.playing || S.overviewPending) render(S.playing && !S.manualFrame);
     });
   }
-  $("play").innerHTML = '<span class="control-icon ' + (S.playing ? "pause-icon" : "play-icon") + '" aria-hidden="true"></span>';
-  $("play").setAttribute("aria-label", S.playing ? "Pause" : "Play");
+  // Rewriting the button on every frame swallowed clicks that landed on the
+  // icon (the pressed element was replaced before the mouse came up).
+  const playState = S.playing ? "pause" : "play";
+  if ($("play").dataset.state !== playState) {
+    $("play").dataset.state = playState;
+    $("play").innerHTML = '<span class="control-icon ' + playState + '-icon" aria-hidden="true"></span>';
+    $("play").setAttribute("aria-label", S.playing ? "Pause" : "Play");
+  }
   $("clock").textContent = secs(timing.elapsed) + " / " + secs(timing.total);
   const mode = $("mode");
   mode.classList.toggle("filtered", S.filtered);
@@ -506,7 +557,7 @@ function render(light = false) {
   const key = railKey();
   const fill = light && key === S.railKey ? rail.querySelector(".step.current .progress span") : null;
   if (fill) {
-    fill.style.width = Math.round(progress * 100) + "%";
+    fill.style.width = Math.round(shownProgress * 100) + "%";
     return;
   }
   S.railKey = key;
@@ -523,7 +574,7 @@ function render(light = false) {
     li.appendChild(button);
     const bar = el("div", { class: "progress" });
     const fill = el("span");
-    if (i === S.index) fill.style.width = Math.round(progress * 100) + "%";
+    if (i === S.index) fill.style.width = Math.round(shownProgress * 100) + "%";
     bar.appendChild(fill);
     li.appendChild(bar);
     if (i === S.index) li.appendChild(card(item));
@@ -579,7 +630,7 @@ window.fusionJavaScriptHandler = {
             const at = S.clip.indexOf(i);
             if (at >= 0) S.pos = at;
             S.epoch++;
-            S.index = i; S.elapsed = 0; S.frameClock = null;
+            S.index = i; S.elapsed = 0; S.stepClock = 0; S.frameClock = null;
             S.shown = null; S.fresh = true; S.playing = false;
             S.manualFrame = false;
             stopAudio(); stopSpeech();

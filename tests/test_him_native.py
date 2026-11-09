@@ -182,13 +182,15 @@ class WireframePlaybackTests(unittest.TestCase):
         self.assertIs(previous_group, session.him.ghost_group)
         self.assertAlmostEqual(entities["ex1"].extentOne.distance.value,
                                interpolate(1.0, 0.6))
-        session.frame(0, 1.0)
+        session.frame(0, 1.0)                    # step end: same look, feature at its real value
+        self.assertIs(previous_group, session.him.ghost_group)
+        self.assertTrue(previous_group.isValid)
+        self.assertAlmostEqual(entities["ex1"].extentOne.distance.value, 1.0)
+        session.stop()                           # next step / stop: everything back
         self.assertTrue(all(entities[name].opacity == original[name]
                             for name in original))
         self.assertFalse(previous_group.isValid)
-        self.assertTrue(all(not group.isValid for group in groups
-                            if group is not session.him.group))
-        session.stop()
+        self.assertTrue(all(not group.isValid for group in groups))
 
     def test_no_feature_faces_falls_back_instead_of_fake_whole_body(self):
         design, entities, _ = build()
@@ -351,8 +353,13 @@ class NativePlaybackTests(unittest.TestCase):
         self.assertEqual(values, sorted(values))                            # monotonic growth
         self.assertGreater(values[0], 0)                                    # never exactly zero
         shown = self.session.frame(0, 1.0)
-        self.assertEqual(shown["mode"], "result")
-        self.assertRestored()                                               # final geometry = original
+        # The finished step keeps its look: the feature at exactly its real value.
+        self.assertEqual(shown["mode"], "parameter")
+        self.assertEqual(self.d1.value, 1.0)
+        self.session.frame(1, 0.0)                                          # next step restores it
+        self.assertEqual(self.d1.expression, self.originals[0])
+        self.session.stop()
+        self.assertRestored()
 
     def test_restored_on_step_change_stop_close_and_show_result(self):
         self.session.frame(0, 0.4)
@@ -387,6 +394,8 @@ class NativePlaybackTests(unittest.TestCase):
         self.assertAlmostEqual(self.d2.value, interpolate(0.2, 0.0))
         self.assertEqual(self.design.timeline.markerPosition, 3)
         self.session.frame(1, 1.0)
+        self.assertEqual(self.d2.value, 0.2)                                # exactly the real value
+        self.session.stop()
         self.assertRestored()
 
     def test_backward_playback_reverses_the_parameter(self):

@@ -187,8 +187,10 @@ class FastPlaybackTests(unittest.TestCase):
         self.session.frame(1, 0.5)                                   # fillet: native as before
         self.assertFalse(group.isValid)
         self.assertAlmostEqual(native.param(self.entities, "fi1").value, interpolate(0.2, 0.5))
-        self.session.frame(0, 1.0)                                    # step end
+        self.session.frame(0, 1.0)                                    # step end: final position
         self.assertAlmostEqual(native.param(self.entities, "fi1").value, 0.2)
+        self.assertIsNotNone(self.session.him.fast_group)
+        self.session.stop()
         self.assertIsNone(self.session.him.fast_group)
 
     def test_without_hidden_native_result_it_stays_native(self):

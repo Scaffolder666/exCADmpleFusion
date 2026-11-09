@@ -807,6 +807,20 @@ class HiMController:
             self.log("HiM auto-focus: " + str(error))
             return False  # camera guidance must not interrupt native reconstruction
 
+    CONTEXT_OPACITY = 0.2
+
+    def dim_context(self):
+        """Dim every body (a sketch step has no result body of its own), with
+        the same opacity as the context of any other step."""
+        if not self.dim_others:
+            return
+        from core.spatial import _model_bodies
+        try:
+            self.focus.apply(self._document_key(), _model_bodies(self.design()), {"\0none"},
+                             dim_opacity=self.CONTEXT_OPACITY)
+        except FocusError as error:
+            self.log("HiM focus: " + str(error))
+
     def _apply_focus(self, bodies, hide_result=False):
         """Dim the other bodies. For the visual fallback the resulting bodies
         are dimmed too, so the fading overlay reads as the result appearing."""
@@ -820,7 +834,8 @@ class HiMController:
             protected = {"\0none"}
         from core.spatial import _model_bodies
         try:
-            self.focus.apply(self._document_key(), _model_bodies(design), protected, dim_opacity=0.2)
+            self.focus.apply(self._document_key(), _model_bodies(design), protected,
+                             dim_opacity=self.CONTEXT_OPACITY)
         except FocusError as error:
             self.log("HiM focus: " + str(error))
 
@@ -878,10 +893,9 @@ class HiMController:
                     overlay.color = adsk.fusion.CustomGraphicsSolidColorEffect.create(
                         adsk.core.Color.create(*(NEUTRAL_FACE if role == "body" else CHANGE_HIGHLIGHT)))
                     if prepared["mode"] == PARAMETRIC:
-                        # With the original shaded bodies hidden, opaque
-                        # changed faces are the only visible solid geometry.
-                        opacity = 1.0 if prepared.get("wireframe") else (
-                            0.18 if body in prepared["bodies"] else 0.6)
+                        # One look for every step: the feature's changed
+                        # faces are opaque teal, whatever the context style.
+                        opacity = 1.0
                         if overlay.setOpacity(opacity, True) is False:
                             raise RuntimeError("Fusion rejected feature overlay opacity")
                     elif self.instant_nonparametric:
@@ -1033,7 +1047,7 @@ class HiMController:
                     overlay = group.addBRepBody(body)
                     overlay.color = adsk.fusion.CustomGraphicsSolidColorEffect.create(
                         adsk.core.Color.create(*CHANGE_HIGHLIGHT))
-                    overlay.setOpacity(0.18 if body in bodies else 0.6, True)
+                    overlay.setOpacity(1.0, True)          # same opaque teal as the animation
                     overlay.depthPriority = 1
                     overlay.isSelectable = False
                 except Exception as error:

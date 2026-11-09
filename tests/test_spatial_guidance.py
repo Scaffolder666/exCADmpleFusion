@@ -378,7 +378,7 @@ class NativeGuidanceTests(unittest.TestCase):
         self.assertTrue(group.isValid)
         self.assertFalse(group.isSelectable)
         self.assertEqual(len(group.bodies), 1)               # the fillet face copy, not body1
-        self.assertEqual(group.bodies[0].opacity, 0.6)
+        self.assertEqual(group.bodies[0].opacity, 1.0)     # the same opaque teal as the animation
         self.assertEqual(len(group.curves), 1)               # its input edge, blue
         self.assertEqual(self.design.timeline.markerPosition, 3)
         self.session.stop()

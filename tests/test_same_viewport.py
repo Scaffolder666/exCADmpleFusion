@@ -316,9 +316,8 @@ class SketchDrawingTests(SameViewportBase):
 
     def test_finished_or_paused_sketch_stays_outlined_and_visibility_is_restored(self):
         self.session.frame(0, 0.5)
-        self.session.frame(0, 1.0)                          # step end
-        self.assertTrue(self.sketch.isLightBulbOn)
-        self.assertEqual(len(self.drawn()), 4)               # whole sketch outlined in blue
+        self.session.frame(0, 1.0)                          # step end: whole sketch outlined in blue
+        self.assertEqual(len(self.drawn()), 4)
         self.session.frame(0, 0.3)                           # replay
         self.assertFalse(self.sketch.isLightBulbOn)
         self.session.frame(1, 0.5)                           # next step
