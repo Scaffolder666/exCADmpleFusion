@@ -3,10 +3,11 @@
 Fusion's API cannot make a toolbar button flash, and Custom Graphics are
 drawn only inside the canvas. So the tool is shown in two supported ways:
 
-* a temporary toolbar panel "exCADmple" in the tab where the tools live,
-  whose drop-down holds Fusion's own buttons for every tool the tutorial
-  uses; the current step's tools are pinned to the toolbar row (Fusion's
-  "Pin to Toolbar") and unpinned on the next step; removed on stop;
+* a toolbar panel "exCADmple" of its own (at the end of the tab where the
+  tools live) that starts empty and fills as the tutorial plays: each
+  step's tools are added as Fusion's own buttons and pinned to the toolbar
+  row (Fusion's "Pin to Toolbar"); earlier steps' tools move into its
+  drop-down; jumping back removes later steps' tools; removed on stop;
 * the tool's menu path (e.g. SOLID > CREATE > Extrude) for the panel, found
   at run time by walking the active workspace's toolbar, so it matches the
   user's Fusion version and layout. Nothing is hard-coded per version; a
@@ -112,13 +113,12 @@ def find(workspace, label):
 
 
 class ToolGuide:
-    """One "exCADmple" toolbar panel per tutorial.
+    """One "exCADmple" toolbar panel per tutorial, empty at first.
 
-    Its drop-down holds Fusion's own buttons for every tool the tutorial
-    uses; the current step's tools are pinned (promoted) to the toolbar row,
-    exactly like Fusion's "Pin to Toolbar", and unpinned when the step
-    changes. The panel is removed when the tutorial closes, so nothing stays
-    pinned in the user's Fusion.
+    It collects Fusion's own buttons for the tools used up to the current
+    step; the current step's tools are pinned (promoted) to the toolbar
+    row, exactly like Fusion's "Pin to Toolbar". The panel is removed when
+    the tutorial closes, so nothing stays pinned in the user's Fusion.
     """
 
     def __init__(self, ui, log=None):
@@ -146,59 +146,58 @@ class ToolGuide:
                 out.append(label)
         return out
 
-    def load(self, key, labels):
-        """Build the panel for a tutorial (``key`` identifies it): every
-        tool it uses, in tutorial order, in the panel's drop-down."""
-        if key is not None and key == self.loaded_for and self.panel is not None:
+    def load(self, key):
+        """A new tutorial (``key`` identifies it) starts with an empty panel."""
+        if key is not None and key == self.loaded_for:
             return
         self.close()
         self.loaded_for = key
-        self.last_error = ""
-        workspace = self._workspace()
-        for label in self._labels(labels):
+
+    def _match(self, label):
+        if label not in self.matches:
+            workspace = self._workspace()
             self.matches[label] = find(workspace, label) if workspace is not None else None
-        found = [(label, m) for label, m in self.matches.items() if m]
-        if not found:
-            return
-        try:
-            tab = found[0][1]["tab"]
+        return self.matches[label]
+
+    def _ensure_panel(self, tab):
+        if self.panel is None:
             panels = tab.toolbarPanels
             self.panel = panels.itemById(PANEL_ID) or panels.add(PANEL_ID, PANEL_NAME)
             self.panel_tab = tab
-            for label, match in found:
-                self.controls[label] = self.panel.controls.addCommand(match["definition"])
+
+    def show(self, labels, used=()):
+        """The panel holds the tools ``used`` so far (steps up to this one,
+        in tutorial order); this step's ``labels`` are pinned to the toolbar
+        row, the earlier ones sit in the drop-down. Jumping back removes the
+        tools of later steps again. Returns [{label, path, found}]."""
+        labels = self._labels(labels)
+        used = self._labels(list(used) + labels)
+        self.last_error = ""
+        wanted = [(label, self._match(label)) for label in used]
+        wanted = [(label, match) for label, match in wanted if match]
+        try:
+            for label in [l for l in self.controls if l not in dict(wanted)]:
+                self.controls.pop(label).deleteMe()   # a later step's tool, after jumping back
+            for label, match in wanted:
+                if label not in self.controls:
+                    self._ensure_panel(match["tab"])
+                    self.controls[label] = self.panel.controls.addCommand(match["definition"])
         except Exception as error:
             self.last_error = "{}: {}".format(type(error).__name__, error)
             self.log("exCADmple tool panel: " + self.last_error)
-            self._remove_panel()
-
-    def show(self, labels):
-        """Pin the step's tools to the toolbar row, unpin the others.
-        Returns [{label, path, found}] for the tutorial panel."""
-        labels = self._labels(labels)
-        missing = [label for label in labels if label not in self.matches]
-        if missing:                                   # not loaded with the tutorial
-            workspace = self._workspace()
-            for label in missing:
-                self.matches[label] = find(workspace, label) if workspace is not None else None
-                match = self.matches[label]
-                if match and self.panel is not None:
-                    try:
-                        self.controls[label] = self.panel.controls.addCommand(match["definition"])
-                    except Exception as error:
-                        self.log("exCADmple tool panel: " + str(error))
         for label, control in self.controls.items():
-            if label not in labels:
-                self._pin(control, False)
-        for label in labels:
-            if label in self.controls:
-                self._pin(self.controls[label], True)
+            self._pin(control, label in labels)
         return [{"label": label, "path": self.matches[label]["path"] if self.matches.get(label) else [],
                  "found": self.matches.get(label) is not None} for label in labels]
 
+    def describe(self, labels):
+        """Where the tools live, without touching the panel."""
+        return [{"label": label, "path": self._match(label)["path"] if self._match(label) else [],
+                 "found": self._match(label) is not None} for label in self._labels(labels)]
+
     def _pin(self, control, pinned):
         try:
-            if control.isPromoted == pinned:
+            if bool(control.isPromoted) == pinned:
                 return
             if pinned and hasattr(control, "promote"):
                 # byDefault=False: a UI reset never keeps it pinned.

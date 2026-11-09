@@ -44,7 +44,7 @@ from core.session_recorder import SessionRecorder
 from core.playback.tool_guide import ToolGuide
 
 # Shown in the panel at start so it is clear which code Fusion is running.
-BUILD = "same-viewport 2026-11-09 · pinned tools v5"
+BUILD = "same-viewport 2026-11-09 · tool panel fills as you go v6"
 PALETTE_ID = "excadmple_fusion_player"
 COMMAND_ID = "excadmple_fusion_open"
 REFERENCE_COMMAND_ID = "excadmple_fusion_reference_open"
@@ -139,7 +139,7 @@ def _previous_geometry(index):
     return _package.step(index - 1).get("geometry", {}).get("meshes", [])
 
 
-def _set_step(index, preview=True):
+def _set_step(index, preview=True, fill_tools=True):
     global _step_index
     if not _package:
         return
@@ -176,19 +176,26 @@ def _set_step(index, preview=True):
         else:
             _spatial.clear_overlay()
         _post_links()
-    _update_tools(index)
+    _update_tools(index, fill=fill_tools)
     _post("step", {"index": index})
 
 
-def _update_tools(index):
-    """Show the step's Fusion tools: native buttons in a temporary toolbar
-    panel, and their menu path in the tutorial panel."""
+def _update_tools(index, fill=True):
+    """Show the step's Fusion tools: native buttons in the exCADmple toolbar
+    panel, and their menu path in the tutorial panel. ``fill=False`` (a
+    tutorial was just loaded) keeps the panel empty."""
     if not _tools or not _package:
         return
     try:
-        # The panel holds every tool of this tutorial; the step's are pinned.
-        _tools.load((str(getattr(_package, "source_path", "")), _package.data.get("id"), _package.data.get("title")), [t for step in _package.data["steps"] for t in step.get("tools", [])])
-        report = _tools.show(_package.step(index).get("tools", []))
+        # The panel starts empty and collects the tools used up to this step.
+        _tools.load((str(getattr(_package, "source_path", "")), _package.data.get("id"), _package.data.get("title")))
+        labels = _package.step(index).get("tools", [])
+        if fill:
+            used = [t for step in _package.data["steps"][:index] for t in step.get("tools", [])]
+            report = _tools.show(labels, used)
+        else:
+            _tools.show([], [])
+            report = _tools.describe(labels)
     except Exception as error:
         # Tool guidance must never block playback, but a failure is shown.
         report = [{"label": "", "path": [], "found": False, "error": "{}: {}".format(type(error).__name__, error)}]
@@ -236,7 +243,7 @@ def _load(filename):
             old.close()
         _post("example", data)
         _post_source()
-        _set_step(0)
+        _set_step(0, fill_tools=False)     # the tool panel starts empty
         if package.generated_path:
             _status("Editable steps saved to " + str(package.generated_path))
         if _palette and _palette.isValid:
@@ -255,7 +262,7 @@ def _load(filename):
         old.close()
     _post("example", data)
     _open_reference_session()
-    _set_step(0)
+    _set_step(0, fill_tools=False)         # the tool panel starts empty
     if _palette and _palette.isValid:
         _palette.isVisible = True
 

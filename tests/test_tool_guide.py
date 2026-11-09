@@ -123,76 +123,85 @@ class FindTests(unittest.TestCase):
 
 
 class GuideTests(unittest.TestCase):
-    TUTORIAL = ["Sketch", "Extrude", "Fillet", "Sketch", "Mirror", "Base Feature"]
+    STEPS = [["Sketch", "Extrude"], ["Fillet"], ["Sketch"], ["Mirror"], ["Base Feature"]]
 
     def setUp(self):
         self.ws, self.d, self.solid, self.surface = workspace()
         self.ui = type("UI", (), {"activeWorkspace": self.ws})()
         self.guide = ToolGuide(self.ui)
-        self.guide.load("tutorial-1", self.TUTORIAL)
+        self.guide.load("tutorial-1")
+
+    def play(self, index):
+        used = [t for step in self.STEPS[:index] for t in step]
+        return self.guide.show(self.STEPS[index], used)
 
     def panel(self):
         return self.solid.toolbarPanels.itemById(PANEL_ID)
 
-    def pinned(self):
-        return [c.commandDefinition.name for c in self.panel().controls if c.isPromoted]
+    def tools(self):
+        return [(c.commandDefinition.name, c.isPromoted) for c in self.panel().controls]
 
-    def test_panel_holds_every_tool_of_the_tutorial_once(self):
-        self.assertEqual([c.commandDefinition for c in self.panel().controls],
-                         [self.d["Create Sketch"], self.d["Extrude"], self.d["Fillet"], self.d["Mirror"]])
-        self.assertEqual(self.pinned(), [])                      # nothing pinned before a step
+    def test_starts_empty(self):
+        self.assertIsNone(self.panel())
+        report = self.guide.describe(self.STEPS[0])              # card text only
+        self.assertEqual([r["path"][-1] for r in report], ["Create Sketch", "Extrude"])
+        self.assertIsNone(self.panel())
 
-    def test_the_steps_tools_are_pinned_and_unpinned_on_the_next_step(self):
-        report = self.guide.show(["Sketch", "Extrude"])
+    def test_fills_as_you_go_with_the_current_step_pinned(self):
+        report = self.play(0)
         self.assertEqual(report, [{"label": "Sketch", "path": ["SOLID", "CREATE", "Create Sketch"], "found": True},
                                   {"label": "Extrude", "path": ["SOLID", "CREATE", "Extrude"], "found": True}])
-        self.assertEqual(self.pinned(), ["Create Sketch", "Extrude"])
+        self.assertEqual(self.tools(), [("Create Sketch", True), ("Extrude", True)])
+        self.assertTrue(all(c.promoted_by_default is False for c in self.panel().controls))
+        self.play(1)
+        self.assertEqual(self.tools(), [("Create Sketch", False), ("Extrude", False), ("Fillet", True)])
+        self.play(2)                                              # Sketch again: no duplicate
+        self.assertEqual(self.tools(), [("Create Sketch", True), ("Extrude", False), ("Fillet", False)])
+        self.play(3)
+        self.assertEqual(self.tools()[-1], ("Mirror", True))
+        report = self.play(4)                                     # a tool without a command
+        self.assertEqual(report, [{"label": "Base Feature", "path": [], "found": False}])
+        self.assertFalse(any(pinned for _, pinned in self.tools()))
+
+    def test_jumping_back_removes_later_tools(self):
+        self.play(3)
+        self.play(1)
+        self.assertEqual(self.tools(), [("Create Sketch", False), ("Extrude", False), ("Fillet", True)])
         panel = self.panel()
-        self.assertTrue(all(c.promoted_by_default is False for c in panel.controls if c.isPromoted))
-        self.guide.show(["Fillet"])                                 # next step
-        self.assertIs(self.panel(), panel)                          # same panel
-        self.assertEqual(self.pinned(), ["Fillet"])                 # previous tools back in the drop-down
-        self.assertEqual(len(panel.controls), 4)
+        self.play(0)
+        self.assertIs(self.panel(), panel)
+        self.assertEqual(self.tools(), [("Create Sketch", True), ("Extrude", True)])
         # Our panel is never reported as where the tool lives, even if
         # Fusion lists it first.
         self.solid.toolbarPanels.remove(panel)
         self.solid.toolbarPanels.insert(0, panel)
         self.assertEqual(find(self.ws, "Fillet")["path"], ["SOLID", "MODIFY", "Fillet"])
 
-    def test_missing_tools_are_reported_not_pinned(self):
-        report = self.guide.show(["Base Feature"])
-        self.assertEqual(report, [{"label": "Base Feature", "path": [], "found": False}])
-        self.assertEqual(self.pinned(), [])
-
-    def test_same_tutorial_keeps_its_panel_new_tutorial_rebuilds(self):
-        panel = self.panel()
-        self.guide.load("tutorial-1", self.TUTORIAL)
-        self.assertIs(self.panel(), panel)
-        self.guide.load("tutorial-2", ["Revolve"])
-        self.assertIsNot(self.panel(), panel)
-        self.assertEqual([c.commandDefinition for c in self.panel().controls], [self.d["Revolve"]])
+    def test_a_new_tutorial_starts_empty_again(self):
+        self.play(1)
+        self.guide.load("tutorial-1")                             # same tutorial: kept
+        self.assertIsNotNone(self.panel())
+        self.guide.load("tutorial-2")
+        self.assertIsNone(self.panel())
 
     def test_use_starts_the_native_command_and_close_leaves_the_toolbar_as_before(self):
-        self.guide.show(["Extrude"])
+        self.play(0)
         self.assertEqual(self.guide.use("Extrude"), "SOLID › CREATE › Extrude")
         self.assertEqual(self.d["Extrude"].executed, 1)
         with self.assertRaises(ValueError):
             self.guide.use("Loft")
         self.guide.close()
         self.assertIsNone(self.panel())
-        self.assertEqual(len(self.solid.toolbarPanels), 2)        # nothing left pinned anywhere
+        self.assertEqual(len(self.solid.toolbarPanels), 2)
 
     def test_a_panel_fusion_refuses_is_reported_not_hidden(self):
-        guide = ToolGuide(self.ui)
         def refuse(id_, name):
             raise RuntimeError("panel id already in use")
-        self.guide.close()
         self.solid.toolbarPanels.add = refuse
-        guide.load("tutorial-3", ["Extrude"])
-        report = guide.show(["Extrude"])
-        self.assertTrue(report[0]["found"])                         # the menu path is still shown
-        self.assertIn("panel id already in use", guide.last_error)
-        self.assertIsNone(guide.panel)
+        report = self.play(0)
+        self.assertTrue(report[0]["found"])                       # the menu path is still shown
+        self.assertIn("panel id already in use", self.guide.last_error)
+        self.assertIsNone(self.guide.panel)
 
 
 if __name__ == "__main__":
