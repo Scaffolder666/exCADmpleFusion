@@ -522,7 +522,7 @@ def _create_palette():
         _palette.deleteMe()          # the layout may have changed
     if ROLE == REFERENCE:
         # Version A: HiM control panel beside the reference instance's canvas.
-        _palette = _ui.palettes.add2(PALETTE_ID, "exCADmple · History in Motion", (ROOT / "ui" / "reference.html").resolve().as_uri(),
+        _palette = _ui.palettes.add2(PALETTE_ID, "exCADmple ", (ROOT / "ui" / "reference.html").resolve().as_uri(),
                                      True, True, True, 340, 740)
         _palette.dockingState = adsk.core.PaletteDockingStates.PaletteDockStateRight
     else:
