@@ -86,6 +86,27 @@ def walk(controls, path, depth=0):
             yield from walk(nested, path + ([name] if name else []), depth + 1)
 
 
+ICON_FILES = ("32x32@2x.png", "64x64.png", "32x32.png", "16x16@2x.png", "16x16.png")
+
+
+def icon_uri(definition):
+    """file:// URI of the command's own icon, if Fusion exposes its resource
+    folder; "" otherwise (the panel then shows a plain letter tile)."""
+    from pathlib import Path
+    folder = _read(definition, "resourceFolder", "")
+    if not folder:
+        return ""
+    try:
+        base = Path(folder)
+        for name in ICON_FILES:
+            path = base / name
+            if path.is_file():
+                return path.resolve().as_uri()
+    except Exception:
+        return ""
+    return ""
+
+
 def find(workspace, label):
     """Best match for ``label`` in the workspace toolbar: {"path", "definition"}
     or None. Exact command-name matches first; within them the solid
@@ -187,13 +208,17 @@ class ToolGuide:
             self.log("exCADmple tool panel: " + self.last_error)
         for label, control in self.controls.items():
             self._pin(control, label in labels)
-        return [{"label": label, "path": self.matches[label]["path"] if self.matches.get(label) else [],
-                 "found": self.matches.get(label) is not None} for label in labels]
+        return self.describe(labels)
 
     def describe(self, labels):
         """Where the tools live, without touching the panel."""
-        return [{"label": label, "path": self._match(label)["path"] if self._match(label) else [],
-                 "found": self._match(label) is not None} for label in self._labels(labels)]
+        out = []
+        for label in self._labels(labels):
+            match = self._match(label)
+            out.append({"label": label, "path": match["path"] if match else [], "found": match is not None,
+                        "name": _read(match["definition"], "name", label) if match else label,
+                        "icon": icon_uri(match["definition"]) if match else ""})
+        return out
 
     def _pin(self, control, pinned):
         try:

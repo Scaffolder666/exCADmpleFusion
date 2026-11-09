@@ -556,6 +556,7 @@ window.fusionJavaScriptHandler = {
       if (action === "example") loadExample(payload);
       else if (action === "filter") applyFilter(payload);
       else if (action === "tools") { S.tools = payload; render(); }
+      else if (action === "pause") { if (S.playing) pause(); }
       else if (action === "animation") {
         S.shown = payload;
         if (payload.mode === "error" && payload.step === S.index) {

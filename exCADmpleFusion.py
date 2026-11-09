@@ -35,7 +35,7 @@ import adsk.core
 import adsk.fusion
 
 from core.packages import open_package, PackageError
-from core.renderer import ReferenceRenderer
+from core.renderer import ReferenceRenderer, active_fusion_command
 from core.spatial import SpatialLinkController
 from core.extract_fusion import extract_with_dialog
 from core.link import InstanceLink, WORKSPACE, REFERENCE
@@ -44,8 +44,9 @@ from core.session_recorder import SessionRecorder
 from core.playback.tool_guide import ToolGuide
 
 # Shown in the panel at start so it is clear which code Fusion is running.
-BUILD = "same-viewport 2026-11-09 · tool panel fills as you go v6"
+BUILD = "same-viewport 2026-11-09 · left tool window v7"
 PALETTE_ID = "excadmple_fusion_player"
+TOOL_PALETTE_ID = "excadmple_tool_window"   # version A: "tool in use" window at the left
 COMMAND_ID = "excadmple_fusion_open"
 REFERENCE_COMMAND_ID = "excadmple_fusion_reference_open"
 RECORD_COMMAND_ID = "excadmple_fusion_record"
@@ -66,6 +67,8 @@ ROLE = "overlay"            # overlay | workspace | reference (decided in run)
 _app = None
 _ui = None
 _palette = None
+_tool_palette = None
+_tool_payload = {"step": "", "tools": []}
 _renderer = None
 _spatial = None
 _package = None
@@ -86,6 +89,11 @@ _recorder = None
 def _post(action, payload):
     if _palette and _palette.isValid:
         _palette.sendInfoToHTML(action, json.dumps(payload))
+
+
+def _post_tool(action, payload):
+    if _tool_palette and _tool_palette.isValid:
+        _tool_palette.sendInfoToHTML(action, json.dumps(payload))
 
 
 def _status(message, is_error=False):
@@ -201,6 +209,11 @@ def _update_tools(index, fill=True):
         report = [{"label": "", "path": [], "found": False, "error": "{}: {}".format(type(error).__name__, error)}]
         _log_error()
     _post("tools", {"index": index, "tools": report, "panel_error": _tools.last_error})
+    global _tool_payload
+    step = _package.step(index)
+    _tool_payload = {"step": "Step {} · {}".format(index + 1, step.get("title", "")),
+                     "tools": [t for t in report if t.get("label")] if fill else []}
+    _post_tool("tool", _tool_payload)
 
 
 def _open_reference_session():
@@ -366,6 +379,8 @@ class PaletteHandler(adsk.core.HTMLEventHandler):
                         if shown and shown != _last_shown:
                             _last_shown = shown
                             _post("animation", shown)
+                            if shown.get("kind"):
+                                _post_tool("active", {"label": active_fusion_command(step, shown.get("kind")) or ""})
                         if shown is None:
                             raise RuntimeError("The reference model is not open any more; load the tutorial again"
                                                if _session.presenter.attached else
@@ -591,6 +606,48 @@ def _create_palette():
     _palette.isVisible = True
 
 
+class ToolPaletteHandler(adsk.core.HTMLEventHandler):
+    """The left "tool in use" window: shows the step's tool, starts it."""
+
+    def notify(self, args):
+        try:
+            command = args.action
+            if command == "response":
+                return                        # Fusion's acknowledgement of sendInfoToHTML
+            body = json.loads(args.data or "{}")
+            if command == "ready":
+                _post_tool("tool", _tool_payload)
+            elif command == "use_tool":
+                if not _tools:
+                    raise ValueError("Tool guidance is not available in this layout")
+                path = _tools.use(body.get("label"))
+                _post("pause", {})            # stop the tutorial while the user models
+                _status("Started " + path + " in your design")
+            args.returnData = json.dumps({"ok": True})
+        except Exception as error:
+            _status(str(error), True)
+            args.returnData = json.dumps({"ok": False, "error": str(error)})
+            _log_error()
+
+
+def _create_tool_palette():
+    """A small window docked at the left of the canvas: the tool in use."""
+    global _tool_palette
+    old = _ui.palettes.itemById(TOOL_PALETTE_ID)
+    if old:
+        old.deleteMe()
+    _tool_palette = _ui.palettes.add2(TOOL_PALETTE_ID, "exCADmple · Tool", _panel_url("tool"),
+                                      True, True, True, 260, 300)
+    try:
+        _tool_palette.dockingState = adsk.core.PaletteDockingStates.PaletteDockStateLeft
+    except Exception:
+        pass
+    handler = ToolPaletteHandler()
+    _tool_palette.incomingFromHTML.add(handler)
+    _handlers.append(handler)
+    _tool_palette.isVisible = True
+
+
 # --- document safety ----------------------------------------------------------------------------
 class BeforeSave(adsk.core.DocumentEventHandler):
     def notify(self, args):
@@ -678,6 +735,11 @@ def run(_context):
             return
 
         _create_palette()
+        if ROLE == REFERENCE:
+            try:
+                _create_tool_palette()
+            except Exception:
+                _log_error()          # the tool window is an aid; never block the tutorial
         _add_button(COMMAND_ID, "exCADmple Tutorial", "Show the tutorial player", ShowPaletteExecute)
         if ROLE == REFERENCE:
             selection = ActiveGeometrySelection()
@@ -734,6 +796,8 @@ def stop(_context):
         if _palette and _palette.isValid:
             _palette.deleteMe()
         _palette = None
+        if _tool_palette and _tool_palette.isValid:
+            _tool_palette.deleteMe()
         for item in reversed(_buttons):
             try:
                 if item and item.isValid:

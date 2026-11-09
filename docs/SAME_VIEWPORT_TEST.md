@@ -92,3 +92,13 @@ Check in Fusion:
 2. The menu path matches where you would find the tool.
 3. Use starts the command in your own design, not in the reference copy.
 4. Closing the tutorial removes the panel.
+
+## Tool window (left of the canvas)
+
+A small **"exCADmple · Tool"** window is docked at the left of the canvas. It shows the tool the current step uses:
+- the tool's name, large;
+- its icon (Fusion's own icon when Fusion exposes it, otherwise a letter tile);
+- where it lives (e.g. SOLID › MODIFY);
+- a **Use** button. Use pauses the tutorial and starts the native command in your design.
+
+When a step uses several tools, they are all listed, and the one being animated is highlighted. The window is empty until a step plays. It can be undocked or moved like any Fusion palette, and it is removed when the add-in stops.

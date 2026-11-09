@@ -133,7 +133,8 @@ class GuideTests(unittest.TestCase):
 
     def play(self, index):
         used = [t for step in self.STEPS[:index] for t in step]
-        return self.guide.show(self.STEPS[index], used)
+        report = self.guide.show(self.STEPS[index], used)
+        return [{k: r[k] for k in ("label", "path", "found")} for r in report]
 
     def panel(self):
         return self.solid.toolbarPanels.itemById(PANEL_ID)
@@ -202,6 +203,18 @@ class GuideTests(unittest.TestCase):
         self.assertTrue(report[0]["found"])                       # the menu path is still shown
         self.assertIn("panel id already in use", self.guide.last_error)
         self.assertIsNone(self.guide.panel)
+
+
+    def test_native_icon_when_fusion_exposes_it(self):
+        import tempfile
+        from pathlib import Path
+        with tempfile.TemporaryDirectory() as folder:
+            (Path(folder) / "32x32.png").write_bytes(b"png")
+            self.d["Extrude"].resourceFolder = folder
+            report = self.guide.describe(["Extrude", "Sketch"])
+        self.assertTrue(report[0]["icon"].startswith("file:") and report[0]["icon"].endswith("32x32.png"))
+        self.assertEqual(report[1]["icon"], "")                  # no folder: letter tile instead
+        self.assertEqual((report[0]["name"], report[1]["name"]), ("Extrude", "Create Sketch"))
 
 
 if __name__ == "__main__":
