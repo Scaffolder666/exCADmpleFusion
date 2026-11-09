@@ -31,6 +31,7 @@ class ReferenceSessionTests(unittest.TestCase):
                 deleteMe=lambda: None, isValid=True)))
         app = FakeApp(self.design)
         self.session = ReferenceSession(app, None)
+        self.session.him.fast_motion = False          # the native recompute path
         self.session.him.dim_others = False
         self.session.model = FusionTimelineModel(self.design)
         self.session.mapped, _ = map_steps(STEPS, self.session.model.features())

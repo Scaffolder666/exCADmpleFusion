@@ -45,7 +45,7 @@ from core.playback.tool_guide import ToolGuide
 from core.diagnostics import DiagnosticLog
 
 # Shown in the panel at start so it is clear which code Fusion is running.
-BUILD = "same-viewport 2026-11-10 · lit highlight, stable ghost v12"
+BUILD = "same-viewport 2026-11-10 · fast for every feature v13"
 PALETTE_ID = "excadmple_fusion_player"
 TOOL_PALETTE_ID = "excadmple_tool_window"   # version A: "tool in use" window at the left
 COMMAND_ID = "excadmple_fusion_open"

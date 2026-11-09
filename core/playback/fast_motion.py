@@ -246,19 +246,36 @@ class Refused(Exception):
     """This feature keeps native recompute, for the given reason."""
 
 
-class Piece:
-    """Faces that move together, and their transform at each progress."""
+def _still(_t):
+    return identity()
 
-    def __init__(self, faces, motion):
+
+class Piece:
+    """Things drawn together: their transform and (optionally) opacity at
+    each progress. ``kind`` "brep" items are copied faces/bodies, "curve"
+    items are curves (a revolve's profile). ``role`` picks the look:
+    None (moving face teal, other feature faces plain), "change" (teal),
+    "before" / "after" (plain body), "profile" (blue curve)."""
+
+    def __init__(self, faces, motion=_still, opacity=None, kind="brep", role=None, copied=False):
         self.faces, self.motion = list(faces), motion
+        self.opacity_curve, self.kind, self.role = opacity, kind, role
+        self.copied = copied          # items are already transient copies
 
     def matrix(self, progress):
         return self.motion(max(0.0, min(1.0, float(progress))))
 
+    def opacity(self, progress):
+        if self.opacity_curve is None:
+            return None
+        return max(0.0, min(1.0, self.opacity_curve(max(0.0, min(1.0, float(progress))))))
+
 
 class Plan:
-    def __init__(self, pieces, accuracy, label):
+    def __init__(self, pieces, accuracy, label, handle_motion=None):
         self.pieces, self.accuracy, self.label = pieces, accuracy, label
+        # How manipulator handles move; default: with the first piece.
+        self.handle_motion = handle_motion or (pieces[0].matrix if pieces else _still)
 
 
 def _extrude_plan(entity, inputs, start_fraction):
@@ -326,19 +343,71 @@ def _mirror_plan(entity, inputs):
 
 
 def _revolve_plan(entity, inputs):
+    """The profile sweeps about the real axis while the revolved faces
+    appear. (Turning the finished solid about its own axis showed nothing
+    for a full revolve: a body of revolution looks the same at any angle.)"""
     if not inputs.get("axis"):
         raise Refused("the revolve axis could not be read")
-    extent = getattr(entity, "extentDefinition", None)
+    extent = _attr(entity, "extentDefinition")
     if _type(extent) != "AngleExtentDefinition":
         raise Refused("extent type " + _type(extent) + " is not a single angle")
-    angle = _value(getattr(extent, "angle", None))
-    faces = _items(getattr(entity, "faces", None))
+    angle = _value(_attr(extent, "angle"))
+    faces = _items(_attr(entity, "faces"))
     if not angle or not faces:
         raise Refused("no angle or no faces")
     point, direction = inputs["axis"]
-    # Rotate so the faces start at the profile and end at their real angle.
-    return Plan([Piece(faces, lambda t: rotation_about(direction, point, -(1.0 - t) * angle))],
-                ILLUSTRATIVE, "the revolved faces turn about the axis")
+    sign = 1.0
+    starts = [c for c in (_centroid(f) for f in _items(_attr(entity, "startFaces"))) if c]
+    ends = [c for c in (_centroid(f) for f in _items(_attr(entity, "endFaces"))) if c]
+    if starts and ends:
+        # Which way the sweep goes: rotating the start face by +angle or
+        # -angle must land on the end face.
+        forward = apply(rotation_about(direction, point, angle), starts[0])
+        backward = apply(rotation_about(direction, point, -angle), starts[0])
+        sign = 1.0 if _dist(forward, ends[0]) <= _dist(backward, ends[0]) else -1.0
+    sweep = lambda t: rotation_about(direction, point, sign * t * angle)
+    pieces = []
+    profile = list(inputs.get("profile_curves") or [])
+    if profile:
+        pieces.append(Piece(profile, sweep, kind="curve", role="profile"))
+    pieces.append(Piece(faces, opacity=lambda t: t, role="change"))
+    return Plan(pieces, ILLUSTRATIVE, "the profile sweeps about the axis",
+                handle_motion=lambda t: rotation_about(direction, point, sign * (t - 1.0) * angle))
+
+
+def _centroid(face):
+    try:
+        return _xyz(face.centroid)
+    except Exception:
+        return None
+
+
+def _dist(a, b):
+    return math.sqrt(sum((a[i] - b[i]) ** 2 for i in range(3)))
+
+
+def _crossfade_plan(entity, inputs):
+    """Any other operation (combine, offset faces, copy/paste, fillet,
+    chamfer, shell, ...): the affected bodies as they were before fade out,
+    the result fades in with the feature's own faces in teal. Bodies the
+    operation consumed (combine tools) fade out; new bodies fade in."""
+    before = inputs.get("before_bodies") or {}
+    after_tokens = inputs.get("after_tokens")
+    results = _items(_attr(entity, "bodies"))
+    result_tokens = {_token_of(b) for b in results}
+    fading = [copy for token, copy in before.items()
+              if token in result_tokens or (after_tokens is not None and token not in after_tokens)]
+    faces = _items(_attr(entity, "faces"))
+    pieces = []
+    if fading:
+        pieces.append(Piece(fading, opacity=lambda t: 1.0 - t, role="before", copied=True))
+    if results:
+        pieces.append(Piece(results, opacity=lambda t: t, role="after"))
+    if faces:
+        pieces.append(Piece(faces, opacity=lambda t: t, role="change"))
+    if not pieces:
+        raise Refused("nothing to show before or after the operation")
+    return Plan(pieces, ILLUSTRATIVE, "the result replaces what was there")
 
 
 def _is_rigid(m, tol=1e-6):
@@ -397,25 +466,40 @@ def _move_plan(entity, inputs):
                 ILLUSTRATIVE, "the bodies move along the real transform")
 
 
+SPECIFIC = {"ExtrudeFeature", "RectangularPatternFeature", "CircularPatternFeature",
+            "MirrorFeature", "RevolveFeature", "MoveFeature"}
+
+
+def _specific_plan(kind, entity, inputs, start_fraction):
+    if kind == "ExtrudeFeature":
+        return _extrude_plan(entity, inputs, start_fraction)
+    if kind in ("RectangularPatternFeature", "CircularPatternFeature"):
+        return _pattern_plan(entity)
+    if kind == "MirrorFeature":
+        return _mirror_plan(entity, inputs)
+    if kind == "RevolveFeature":
+        return _revolve_plan(entity, inputs)
+    if kind == "MoveFeature":
+        return _move_plan(entity, inputs)
+    raise Refused("no motion of its own for " + (kind or "this feature"))
+
+
 def plan_for(kind, entity, inputs, start_fraction=0.02, reasons=None):
     """A fast-motion Plan for this feature, or None (keep native recompute).
-    Why it was refused is appended to ``reasons`` when a list is given."""
-    try:
-        if kind == "ExtrudeFeature":
-            return _extrude_plan(entity, inputs, start_fraction)
-        if kind in ("RectangularPatternFeature", "CircularPatternFeature"):
-            return _pattern_plan(entity)
-        if kind == "MirrorFeature":
-            return _mirror_plan(entity, inputs)
-        if kind == "RevolveFeature":
-            return _revolve_plan(entity, inputs)
-        if kind == "MoveFeature":
-            return _move_plan(entity, inputs)
-        reason = "no fast motion for " + (kind or "this feature")
-    except Refused as refused:
-        reason = str(refused)
-    except Exception as error:
-        reason = "{}: {}".format(type(error).__name__, error)
+    A feature without a motion of its own (or whose own motion cannot be
+    used) gets the before/after crossfade. Why each was refused is
+    appended to ``reasons`` when a list is given."""
+    notes = []
+    for planner in (lambda: _specific_plan(kind, entity, inputs, start_fraction),
+                    lambda: _crossfade_plan(entity, inputs)):
+        try:
+            plan = planner()
+            plan.note = "; ".join(notes)          # why a more specific motion was not used
+            return plan
+        except Refused as refused:
+            notes.append(str(refused))
+        except Exception as error:
+            notes.append("{}: {}".format(type(error).__name__, error))
     if reasons is not None:
-        reasons.append(reason)
+        reasons.append("; ".join(notes))
     return None

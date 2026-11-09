@@ -780,10 +780,13 @@ class HiMController:
         prepared["inputs"] = inputs
         plan = None
         native_reason = ""
-        if self.fast_motion and entity is not None and mode in (PARAMETRIC, FADE):
+        if self.fast_motion and entity is not None:
             from .fast_motion import plan_for
             reasons = []
-            plan = plan_for(feature.kind, entity, dict(inputs, resolve=self._resolve_token), reasons=reasons)
+            extra = {"resolve": self._resolve_token,
+                     "profile_curves": self.model_highlights.get(feature.index, []),
+                     "after_tokens": self._visible_tokens()}
+            plan = plan_for(feature.kind, entity, dict(inputs, **extra), reasons=reasons)
             native_reason = reasons[0] if reasons else ""
         if entity is None:
             pass
@@ -808,7 +811,7 @@ class HiMController:
             # the native result can be hidden behind the ghost context.
             suitable = True
         if (self.wireframe_context and self.dim_others and suitable
-                and prepared["mode"] in (PARAMETRIC, FADE)):
+                and (prepared["mode"] in (PARAMETRIC, FADE) or plan is not None)):
             self._start_ghost_context(prepared, snapshot)
         if not prepared["wireframe"]:
             prepared["context_fallback"] = ("exact pre-feature context or affected faces unavailable")
@@ -817,7 +820,7 @@ class HiMController:
                          .format(feature.name))
             self._apply_focus(prepared["bodies"], hide_result=(
                 prepared["mode"] == FADE and not self.instant_nonparametric))
-        if plan is not None and prepared["mode"] in (PARAMETRIC, FADE) and prepared["wireframe"]:
+        if plan is not None and prepared["wireframe"]:
             # Only with the native result hidden can moved face copies show
             # the intermediate shape without the final one behind them.
             prepared["fast"] = plan
@@ -835,10 +838,12 @@ class HiMController:
             prepared["fast"] = None
             prepared["native_reason"] = "the feature's faces could not be copied"
             self._draw_overlay(prepared, 0.0)
-        if self.fast_motion and prepared["mode"] in (PARAMETRIC, FADE):
+        if self.fast_motion and (prepared["mode"] in (PARAMETRIC, FADE) or prepared.get("fast")):
             self.log("HiM motion {} ({}): {}".format(
                 feature.name, feature.kind,
-                "fast, " + prepared["fast"].accuracy if prepared.get("fast")
+                "fast, " + prepared["fast"].accuracy + (
+                    " (" + prepared["fast"].note + ")" if getattr(prepared["fast"], "note", "") else "")
+                if prepared.get("fast")
                 else "Fusion recompute, " + (prepared["native_reason"] or "no reason recorded")))
         self.active_position = position
         self.active = prepared
@@ -1163,7 +1168,44 @@ class HiMController:
         entity = self._feature_entity(feature)
         if entity is not None:
             self.pending_inputs = capture_inputs(feature.kind, entity)
+            from .fast_motion import SPECIFIC
+            if feature.kind not in SPECIFIC or feature.kind == "RevolveFeature":
+                before = self._copy_bodies_before()
+                if before is not None:
+                    self.pending_inputs["before_bodies"] = before
             self.inputs_by_index[feature.index] = self.pending_inputs
+
+    MAX_BEFORE_BODIES = 60
+
+    def _copy_bodies_before(self):
+        """Transient copies of the visible bodies as they are now (marker
+        before a feature), keyed by token: the "before" of a crossfade.
+        None when there are too many to copy."""
+        from core.spatial import _model_bodies
+        design = self.design()
+        bodies = [(t, b) for t, b in _model_bodies(design) if getattr(b, "isVisible", True) is not False]
+        if len(bodies) > self.MAX_BEFORE_BODIES:
+            return None
+        try:
+            manager = adsk.fusion.TemporaryBRepManager.get()
+        except Exception:
+            return None
+        copies = {}
+        for token, body in bodies:
+            try:
+                copy = manager.copy(body)
+            except Exception:
+                copy = None
+            if copy is not None:
+                copies[token] = copy
+        return copies
+
+    def _visible_tokens(self):
+        from core.spatial import _model_bodies
+        try:
+            return {t for t, b in _model_bodies(self.design()) if getattr(b, "isVisible", True) is not False}
+        except Exception:
+            return None
 
     def _start_fast(self, prepared):
         """Copy the feature's real faces once; frames only move them."""
@@ -1182,18 +1224,32 @@ class HiMController:
             moving = moving_faces(kind, prepared["entity"])
             prepared["handles"] = handles(kind, prepared["entity"], prepared.get("inputs", {}))
             entities = []
+            profile = adsk.fusion.CustomGraphicsSolidColorEffect.create(adsk.core.Color.create(*HIGHLIGHT))
             for piece in prepared["fast"].pieces:
                 for face in piece.faces:
-                    copy = manager.copy(face)
+                    if piece.kind == "curve":
+                        entity = group.addCurve(face)
+                        entity.color = profile
+                        entity.weight = 3
+                        entity.depthPriority = 3
+                        entity.isSelectable = False
+                        entities.append((piece, entity))
+                        continue
+                    copy = face if piece.copied else manager.copy(face)
                     if copy is None:
                         raise RuntimeError("Fusion could not copy a feature face")
                     entity = group.addBRepBody(copy)
                     if entity is None:
                         raise RuntimeError("Fusion could not draw a feature face")
-                    # Only the face that moves is highlighted, as in Fusion's
-                    # own commands; the rest of the feature looks like a body.
-                    entity.color = neutral if moving and _token(face) not in moving else color
-                    entity.depthPriority = 1
+                    if piece.role in ("before", "after"):
+                        entity.color = neutral
+                    elif piece.role == "change":
+                        entity.color = color
+                    else:
+                        # Only the face that moves is highlighted, as in Fusion's
+                        # own commands; the rest of the feature looks like a body.
+                        entity.color = neutral if moving and _token(face) not in moving else color
+                    entity.depthPriority = 2 if piece.role == "change" else 1
                     entity.isSelectable = False
                     entities.append((piece, entity))
                     for line in _outline(group, copy, outline_budget):
@@ -1265,10 +1321,15 @@ class HiMController:
             if offset is not None:
                 matrix.transformBy(offset)
             entity.transform = matrix
+            opacity = piece.opacity(progress)
+            if opacity is not None:
+                try:
+                    entity.setOpacity(max(0.0, opacity), True)
+                except Exception:
+                    entity.isVisible = opacity > 0.5      # entities without opacity
         if prepared.get("handles"):
             from .fast_motion import apply
-            piece = prepared["fast"].pieces[0]
-            m = piece.matrix(progress)
+            m = prepared["fast"].handle_motion(progress)
             moved = []
             for h in prepared["handles"]:
                 tip = tuple(h["anchor"][i] + h["direction"][i] for i in range(3))

@@ -131,10 +131,14 @@ class FakeApp:
         self.activeViewport = types.SimpleNamespace(refresh=lambda: None, fit=lambda: None)
 
 
-def session_for(design, dim=False):
+def session_for(design, dim=False, fast=False):
+    """A reference session on the stub design. ``fast=False`` tests the
+    native recompute path (still used when paused and when fast motion is
+    unavailable); fast-motion tests pass ``fast=True``."""
     app = FakeApp(design)
     session = ReferenceSession(app, None)
     session.him.dim_others = dim
+    session.him.fast_motion = fast
     session.model = FusionTimelineModel(design)
     session.mapped, session.unmatched = map_steps(STEPS, session.model.features())
     session.plan = session.animation_plan()

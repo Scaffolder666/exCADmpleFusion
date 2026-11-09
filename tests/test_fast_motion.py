@@ -82,14 +82,17 @@ class PlannerTests(unittest.TestCase):
         self.assertEqual(fm.plan_for("ExtrudeFeature", extrude(), PLANE).accuracy, fm.EXACT)
         self.assertEqual(fm.plan_for("ExtrudeFeature", extrude(operation=0), PLANE).accuracy, fm.APPROXIMATE)
 
-    def test_extrudes_that_cannot_be_scaled_keep_native_recompute(self):
-        for entity in (extrude(taperAngleOne=types.SimpleNamespace(value=0.1)),
-                       extrude(extentOne=typed("ToEntityExtentDefinition")),
-                       extrude(startExtent=typed("OffsetStartDefinition")),
-                       extrude(faces=Coll())):
-            self.assertIsNone(fm.plan_for("ExtrudeFeature", entity, PLANE))
-        self.assertIsNone(fm.plan_for("ExtrudeFeature", extrude(), {}))       # profile not read
-        self.assertIsNone(fm.plan_for("FilletFeature", extrude(), PLANE))      # fillet: always native
+    def test_extrudes_that_cannot_be_scaled_fall_back_to_the_crossfade(self):
+        for entity, why in ((extrude(taperAngleOne=types.SimpleNamespace(value=0.1)), "taper"),
+                            (extrude(extentOne=typed("ToEntityExtentDefinition")), "cannot be scaled"),
+                            (extrude(startExtent=typed("OffsetStartDefinition")), "profile plane")):
+            plan = fm.plan_for("ExtrudeFeature", entity, PLANE)
+            self.assertEqual(plan.accuracy, fm.ILLUSTRATIVE)
+            self.assertEqual([p.role for p in plan.pieces], ["change"])        # its faces fade in
+            self.assertIn(why, plan.note)
+        self.assertIsNone(fm.plan_for("ExtrudeFeature", extrude(faces=Coll()), PLANE))   # nothing to show
+        fillet = fm.plan_for("FilletFeature", extrude(), PLANE)
+        self.assertEqual(fillet.label, "the result replaces what was there")
 
     def test_pattern_instances_skip_the_source(self):
         def element(dx, faces):
@@ -105,13 +108,46 @@ class PlannerTests(unittest.TestCase):
         self.assertTrue(close(fm.apply(plan.pieces[1].matrix(0), (11, 0, 0)), (1, 0, 0)))
         self.assertTrue(close(fm.apply(plan.pieces[1].matrix(0.5), (11, 0, 0)), (6, 0, 0)))
 
-    def test_revolve_needs_an_angle_and_axis(self):
+    def test_revolve_sweeps_its_profile_while_the_faces_appear(self):
+        """A full revolve turned as a finished solid looked static; the
+        profile sweeping about the axis shows the operation."""
         entity = types.SimpleNamespace(faces=Coll(["f"]), extentDefinition=typed(
-            "AngleExtentDefinition", angle=types.SimpleNamespace(value=math.pi / 2)))
-        plan = fm.plan_for("RevolveFeature", entity, {"axis": ((0, 0, 0), (0, 0, 1))})
-        self.assertTrue(close(fm.apply(plan.pieces[0].matrix(1), (1, 0, 0)), (1, 0, 0)))
-        self.assertTrue(close(fm.apply(plan.pieces[0].matrix(0), (0, 1, 0)), (1, 0, 0)))
-        self.assertIsNone(fm.plan_for("RevolveFeature", entity, {}))
+            "AngleExtentDefinition", angle=types.SimpleNamespace(value=2 * math.pi)))
+        plan = fm.plan_for("RevolveFeature", entity, {"axis": ((0, 0, 0), (0, 0, 1)),
+                                                      "profile_curves": ["profile-line"]})
+        profile, faces = plan.pieces
+        self.assertEqual((profile.kind, profile.role, profile.faces), ("curve", "profile", ["profile-line"]))
+        self.assertTrue(close(fm.apply(profile.matrix(0), (1, 0, 0)), (1, 0, 0)))          # starts at the profile
+        self.assertTrue(close(fm.apply(profile.matrix(0.25), (1, 0, 0)), (0, 1, 0)))       # a quarter turn
+        self.assertEqual((faces.role, faces.opacity(0), faces.opacity(0.5), faces.opacity(1)),
+                         ("change", 0.0, 0.5, 1.0))
+        self.assertEqual(fm.plan_for("RevolveFeature", entity, {}).label,          # no axis: crossfade
+                         "the result replaces what was there")
+
+    def test_partial_revolve_sweeps_towards_its_end_face(self):
+        start = types.SimpleNamespace(centroid=P(1, 0, 0))
+        end = types.SimpleNamespace(centroid=P(0, -1, 0))                    # -90 degrees about z
+        entity = types.SimpleNamespace(faces=Coll(["f"]), startFaces=Coll([start]), endFaces=Coll([end]),
+                                       extentDefinition=typed("AngleExtentDefinition",
+                                                              angle=types.SimpleNamespace(value=math.pi / 2)))
+        plan = fm.plan_for("RevolveFeature", entity, {"axis": ((0, 0, 0), (0, 0, 1)), "profile_curves": ["c"]})
+        self.assertTrue(close(fm.apply(plan.pieces[0].matrix(1), (1, 0, 0)), (0, -1, 0)))
+
+    def test_crossfade_for_combine_copy_paste_and_others(self):
+        tool, target, result = (types.SimpleNamespace(entityToken=t) for t in ("tool", "target", "target"))
+        entity = types.SimpleNamespace(bodies=Coll([result]), faces=Coll(["cut-face"]))
+        inputs = {"before_bodies": {"tool": "tool-copy", "target": "target-copy", "other": "other-copy"},
+                  "after_tokens": {"target", "other"}}
+        plan = fm.plan_for("CombineFeature", entity, inputs)
+        before, after, faces = plan.pieces
+        # The target as it was and the consumed tool fade out; the untouched body is not part of it.
+        self.assertEqual((before.role, sorted(before.faces)), ("before", ["target-copy", "tool-copy"]))
+        self.assertEqual((before.opacity(0), before.opacity(1)), (1.0, 0.0))
+        self.assertEqual((after.role, after.faces, after.opacity(1)), ("after", [result], 1.0))
+        self.assertEqual((faces.role, faces.faces), ("change", ["cut-face"]))
+        pasted = fm.plan_for("CopyPasteBody", types.SimpleNamespace(bodies=Coll([types.SimpleNamespace(
+            entityToken="new")])), {"before_bodies": {"src": "src-copy"}, "after_tokens": {"src", "new"}})
+        self.assertEqual([p.role for p in pasted.pieces], ["after"])        # the copy appears
 
 
 class FastPlaybackTests(unittest.TestCase):
@@ -128,7 +164,7 @@ class FastPlaybackTests(unittest.TestCase):
         self.d1 = ex.extentOne.distance
         adsk.fusion.TemporaryBRepManager = types.SimpleNamespace(
             get=lambda: types.SimpleNamespace(copy=lambda face: ("copy", face.entityToken)))
-        _, self.session = native.session_for(self.design, dim=True)
+        _, self.session = native.session_for(self.design, dim=True, fast=True)
         him = self.session.him
         him.wireframe_context = True
         # The ghost context itself is covered elsewhere; here it only has to
@@ -184,9 +220,10 @@ class FastPlaybackTests(unittest.TestCase):
     def test_step_change_and_end_clean_up(self):
         self.session.frame(0, 0.5)
         group = self.session.him.fast_group
-        self.session.frame(1, 0.5)                                   # fillet: native as before
+        self.session.frame(1, 0.5)                                   # fillet: its own (crossfade) group
         self.assertFalse(group.isValid)
-        self.assertAlmostEqual(native.param(self.entities, "fi1").value, interpolate(0.2, 0.5))
+        self.assertIsNot(self.session.him.fast_group, group)
+        self.assertEqual(native.param(self.entities, "fi1").writes, [])
         self.session.frame(0, 1.0)                                    # step end: final position
         self.assertAlmostEqual(native.param(self.entities, "fi1").value, 0.2)
         self.assertIsNotNone(self.session.him.fast_group)
@@ -229,6 +266,23 @@ class FastPlaybackTests(unittest.TestCase):
         self.session.frame(0, 0.8)
         self.assertAlmostEqual(group.curves[0].transform.cells[(2, 2)], interpolate(1.0, 0.8))
 
+    def test_fillet_crossfades_without_recompute(self):
+        self.entities["fi1"].faces = Coll([Obj("BRepFace", "round-face")])
+        shown = self.session.frame(1, 0.25)
+        self.assertEqual(shown["motion"], "illustrative")
+        radius = native.param(self.entities, "fi1")
+        self.assertEqual(radius.writes, [])                            # no parameter change
+        bodies = self.session.him.fast_group.bodies
+        roles = [(piece.role, entity.opacity) for piece, entity in self.session.him.active["fast_entities"]]
+        self.assertIn(("before", 0.75), roles)                         # body1 as it was, fading out
+        self.assertIn(("after", 0.25), roles)                          # the filleted body, fading in
+        self.assertIn(("change", 0.25), roles)                         # its new face, teal
+        self.session.frame(1, 0.8)
+        self.assertIn(("before", 0.2), [(p.role, round(e.opacity, 6))
+                                        for p, e in self.session.him.active["fast_entities"]])
+        self.session.stop()
+        self.assertIsNone(self.session.him.fast_group)
+
     def test_without_hidden_native_result_it_stays_native(self):
         self.session.him._start_ghost_context = lambda prepared, snapshot: False
         shown = self.session.frame(0, 0.5)
@@ -254,17 +308,15 @@ class FastPlaybackTests(unittest.TestCase):
         self.entities["ex1"].taperAngleOne = types.SimpleNamespace(value=0.2)
         self.session.frame(1, 0.5)
         self.session.frame(0, 0.5)                                    # Extrude1 again, now tapered
-        self.assertIn("HiM motion Extrude1 (ExtrudeFeature): Fusion recompute, the extrude has a taper angle",
-                      logged)
-        self.assertIn("taper angle", self.session.him.status()["motion_note"])
+        self.assertTrue(any(line.startswith("HiM motion Extrude1 (ExtrudeFeature): fast, illustrative (")
+                            and "taper angle" in line for line in logged), logged)
 
 
 class RefusalReasonTests(unittest.TestCase):
     def test_reasons_are_reported(self):
-        cases = [("ExtrudeFeature", extrude(), {}, "profile plane could not be read"),
-                 ("ExtrudeFeature", extrude(extentOne=typed("ToEntityExtentDefinition")), PLANE,
-                  "ToEntityExtentDefinition cannot be scaled"),
-                 ("FilletFeature", extrude(), PLANE, "no fast motion for FilletFeature")]
+        empty = extrude(faces=Coll())
+        cases = [("ExtrudeFeature", empty, {}, "profile plane could not be read"),
+                 ("FilletFeature", empty, PLANE, "nothing to show before or after")]
         for kind, entity, inputs, expected in cases:
             reasons = []
             self.assertIsNone(fm.plan_for(kind, entity, inputs, reasons=reasons))
@@ -447,3 +499,51 @@ class MovePlaybackTests(unittest.TestCase):
         self.assertIn("HiM motion Mirror1 (MoveFeature): fast, illustrative", logged)
         self.session.frame(0, 1.0)
         self.assertIsNone(self.session.him.fast_group)
+
+
+class RevolvePlaybackTests(unittest.TestCase):
+    """Mirror1 of the stub design turned into a full revolve about z."""
+
+    def setUp(self):
+        self.design, self.entities, self.groups = native.build()
+        rev = self.entities["mi1"]
+        rev.objectType = "adsk::fusion::RevolveFeature"
+        rev.axis = types.SimpleNamespace(geometry=types.SimpleNamespace(origin=P(0, 0, 0), direction=P(0, 0, 1)))
+        rev.extentDefinition = typed("AngleExtentDefinition", angle=types.SimpleNamespace(value=2 * math.pi))
+        rev.faces = Coll([Obj("BRepFace", "rev-face")])
+        adsk.fusion.TemporaryBRepManager = types.SimpleNamespace(
+            get=lambda: types.SimpleNamespace(copy=lambda item: ("copy", getattr(item, "entityToken", "?"))))
+        from core.him_fusion import FusionTimelineModel
+        from core.him_reference import ReferenceSession
+        from core.reference_plan import map_steps
+        self.session = ReferenceSession(native.FakeApp(self.design), None)
+        him = self.session.him
+        him.dim_others = him.wireframe_context = True
+        him.capture_ghost_context = lambda: setattr(him, "pending_ghost",
+                                                    {"curves": ["edge"], "body_tokens": frozenset()})
+
+        def ghost(prepared, snapshot):
+            prepared["wireframe"] = True
+            return True
+        him._start_ghost_context = ghost
+        self.session.model = FusionTimelineModel(self.design)
+        self.session.model.highlights[5] = ["profile-curve"]      # the input profile (blue)
+        self.session.mapped, _ = map_steps([{"id": "rev", "source_features": [{"name": "Mirror1", "index": 5}]}],
+                                           self.session.model.features())
+
+    def tearDown(self):
+        self.session.close()
+        del adsk.fusion.TemporaryBRepManager
+
+    def test_the_profile_turns_and_the_solid_appears(self):
+        shown = self.session.frame(0, 0.25)
+        self.assertEqual(shown["motion"], "illustrative")
+        entities = self.session.him.active["fast_entities"]
+        profile = [e for p, e in entities if p.role == "profile"][0]
+        faces = [e for p, e in entities if p.role == "change"][0]
+        self.assertAlmostEqual(profile.transform.cells[(0, 0)], 0.0)    # a quarter of the full turn
+        self.assertAlmostEqual(profile.transform.cells[(1, 0)], 1.0)
+        self.assertAlmostEqual(faces.opacity, 0.25)
+        self.session.frame(0, 0.75)
+        self.assertAlmostEqual(profile.transform.cells[(1, 0)], -1.0)   # three quarters
+        self.assertAlmostEqual(faces.opacity, 0.75)

@@ -69,9 +69,9 @@ During playback, some operations no longer make Fusion recompute every frame:
 | The same extrude joining or cutting other bodies | Same | approximate where it meets other geometry |
 | Rectangular / circular pattern | Each instance moves from the source along its real pattern transform (arc for circular) | illustrative path, real end state |
 | Mirror | The copy folds over the mirror plane | illustrative path, real end state |
-| Revolve with one angle | The revolved faces turn about the real axis into place | illustrative path, real end state |
+| Revolve with one angle | The profile (blue) sweeps about the real axis while the revolved faces appear | illustrative path, real end state |
 | Move (bodies or faces, rigid transform) | The moved bodies travel from their old place to the new one along the real transform (on the arc for a rotation) | illustrative path, real end state |
-| Fillet, chamfer, shell, extrudes with taper / to-object / offset start, everything else | Fusion recomputes every frame as before | native |
+| Everything else: combine, offset faces, copy/paste, fillet, chamfer, shell, extrudes with taper / to-object / offset start, ... | The affected bodies as they were fade out, the result fades in with the feature's own faces in teal; consumed tools fade out, new bodies fade in | illustrative path, real end state |
 
 - **Pausing:** when you pause (or scrub), Fusion recomputes the real model at that position for operations that have parameters. Pressing Play goes back to moving copies.
 - **When fast motion is used:** only when the native result can be hidden (the HiM ghost context). It falls back to native recompute if face copies cannot be made.
