@@ -1,4 +1,5 @@
 """Compatibility import; implementation lives in core.playback.him_reference."""
 from importlib import import_module as _import_module
 _impl = _import_module("core.playback.him_reference")
-globals().update({k: v for k, v in vars(_impl).items() if not k.startswith("__")})
+import sys as _sys
+_sys.modules[__name__] = _impl
