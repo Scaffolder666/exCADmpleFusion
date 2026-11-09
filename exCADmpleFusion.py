@@ -43,6 +43,8 @@ from core.him_reference import ReferenceSession
 from core.session_recorder import SessionRecorder
 from core.playback.tool_guide import ToolGuide
 
+# Shown in the panel at start so it is clear which code Fusion is running.
+BUILD = "same-viewport 2026-11-09 · tool guide v2"
 PALETTE_ID = "excadmple_fusion_player"
 COMMAND_ID = "excadmple_fusion_open"
 REFERENCE_COMMAND_ID = "excadmple_fusion_reference_open"
@@ -185,10 +187,11 @@ def _update_tools(index):
         return
     try:
         report = _tools.show(_package.step(index).get("tools", []))
-    except Exception:
-        report = []
-        _log_error()            # tool guidance must never block playback
-    _post("tools", {"index": index, "tools": report})
+    except Exception as error:
+        # Tool guidance must never block playback, but a failure is shown.
+        report = [{"label": "", "path": [], "found": False, "error": "{}: {}".format(type(error).__name__, error)}]
+        _log_error()
+    _post("tools", {"index": index, "tools": report, "panel_error": _tools.last_error})
 
 
 def _open_reference_session():
@@ -656,6 +659,7 @@ def run(_context):
             _ui.activeSelectionChanged.add(selection)
             _handlers.append(selection)
         _load(str(ROOT / "examples" / "phone_stand.json"))     # illustrative sample tutorial
+        _status("exCADmple " + BUILD)
     except Exception:
         _log_error()
         if _ui:

@@ -103,6 +103,7 @@ class ToolGuide:
         self.panel = None
         self.panel_tab = None
         self.matches = {}
+        self.last_error = ""           # why the toolbar panel could not be filled
 
     def _workspace(self):
         try:
@@ -114,6 +115,7 @@ class ToolGuide:
         """Find each tool; put the found native buttons in the temporary
         panel. Returns [{label, path, found}] for the tutorial panel."""
         self._clear_buttons()
+        self.last_error = ""
         workspace = self._workspace()
         report, matches = [], {}
         for label in labels:
@@ -130,8 +132,9 @@ class ToolGuide:
             try:
                 self._fill_panel(found)
             except Exception as error:
-                self.log("exCADmple tool panel: " + str(error))
-                self.close()
+                self.last_error = "{}: {}".format(type(error).__name__, error)
+                self.log("exCADmple tool panel: " + self.last_error)
+                self._remove_panel()
         else:
             self._remove_panel()
         return report

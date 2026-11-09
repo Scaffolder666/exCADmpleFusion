@@ -398,7 +398,10 @@ function card(item) {
   }
   // Where to find this step's tools in Fusion (path read from the toolbar).
   if (S.tools && S.tools.index === S.index) {
+    if (S.tools.panel_error) box.appendChild(el("div", { class: "playback-note" },
+      "Toolbar panel could not be added: " + S.tools.panel_error));
     for (const tool of S.tools.tools || []) {
+      if (tool.error) { box.appendChild(el("div", { class: "playback-note" }, "Tool lookup failed: " + tool.error)); continue; }
       const row = el("div", { class: "tool-guide" + (tool.found ? "" : " missing") });
       row.appendChild(el("span", { class: "tool-path" },
         tool.found ? tool.path.join(" › ") : tool.label + " · not found in this workspace"));

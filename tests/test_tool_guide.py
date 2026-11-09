@@ -140,5 +140,15 @@ class GuideTests(unittest.TestCase):
         self.assertEqual(len(self.solid.toolbarPanels), 2)                 # the user's toolbar as before
 
 
+    def test_a_panel_fusion_refuses_is_reported_not_hidden(self):
+        def refuse(id_, name):
+            raise RuntimeError("panel id already in use")
+        self.solid.toolbarPanels.add = refuse
+        report = self.guide.show(["Extrude"])
+        self.assertTrue(report[0]["found"])                       # the menu path is still shown
+        self.assertIn("panel id already in use", self.guide.last_error)
+        self.assertIsNone(self.guide.panel)
+
+
 if __name__ == "__main__":
     unittest.main()
