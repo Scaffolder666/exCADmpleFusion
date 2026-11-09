@@ -631,7 +631,7 @@ class HiMController:
                 drawn += 1
             if drawn != len(snapshot["curves"]):
                 raise RuntimeError("Incomplete background wireframe")
-            from .spatial import _model_bodies
+            from core.spatial import _model_bodies
             # Hide native shaded faces; ONLY the precise feature-owned face
             # copies (or a provably newly created Body) will be opaque.
             # 0.001 avoids unsupported exact-zero edge cases in Fusion.
@@ -730,7 +730,7 @@ class HiMController:
             return
         if hide_result:
             protected = {"\0none"}
-        from .spatial import _model_bodies
+        from core.spatial import _model_bodies
         try:
             self.focus.apply(self._document_key(), _model_bodies(design), protected, dim_opacity=0.2)
         except FocusError as error:
@@ -836,7 +836,7 @@ class HiMController:
                                   for target in targets):
             return
         try:
-            from .renderer import add_target_arrow, body_target_bounds
+            from core.renderer import add_target_arrow, body_target_bounds
             add_target_arrow(group, body_target_bounds(targets))
         except Exception:
             pass  # guidance is optional and must never interrupt native playback
