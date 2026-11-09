@@ -279,17 +279,23 @@ class ReferenceSession:
         items = animated(self.mapped[step_index])
         if not items and progress < 1.0:
             # Sketch/construction-only steps have no BRep parameter to grow.
-            # Roll to their real completed Timeline state immediately,
-            # rather than pretending an extrusion-like animation exists.
-            if self.current != (step_index, "result"):
-                self.show_result(step_index)
-                self.current = (step_index, "result")
+            # Roll to their real completed Timeline state; sketches are drawn
+            # line by line from their actual curves (no invented geometry).
+            sketches = self._sketch_entities(step_index)
+            if self.current != (step_index, "sketch"):
+                self.show_result(step_index, guidance=False)
+                self.current = (step_index, "sketch")
+            if sketches:
+                try:
+                    self.him.draw_sketch(sketches, progress)
+                except Exception as error:
+                    self.log("HiM sketch drawing: " + str(error))
                 self.present()
             features = self.mapped[step_index]
             return {"step": step_index,
                     "feature": features[-1].name if features else None,
                     "kind": features[-1].kind if features else None,
-                    "mode": "instant", "parameters": []}
+                    "mode": "instant", "parameters": [], "drawing": bool(sketches)}
         if progress >= 1.0:
             # The FINAL step returns to the entire shaded model, not a
             # ghost/partial-timeline state. Intermediate steps preserve the
@@ -335,7 +341,16 @@ class ReferenceSession:
         status["step"] = step_index
         return status
 
-    def show_result(self, step_index):
+    def _sketch_entities(self, step_index):
+        sketches = []
+        for feature in self.mapped[step_index] if 0 <= step_index < len(self.mapped) else []:
+            if feature.is_sketch:
+                entity = self.model.entity(feature)
+                if entity is not None:
+                    sketches.append(entity)
+        return sketches
+
+    def show_result(self, step_index, guidance=True):
         """The model as it is after this step (timeline rolled, nothing
         animated), with the step's geometry highlighted."""
         if not self.live:
@@ -348,7 +363,15 @@ class ReferenceSession:
         elif self.mapped[step_index]:
             self._roll_after(self.mapped[step_index][-1])
         try:
-            self.him.draw_guidance(features)
+            if not guidance:
+                pass
+            elif features:
+                self.him.draw_guidance(features)
+            else:
+                # A sketch-only step: its finished sketch stays outlined in blue.
+                sketches = self._sketch_entities(step_index)
+                if sketches:
+                    self.him.draw_sketch(sketches, 1.0)
         except Exception as error:
             self.log("HiM geometry guidance: " + str(error))
         self.present()

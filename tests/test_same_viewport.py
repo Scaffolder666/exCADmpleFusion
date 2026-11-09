@@ -118,7 +118,7 @@ class FakeApp:
         return self.reference_document
 
 
-class SameViewportTests(unittest.TestCase):
+class SameViewportBase(unittest.TestCase):
     def setUp(self):
         self._saved = {name: getattr(adsk.core, name, None) for name in ("Matrix3D",)}
         adsk.core.Matrix3D = types.SimpleNamespace(create=lambda: Matrix())
@@ -169,7 +169,9 @@ class SameViewportTests(unittest.TestCase):
         self.assertEqual(self.user_width.writes, [])
         self.assertEqual(self.ref_groups, [])                # nothing drawn in the reference copy
 
-    # --- tests ------------------------------------------------------------------------
+
+
+class SameViewportTests(SameViewportBase):
     def test_loading_keeps_the_users_design_active_and_history_separate(self):
         self.assertUserUntouched()
         self.assertIsNot(self.session.document, self.user_doc)
@@ -254,6 +256,77 @@ class SameViewportTests(unittest.TestCase):
         self.assertIn("Your design was closed", shown["fallback"])
         self.assertAlmostEqual(self.d1.value, 1.0)
         self.assertEqual(len(self.session.him.journal), 0)
+
+
+
+class Line:
+    _type = "Line3D"
+
+    def __init__(self, a, b):
+        self.startPoint, self.endPoint = a, b
+
+
+def point(x, y, z=0.0):
+    return types.SimpleNamespace(x=x, y=y, z=z)
+
+
+class SketchDrawingTests(SameViewportBase):
+    """A sketch-only step draws the sketch's real curves line by line."""
+
+    def setUp(self):
+        super().setUp()
+        adsk.core.Line3D = types.SimpleNamespace(
+            cast=lambda g: g if getattr(g, "_type", None) == "Line3D" else None,
+            create=lambda a, b: Line(a, b))
+        self.arc = types.SimpleNamespace(kind="arc")
+        lines = [Line(point(0, 0), point(4, 0)), Line(point(4, 0), point(4, 3)), self.arc,
+                 Line(point(0, 3), point(0, 0))]
+        self.sketch = self.entities["sk1"]
+        self.sketch.sketchCurves = Coll([types.SimpleNamespace(worldGeometry=g) for g in lines])
+        self.sketch.isLightBulbOn = True
+        self.sketch.isVisible = True
+        from core.reference_plan import map_steps
+        self.session.mapped, _ = map_steps(
+            [{"id": "sketch", "source_features": [{"name": "Sketch1", "index": 0}]},
+             {"id": "extrude", "source_features": [{"name": "Extrude1", "index": 1}]}],
+            self.session.model.features())
+
+    def tearDown(self):
+        del adsk.core.Line3D
+        super().tearDown()
+
+    def drawn(self):
+        return [e.source for e in self.session.him.group.entities]
+
+    def test_lines_appear_in_order_and_the_current_one_grows(self):
+        shown = self.session.frame(0, 0.125)               # half of the first of 4 curves
+        self.assertTrue(shown["drawing"])
+        self.assertEqual(self.ref_design.timeline.markerPosition, 1)   # after Sketch1
+        first = self.drawn()
+        self.assertEqual(len(first), 1)
+        self.assertEqual((first[0].endPoint.x, first[0].endPoint.y), (2.0, 0.0))
+        self.assertFalse(self.sketch.isLightBulbOn)        # native sketch hidden while drawing
+        self.session.frame(0, 0.6)                          # 2 whole lines, the arc not reached
+        self.assertEqual(len(self.drawn()), 2)
+        self.session.frame(0, 0.8)                          # the arc appears whole, never approximated
+        self.assertIs(self.drawn()[2], self.arc)
+        self.assertTrue(all(e.transform.translation() == (8.0, 0, 0)
+                            for e in self.session.him.group.entities))
+        self.assertUserUntouched()
+
+    def test_finished_or_paused_sketch_stays_outlined_and_visibility_is_restored(self):
+        self.session.frame(0, 0.5)
+        self.session.frame(0, 1.0)                          # step end
+        self.assertTrue(self.sketch.isLightBulbOn)
+        self.assertEqual(len(self.drawn()), 4)               # whole sketch outlined in blue
+        self.session.frame(0, 0.3)                           # replay
+        self.assertFalse(self.sketch.isLightBulbOn)
+        self.session.frame(1, 0.5)                           # next step
+        self.assertTrue(self.sketch.isLightBulbOn)
+        self.session.frame(0, 0.3)
+        self.session.close()
+        self.assertTrue(self.sketch.isLightBulbOn)
+        self.assertEqual(self.live_user_groups(), [])
 
 
 if __name__ == "__main__":

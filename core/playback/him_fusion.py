@@ -416,6 +416,21 @@ def all_feature_parameters(design, feature_entity):
     return result
 
 
+def _partial_line(geometry, fraction):
+    """The first ``fraction`` of a straight line; None for other curves
+    (they appear whole once reached rather than being approximated)."""
+    try:
+        line = adsk.core.Line3D.cast(geometry)
+        if not line or fraction <= 0:
+            return None
+        a, b = line.startPoint, line.endPoint
+        end = adsk.core.Point3D.create(a.x + (b.x - a.x) * fraction, a.y + (b.y - a.y) * fraction,
+                                       a.z + (b.z - a.z) * fraction)
+        return adsk.core.Line3D.create(a, end)
+    except Exception:
+        return None
+
+
 def _center(bodies):
     """Centre of the union of the bodies' bounding boxes."""
     lo, hi = [float("inf")] * 3, [float("-inf")] * 3
@@ -452,6 +467,7 @@ class HiMController:
         self.focus = OpacityFocus(self._resolve_body, self._document_key)
         self.group = None
         self.ghost_group = None       # persistent backdrop for ONE active Feature
+        self.hidden_sketches = []     # native sketches hidden while being drawn
         self.pending_ghost = None     # captured at Timeline marker BEFORE feature
         self.wireframe_context = False  # opt in only on the disposable reference copy
         self.instant_nonparametric = False  # reference: no invented fades or scale
@@ -860,6 +876,60 @@ class HiMController:
             pass  # guidance is optional and must never interrupt native playback
 
     MAX_FACE_HIGHLIGHTS = 200
+    MAX_SKETCH_CURVES = 2000
+
+    def draw_sketch(self, sketches, progress, hide_native=True):
+        """Draw the sketches' real curves in blue, revealed in the order of
+        Fusion's sketchCurves collection (the designer's drawing order was
+        not recorded). A line being drawn grows from its start point. While
+        drawing, the native sketch is hidden so it does not appear all at
+        once; _finish_feature shows it again."""
+        self._delete_group()
+        design = self.design()
+        curves = []
+        for sketch in sketches:
+            if hide_native and progress < 1.0:
+                try:
+                    if sketch.isLightBulbOn and sketch not in self.hidden_sketches:
+                        sketch.isLightBulbOn = False
+                        self.hidden_sketches.append(sketch)
+                except Exception:
+                    pass
+            collection = getattr(sketch, "sketchCurves", None)
+            for curve in _items(collection, self.MAX_SKETCH_CURVES):
+                try:
+                    curves.append(curve.worldGeometry)
+                except Exception:
+                    continue
+        if not design or not curves:
+            return 0
+        group = self._new_group(design)
+        self.group = group
+        group.isSelectable = False
+        progress = max(0.0, min(1.0, float(progress)))
+        shown = len(curves) * progress
+        complete = int(shown)
+        color = adsk.fusion.CustomGraphicsSolidColorEffect.create(adsk.core.Color.create(*HIGHLIGHT))
+        drawn = 0
+        for i, geometry in enumerate(curves):
+            if i > complete or (i == complete and complete == len(curves)):
+                break
+            if i == complete:                     # the curve being drawn now
+                geometry = _partial_line(geometry, shown - complete)
+                if geometry is None:
+                    break
+            try:
+                line = group.addCurve(geometry)
+                line.color = color
+                line.weight = 3
+                line.depthPriority = 2
+                line.isSelectable = False
+                drawn += 1
+            except Exception:
+                continue
+        self._placed(group)
+        self._refresh()
+        return drawn
 
     def draw_guidance(self, features):
         """Spatial guidance for a finished step, kept until the next frame,
@@ -1007,6 +1077,12 @@ class HiMController:
         except Exception as error:
             errors.append(str(error))
         self._delete_group()
+        for sketch in self.hidden_sketches:
+            try:
+                sketch.isLightBulbOn = True
+            except Exception as error:
+                errors.append("sketch visibility: " + str(error))
+        self.hidden_sketches = []
         if self.ghost_group is not None:
             try:
                 if self.ghost_group.isValid:
