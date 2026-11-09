@@ -1,0 +1,1363 @@
+{
+  "format": "excadmple-pair",
+  "version": 1,
+  "title": "Fusion Real Model Test",
+  "model": "fusion(3).f3d",
+  "auto_generate": false,
+  "step_duration_ms": 8000,
+  "steps": [
+    {
+      "id": "feature-0",
+      "title": "Sketch1",
+      "features": [
+        {
+          "index": 0,
+          "name": "Sketch1",
+          "kind": "Sketch"
+        }
+      ],
+      "duration_ms": 8000,
+      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Sketch1: This sketch may establish editable profiles or geometric constraints for a later operation.",
+      "parameters": [
+        {
+          "feature_index": 0,
+          "name": "d1",
+          "expression": "100 mm"
+        },
+        {
+          "feature_index": 0,
+          "name": "d2",
+          "expression": "100 mm"
+        },
+        {
+          "feature_index": 0,
+          "name": "d3",
+          "expression": "10.00 mm"
+        },
+        {
+          "feature_index": 0,
+          "name": "d18",
+          "expression": "10 mm"
+        },
+        {
+          "feature_index": 0,
+          "name": "d19",
+          "expression": "10 mm"
+        },
+        {
+          "feature_index": 0,
+          "name": "d20",
+          "expression": "10 mm"
+        },
+        {
+          "feature_index": 0,
+          "name": "d21",
+          "expression": "10 mm"
+        }
+      ],
+      "reasoning_source": "simulated"
+    },
+    {
+      "id": "feature-1",
+      "title": "Sketch2",
+      "features": [
+        {
+          "index": 1,
+          "name": "Sketch2",
+          "kind": "Sketch"
+        }
+      ],
+      "duration_ms": 8000,
+      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Sketch2: This sketch may establish editable profiles or geometric constraints for a later operation.",
+      "parameters": [
+        {
+          "feature_index": 1,
+          "name": "d4",
+          "expression": "10 mm"
+        },
+        {
+          "feature_index": 1,
+          "name": "d5",
+          "expression": "12 mm"
+        },
+        {
+          "feature_index": 1,
+          "name": "d6",
+          "expression": "10 mm"
+        },
+        {
+          "feature_index": 1,
+          "name": "d8",
+          "expression": "10.00 mm"
+        },
+        {
+          "feature_index": 1,
+          "name": "d9",
+          "expression": "10.00 mm"
+        },
+        {
+          "feature_index": 1,
+          "name": "d10",
+          "expression": "10 mm"
+        },
+        {
+          "feature_index": 1,
+          "name": "d11",
+          "expression": "80.00 mm"
+        },
+        {
+          "feature_index": 1,
+          "name": "d12",
+          "expression": "80.00 mm"
+        }
+      ],
+      "reasoning_source": "simulated"
+    },
+    {
+      "id": "feature-2",
+      "title": "Extrude2",
+      "features": [
+        {
+          "index": 2,
+          "name": "Extrude2",
+          "kind": "ExtrudeFeature"
+        }
+      ],
+      "duration_ms": 8000,
+      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Extrude2: This extrusion may control material thickness, reach, or clearance.",
+      "parameters": [
+        {
+          "feature_index": 2,
+          "name": "d22",
+          "expression": "10.00 mm"
+        },
+        {
+          "feature_index": 2,
+          "name": "d23",
+          "expression": "0.0 deg"
+        }
+      ],
+      "reasoning_source": "simulated"
+    },
+    {
+      "id": "feature-3",
+      "title": "Sketch3",
+      "features": [
+        {
+          "index": 3,
+          "name": "Sketch3",
+          "kind": "Sketch"
+        }
+      ],
+      "duration_ms": 8000,
+      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Sketch3: This sketch may establish editable profiles or geometric constraints for a later operation.",
+      "parameters": [
+        {
+          "feature_index": 3,
+          "name": "d24",
+          "expression": "70 mm"
+        }
+      ],
+      "reasoning_source": "simulated"
+    },
+    {
+      "id": "feature-4",
+      "title": "Extrude3",
+      "features": [
+        {
+          "index": 4,
+          "name": "Extrude3",
+          "kind": "ExtrudeFeature"
+        }
+      ],
+      "duration_ms": 8000,
+      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Extrude3: This extrusion may control material thickness, reach, or clearance.",
+      "parameters": [
+        {
+          "feature_index": 4,
+          "name": "d25",
+          "expression": "80 mm"
+        },
+        {
+          "feature_index": 4,
+          "name": "d26",
+          "expression": "0.0 deg"
+        }
+      ],
+      "reasoning_source": "simulated"
+    },
+    {
+      "id": "feature-5",
+      "title": "Sketch4",
+      "features": [
+        {
+          "index": 5,
+          "name": "Sketch4",
+          "kind": "Sketch"
+        }
+      ],
+      "duration_ms": 8000,
+      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Sketch4: This sketch may establish editable profiles or geometric constraints for a later operation.",
+      "parameters": [
+        {
+          "feature_index": 5,
+          "name": "d27",
+          "expression": "31.14 mm"
+        },
+        {
+          "feature_index": 5,
+          "name": "d28",
+          "expression": "25 mm"
+        },
+        {
+          "feature_index": 5,
+          "name": "d29",
+          "expression": "50 mm"
+        }
+      ],
+      "reasoning_source": "simulated"
+    },
+    {
+      "id": "feature-6",
+      "title": "Sketch5",
+      "features": [
+        {
+          "index": 6,
+          "name": "Sketch5",
+          "kind": "Sketch"
+        }
+      ],
+      "duration_ms": 8000,
+      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Sketch5: This sketch may establish editable profiles or geometric constraints for a later operation.",
+      "parameters": [
+        {
+          "feature_index": 6,
+          "name": "d30",
+          "expression": "25 mm"
+        },
+        {
+          "feature_index": 6,
+          "name": "d31",
+          "expression": "31.14 mm"
+        }
+      ],
+      "reasoning_source": "simulated"
+    },
+    {
+      "id": "feature-7",
+      "title": "Move1",
+      "features": [
+        {
+          "index": 7,
+          "name": "Move1",
+          "kind": "MoveFeature"
+        }
+      ],
+      "duration_ms": 8000,
+      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Move1: This move may adjust alignment or placement relative to other parts.",
+      "parameters": [],
+      "reasoning_source": "simulated"
+    },
+    {
+      "id": "feature-8",
+      "title": "Revolve2",
+      "features": [
+        {
+          "index": 8,
+          "name": "Revolve2",
+          "kind": "RevolveFeature"
+        }
+      ],
+      "duration_ms": 8000,
+      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Revolve2: This revolve may help form a rotationally symmetric part around an axis.",
+      "parameters": [
+        {
+          "feature_index": 8,
+          "name": "d33",
+          "expression": "360.0 deg"
+        }
+      ],
+      "reasoning_source": "simulated"
+    },
+    {
+      "id": "feature-9",
+      "title": "Sketch6",
+      "features": [
+        {
+          "index": 9,
+          "name": "Sketch6",
+          "kind": "Sketch"
+        }
+      ],
+      "duration_ms": 8000,
+      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Sketch6: This sketch may establish editable profiles or geometric constraints for a later operation.",
+      "parameters": [
+        {
+          "feature_index": 9,
+          "name": "d34",
+          "expression": "70 mm"
+        },
+        {
+          "feature_index": 9,
+          "name": "d35",
+          "expression": "70 mm"
+        },
+        {
+          "feature_index": 9,
+          "name": "d36",
+          "expression": "10.00 mm"
+        },
+        {
+          "feature_index": 9,
+          "name": "d37",
+          "expression": "10 mm"
+        },
+        {
+          "feature_index": 9,
+          "name": "d38",
+          "expression": "10 mm"
+        },
+        {
+          "feature_index": 9,
+          "name": "d39",
+          "expression": "10 mm"
+        },
+        {
+          "feature_index": 9,
+          "name": "d40",
+          "expression": "10 mm"
+        }
+      ],
+      "reasoning_source": "simulated"
+    },
+    {
+      "id": "feature-10",
+      "title": "Sketch7",
+      "features": [
+        {
+          "index": 10,
+          "name": "Sketch7",
+          "kind": "Sketch"
+        }
+      ],
+      "duration_ms": 8000,
+      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Sketch7: This sketch may establish editable profiles or geometric constraints for a later operation.",
+      "parameters": [],
+      "reasoning_source": "simulated"
+    },
+    {
+      "id": "feature-11",
+      "title": "Extrude4",
+      "features": [
+        {
+          "index": 11,
+          "name": "Extrude4",
+          "kind": "ExtrudeFeature"
+        }
+      ],
+      "duration_ms": 8000,
+      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Extrude4: This extrusion may control material thickness, reach, or clearance.",
+      "parameters": [
+        {
+          "feature_index": 11,
+          "name": "d41",
+          "expression": "10 mm"
+        },
+        {
+          "feature_index": 11,
+          "name": "d42",
+          "expression": "0.0 deg"
+        }
+      ],
+      "reasoning_source": "simulated"
+    },
+    {
+      "id": "feature-12",
+      "title": "Move2",
+      "features": [
+        {
+          "index": 12,
+          "name": "Move2",
+          "kind": "MoveFeature"
+        }
+      ],
+      "duration_ms": 8000,
+      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Move2: This move may adjust alignment or placement relative to other parts.",
+      "parameters": [],
+      "reasoning_source": "simulated"
+    },
+    {
+      "id": "feature-13",
+      "title": "Move3",
+      "features": [
+        {
+          "index": 13,
+          "name": "Move3",
+          "kind": "MoveFeature"
+        }
+      ],
+      "duration_ms": 8000,
+      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Move3: This move may adjust alignment or placement relative to other parts.",
+      "parameters": [],
+      "reasoning_source": "simulated"
+    },
+    {
+      "id": "feature-14",
+      "title": "Combine1",
+      "features": [
+        {
+          "index": 14,
+          "name": "Combine1",
+          "kind": "CombineFeature"
+        }
+      ],
+      "duration_ms": 8000,
+      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Combine1: This combine may consolidate or remove overlapping volumes.",
+      "parameters": [],
+      "reasoning_source": "simulated"
+    },
+    {
+      "id": "feature-15",
+      "title": "Combine2",
+      "features": [
+        {
+          "index": 15,
+          "name": "Combine2",
+          "kind": "CombineFeature"
+        }
+      ],
+      "duration_ms": 8000,
+      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Combine2: This combine may consolidate or remove overlapping volumes.",
+      "parameters": [],
+      "reasoning_source": "simulated"
+    },
+    {
+      "id": "feature-16",
+      "title": "Sketch8",
+      "features": [
+        {
+          "index": 16,
+          "name": "Sketch8",
+          "kind": "Sketch"
+        }
+      ],
+      "duration_ms": 8000,
+      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Sketch8: This sketch may establish editable profiles or geometric constraints for a later operation.",
+      "parameters": [
+        {
+          "feature_index": 16,
+          "name": "d43",
+          "expression": "20 mm"
+        },
+        {
+          "feature_index": 16,
+          "name": "d44",
+          "expression": "22.5 mm"
+        }
+      ],
+      "reasoning_source": "simulated"
+    },
+    {
+      "id": "feature-17",
+      "title": "Revolve3",
+      "features": [
+        {
+          "index": 17,
+          "name": "Revolve3",
+          "kind": "RevolveFeature"
+        }
+      ],
+      "duration_ms": 8000,
+      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Revolve3: This revolve may help form a rotationally symmetric part around an axis.",
+      "parameters": [
+        {
+          "feature_index": 17,
+          "name": "d45",
+          "expression": "360.0 deg"
+        }
+      ],
+      "reasoning_source": "simulated"
+    },
+    {
+      "id": "feature-18",
+      "title": "Move4",
+      "features": [
+        {
+          "index": 18,
+          "name": "Move4",
+          "kind": "MoveFeature"
+        }
+      ],
+      "duration_ms": 8000,
+      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Move4: This move may adjust alignment or placement relative to other parts.",
+      "parameters": [],
+      "reasoning_source": "simulated"
+    },
+    {
+      "id": "feature-19",
+      "title": "OffsetFaces1",
+      "features": [
+        {
+          "index": 19,
+          "name": "OffsetFaces1",
+          "kind": "OffsetFacesFeature"
+        }
+      ],
+      "duration_ms": 8000,
+      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). OffsetFaces1: The offset may adjust local fit, thickness, or clearance.",
+      "parameters": [
+        {
+          "feature_index": 19,
+          "name": "d46",
+          "expression": "30.00 mm"
+        }
+      ],
+      "reasoning_source": "simulated"
+    },
+    {
+      "id": "feature-20",
+      "title": "OffsetFaces2",
+      "features": [
+        {
+          "index": 20,
+          "name": "OffsetFaces2",
+          "kind": "OffsetFacesFeature"
+        }
+      ],
+      "duration_ms": 8000,
+      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). OffsetFaces2: The offset may adjust local fit, thickness, or clearance.",
+      "parameters": [
+        {
+          "feature_index": 20,
+          "name": "d47",
+          "expression": "40.00 mm"
+        }
+      ],
+      "reasoning_source": "simulated"
+    },
+    {
+      "id": "feature-21",
+      "title": "Combine3",
+      "features": [
+        {
+          "index": 21,
+          "name": "Combine3",
+          "kind": "CombineFeature"
+        }
+      ],
+      "duration_ms": 8000,
+      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Combine3: This combine may consolidate or remove overlapping volumes.",
+      "parameters": [],
+      "reasoning_source": "simulated"
+    },
+    {
+      "id": "feature-22",
+      "title": "Move5",
+      "features": [
+        {
+          "index": 22,
+          "name": "Move5",
+          "kind": "MoveFeature"
+        }
+      ],
+      "duration_ms": 8000,
+      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Move5: This move may adjust alignment or placement relative to other parts.",
+      "parameters": [],
+      "reasoning_source": "simulated"
+    },
+    {
+      "id": "feature-23",
+      "title": "Sketch9",
+      "features": [
+        {
+          "index": 23,
+          "name": "Sketch9",
+          "kind": "Sketch"
+        }
+      ],
+      "duration_ms": 8000,
+      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Sketch9: This sketch may establish editable profiles or geometric constraints for a later operation.",
+      "parameters": [
+        {
+          "feature_index": 23,
+          "name": "d48",
+          "expression": "60 mm"
+        },
+        {
+          "feature_index": 23,
+          "name": "d49",
+          "expression": "60 mm"
+        },
+        {
+          "feature_index": 23,
+          "name": "d50",
+          "expression": "8 mm"
+        },
+        {
+          "feature_index": 23,
+          "name": "d51",
+          "expression": "8 mm"
+        },
+        {
+          "feature_index": 23,
+          "name": "d52",
+          "expression": "8 mm"
+        },
+        {
+          "feature_index": 23,
+          "name": "d53",
+          "expression": "8 mm"
+        }
+      ],
+      "reasoning_source": "simulated"
+    },
+    {
+      "id": "feature-24",
+      "title": "Extrude5",
+      "features": [
+        {
+          "index": 24,
+          "name": "Extrude5",
+          "kind": "ExtrudeFeature"
+        }
+      ],
+      "duration_ms": 8000,
+      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Extrude5: This extrusion may control material thickness, reach, or clearance.",
+      "parameters": [
+        {
+          "feature_index": 24,
+          "name": "d54",
+          "expression": "4 mm"
+        },
+        {
+          "feature_index": 24,
+          "name": "d55",
+          "expression": "0.0 deg"
+        }
+      ],
+      "reasoning_source": "simulated"
+    },
+    {
+      "id": "feature-25",
+      "title": "Move6",
+      "features": [
+        {
+          "index": 25,
+          "name": "Move6",
+          "kind": "MoveFeature"
+        }
+      ],
+      "duration_ms": 8000,
+      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Move6: This move may adjust alignment or placement relative to other parts.",
+      "parameters": [],
+      "reasoning_source": "simulated"
+    },
+    {
+      "id": "feature-26",
+      "title": "Move7",
+      "features": [
+        {
+          "index": 26,
+          "name": "Move7",
+          "kind": "MoveFeature"
+        }
+      ],
+      "duration_ms": 8000,
+      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Move7: This move may adjust alignment or placement relative to other parts.",
+      "parameters": [],
+      "reasoning_source": "simulated"
+    },
+    {
+      "id": "feature-27",
+      "title": "Move8",
+      "features": [
+        {
+          "index": 27,
+          "name": "Move8",
+          "kind": "MoveFeature"
+        }
+      ],
+      "duration_ms": 8000,
+      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Move8: This move may adjust alignment or placement relative to other parts.",
+      "parameters": [],
+      "reasoning_source": "simulated"
+    },
+    {
+      "id": "feature-28",
+      "title": "CopyPasteBodies1",
+      "features": [
+        {
+          "index": 28,
+          "name": "CopyPasteBodies1",
+          "kind": "CopyPasteBody"
+        }
+      ],
+      "duration_ms": 8000,
+      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). CopyPasteBodies1: The purpose of this modeling operation is not known.",
+      "parameters": [],
+      "reasoning_source": "simulated"
+    },
+    {
+      "id": "feature-29",
+      "title": "Move9",
+      "features": [
+        {
+          "index": 29,
+          "name": "Move9",
+          "kind": "MoveFeature"
+        }
+      ],
+      "duration_ms": 8000,
+      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Move9: This move may adjust alignment or placement relative to other parts.",
+      "parameters": [],
+      "reasoning_source": "simulated"
+    },
+    {
+      "id": "feature-30",
+      "title": "CopyPasteBodies2",
+      "features": [
+        {
+          "index": 30,
+          "name": "CopyPasteBodies2",
+          "kind": "CopyPasteBody"
+        }
+      ],
+      "duration_ms": 8000,
+      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). CopyPasteBodies2: The purpose of this modeling operation is not known.",
+      "parameters": [],
+      "reasoning_source": "simulated"
+    },
+    {
+      "id": "feature-31",
+      "title": "Move10",
+      "features": [
+        {
+          "index": 31,
+          "name": "Move10",
+          "kind": "MoveFeature"
+        }
+      ],
+      "duration_ms": 8000,
+      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Move10: This move may adjust alignment or placement relative to other parts.",
+      "parameters": [],
+      "reasoning_source": "simulated"
+    },
+    {
+      "id": "feature-32",
+      "title": "CopyPasteBodies3",
+      "features": [
+        {
+          "index": 32,
+          "name": "CopyPasteBodies3",
+          "kind": "CopyPasteBody"
+        }
+      ],
+      "duration_ms": 8000,
+      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). CopyPasteBodies3: The purpose of this modeling operation is not known.",
+      "parameters": [],
+      "reasoning_source": "simulated"
+    },
+    {
+      "id": "feature-33",
+      "title": "Move11",
+      "features": [
+        {
+          "index": 33,
+          "name": "Move11",
+          "kind": "MoveFeature"
+        }
+      ],
+      "duration_ms": 8000,
+      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Move11: This move may adjust alignment or placement relative to other parts.",
+      "parameters": [],
+      "reasoning_source": "simulated"
+    },
+    {
+      "id": "feature-34",
+      "title": "Sketch10",
+      "features": [
+        {
+          "index": 34,
+          "name": "Sketch10",
+          "kind": "Sketch"
+        }
+      ],
+      "duration_ms": 8000,
+      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Sketch10: This sketch may establish editable profiles or geometric constraints for a later operation.",
+      "parameters": [
+        {
+          "feature_index": 34,
+          "name": "d56",
+          "expression": "45 mm"
+        }
+      ],
+      "reasoning_source": "simulated"
+    },
+    {
+      "id": "feature-35",
+      "title": "Sketch11",
+      "features": [
+        {
+          "index": 35,
+          "name": "Sketch11",
+          "kind": "Sketch"
+        }
+      ],
+      "duration_ms": 8000,
+      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Sketch11: This sketch may establish editable profiles or geometric constraints for a later operation.",
+      "parameters": [
+        {
+          "feature_index": 35,
+          "name": "d58",
+          "expression": "20 mm"
+        },
+        {
+          "feature_index": 35,
+          "name": "d59",
+          "expression": "40 mm"
+        },
+        {
+          "feature_index": 35,
+          "name": "d60",
+          "expression": "20 mm"
+        },
+        {
+          "feature_index": 35,
+          "name": "d61",
+          "expression": "20 mm"
+        },
+        {
+          "feature_index": 35,
+          "name": "d62",
+          "expression": "10.00 mm"
+        },
+        {
+          "feature_index": 35,
+          "name": "d63",
+          "expression": "8.00 mm"
+        },
+        {
+          "feature_index": 35,
+          "name": "d64",
+          "expression": "10.00 mm"
+        },
+        {
+          "feature_index": 35,
+          "name": "d65",
+          "expression": "7.00 mm"
+        }
+      ],
+      "reasoning_source": "simulated"
+    },
+    {
+      "id": "feature-36",
+      "title": "Extrude6",
+      "features": [
+        {
+          "index": 36,
+          "name": "Extrude6",
+          "kind": "ExtrudeFeature"
+        }
+      ],
+      "duration_ms": 8000,
+      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Extrude6: This extrusion may control material thickness, reach, or clearance.",
+      "parameters": [
+        {
+          "feature_index": 36,
+          "name": "d66",
+          "expression": "-60.00 mm"
+        },
+        {
+          "feature_index": 36,
+          "name": "d67",
+          "expression": "0.0 deg"
+        }
+      ],
+      "reasoning_source": "simulated"
+    },
+    {
+      "id": "feature-37",
+      "title": "Extrude7",
+      "features": [
+        {
+          "index": 37,
+          "name": "Extrude7",
+          "kind": "ExtrudeFeature"
+        }
+      ],
+      "duration_ms": 8000,
+      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Extrude7: This extrusion may control material thickness, reach, or clearance.",
+      "parameters": [
+        {
+          "feature_index": 37,
+          "name": "d68",
+          "expression": "4 mm"
+        },
+        {
+          "feature_index": 37,
+          "name": "d69",
+          "expression": "0.0 deg"
+        }
+      ],
+      "reasoning_source": "simulated"
+    },
+    {
+      "id": "feature-38",
+      "title": "Sketch12",
+      "features": [
+        {
+          "index": 38,
+          "name": "Sketch12",
+          "kind": "Sketch"
+        }
+      ],
+      "duration_ms": 8000,
+      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Sketch12: This sketch may establish editable profiles or geometric constraints for a later operation.",
+      "parameters": [
+        {
+          "feature_index": 38,
+          "name": "d70",
+          "expression": "18 mm"
+        }
+      ],
+      "reasoning_source": "simulated"
+    },
+    {
+      "id": "feature-39",
+      "title": "Extrude8",
+      "features": [
+        {
+          "index": 39,
+          "name": "Extrude8",
+          "kind": "ExtrudeFeature"
+        }
+      ],
+      "duration_ms": 8000,
+      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Extrude8: This extrusion may control material thickness, reach, or clearance.",
+      "parameters": [
+        {
+          "feature_index": 39,
+          "name": "d71",
+          "expression": "-90.00 mm"
+        },
+        {
+          "feature_index": 39,
+          "name": "d72",
+          "expression": "0.0 deg"
+        }
+      ],
+      "reasoning_source": "simulated"
+    },
+    {
+      "id": "feature-40",
+      "title": "Sketch13",
+      "features": [
+        {
+          "index": 40,
+          "name": "Sketch13",
+          "kind": "Sketch"
+        }
+      ],
+      "duration_ms": 8000,
+      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Sketch13: This sketch may establish editable profiles or geometric constraints for a later operation.",
+      "parameters": [
+        {
+          "feature_index": 40,
+          "name": "d73",
+          "expression": "22 mm"
+        },
+        {
+          "feature_index": 40,
+          "name": "d74",
+          "expression": "12 mm"
+        }
+      ],
+      "reasoning_source": "simulated"
+    },
+    {
+      "id": "feature-41",
+      "title": "Extrude9",
+      "features": [
+        {
+          "index": 41,
+          "name": "Extrude9",
+          "kind": "ExtrudeFeature"
+        }
+      ],
+      "duration_ms": 8000,
+      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Extrude9: This extrusion may control material thickness, reach, or clearance.",
+      "parameters": [
+        {
+          "feature_index": 41,
+          "name": "d75",
+          "expression": "30.00 mm"
+        },
+        {
+          "feature_index": 41,
+          "name": "d76",
+          "expression": "0.0 deg"
+        }
+      ],
+      "reasoning_source": "simulated"
+    },
+    {
+      "id": "feature-42",
+      "title": "Move12",
+      "features": [
+        {
+          "index": 42,
+          "name": "Move12",
+          "kind": "MoveFeature"
+        }
+      ],
+      "duration_ms": 8000,
+      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Move12: This move may adjust alignment or placement relative to other parts.",
+      "parameters": [],
+      "reasoning_source": "simulated"
+    },
+    {
+      "id": "feature-43",
+      "title": "Sketch14",
+      "features": [
+        {
+          "index": 43,
+          "name": "Sketch14",
+          "kind": "Sketch"
+        }
+      ],
+      "duration_ms": 8000,
+      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Sketch14: This sketch may establish editable profiles or geometric constraints for a later operation.",
+      "parameters": [
+        {
+          "feature_index": 43,
+          "name": "d77",
+          "expression": "8.5 mm"
+        }
+      ],
+      "reasoning_source": "simulated"
+    },
+    {
+      "id": "feature-44",
+      "title": "Extrude10",
+      "features": [
+        {
+          "index": 44,
+          "name": "Extrude10",
+          "kind": "ExtrudeFeature"
+        }
+      ],
+      "duration_ms": 8000,
+      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Extrude10: This extrusion may control material thickness, reach, or clearance.",
+      "parameters": [
+        {
+          "feature_index": 44,
+          "name": "d78",
+          "expression": "-450.00 mm"
+        },
+        {
+          "feature_index": 44,
+          "name": "d79",
+          "expression": "0.0 deg"
+        }
+      ],
+      "reasoning_source": "simulated"
+    },
+    {
+      "id": "feature-45",
+      "title": "Sketch15",
+      "features": [
+        {
+          "index": 45,
+          "name": "Sketch15",
+          "kind": "Sketch"
+        }
+      ],
+      "duration_ms": 8000,
+      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Sketch15: This sketch may establish editable profiles or geometric constraints for a later operation.",
+      "parameters": [
+        {
+          "feature_index": 45,
+          "name": "d80",
+          "expression": "50 mm"
+        },
+        {
+          "feature_index": 45,
+          "name": "d81",
+          "expression": "12 mm"
+        }
+      ],
+      "reasoning_source": "simulated"
+    },
+    {
+      "id": "feature-46",
+      "title": "Extrude11",
+      "features": [
+        {
+          "index": 46,
+          "name": "Extrude11",
+          "kind": "ExtrudeFeature"
+        }
+      ],
+      "duration_ms": 8000,
+      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Extrude11: This extrusion may control material thickness, reach, or clearance.",
+      "parameters": [
+        {
+          "feature_index": 46,
+          "name": "d82",
+          "expression": "10 mm"
+        },
+        {
+          "feature_index": 46,
+          "name": "d83",
+          "expression": "0.0 deg"
+        }
+      ],
+      "reasoning_source": "simulated"
+    },
+    {
+      "id": "feature-47",
+      "title": "Move13",
+      "features": [
+        {
+          "index": 47,
+          "name": "Move13",
+          "kind": "MoveFeature"
+        }
+      ],
+      "duration_ms": 8000,
+      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Move13: This move may adjust alignment or placement relative to other parts.",
+      "parameters": [],
+      "reasoning_source": "simulated"
+    },
+    {
+      "id": "feature-48",
+      "title": "Move14",
+      "features": [
+        {
+          "index": 48,
+          "name": "Move14",
+          "kind": "MoveFeature"
+        }
+      ],
+      "duration_ms": 8000,
+      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Move14: This move may adjust alignment or placement relative to other parts.",
+      "parameters": [],
+      "reasoning_source": "simulated"
+    },
+    {
+      "id": "feature-49",
+      "title": "Move15",
+      "features": [
+        {
+          "index": 49,
+          "name": "Move15",
+          "kind": "MoveFeature"
+        }
+      ],
+      "duration_ms": 8000,
+      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Move15: This move may adjust alignment or placement relative to other parts.",
+      "parameters": [],
+      "reasoning_source": "simulated"
+    },
+    {
+      "id": "feature-50",
+      "title": "Mirror1",
+      "features": [
+        {
+          "index": 50,
+          "name": "Mirror1",
+          "kind": "MirrorFeature"
+        }
+      ],
+      "duration_ms": 8000,
+      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Mirror1: A mirrored feature may help maintain symmetry.",
+      "parameters": [],
+      "reasoning_source": "simulated"
+    },
+    {
+      "id": "feature-51",
+      "title": "Sketch16",
+      "features": [
+        {
+          "index": 51,
+          "name": "Sketch16",
+          "kind": "Sketch"
+        }
+      ],
+      "duration_ms": 8000,
+      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Sketch16: This sketch may establish editable profiles or geometric constraints for a later operation.",
+      "parameters": [
+        {
+          "feature_index": 51,
+          "name": "d86",
+          "expression": "130 mm"
+        },
+        {
+          "feature_index": 51,
+          "name": "d87",
+          "expression": "70 mm"
+        }
+      ],
+      "reasoning_source": "simulated"
+    },
+    {
+      "id": "feature-52",
+      "title": "Extrude12",
+      "features": [
+        {
+          "index": 52,
+          "name": "Extrude12",
+          "kind": "ExtrudeFeature"
+        }
+      ],
+      "duration_ms": 8000,
+      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Extrude12: This extrusion may control material thickness, reach, or clearance.",
+      "parameters": [
+        {
+          "feature_index": 52,
+          "name": "d88",
+          "expression": "10.00 mm"
+        },
+        {
+          "feature_index": 52,
+          "name": "d89",
+          "expression": "0.0 deg"
+        }
+      ],
+      "reasoning_source": "simulated"
+    },
+    {
+      "id": "feature-53",
+      "title": "Extrude13",
+      "features": [
+        {
+          "index": 53,
+          "name": "Extrude13",
+          "kind": "ExtrudeFeature"
+        }
+      ],
+      "duration_ms": 8000,
+      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Extrude13: This extrusion may control material thickness, reach, or clearance.",
+      "parameters": [
+        {
+          "feature_index": 53,
+          "name": "d90",
+          "expression": "50.00 mm"
+        },
+        {
+          "feature_index": 53,
+          "name": "d91",
+          "expression": "0.0 deg"
+        }
+      ],
+      "reasoning_source": "simulated"
+    },
+    {
+      "id": "feature-54",
+      "title": "Combine4",
+      "features": [
+        {
+          "index": 54,
+          "name": "Combine4",
+          "kind": "CombineFeature"
+        }
+      ],
+      "duration_ms": 8000,
+      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Combine4: This combine may consolidate or remove overlapping volumes.",
+      "parameters": [],
+      "reasoning_source": "simulated"
+    },
+    {
+      "id": "feature-55",
+      "title": "Move16",
+      "features": [
+        {
+          "index": 55,
+          "name": "Move16",
+          "kind": "MoveFeature"
+        }
+      ],
+      "duration_ms": 8000,
+      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Move16: This move may adjust alignment or placement relative to other parts.",
+      "parameters": [],
+      "reasoning_source": "simulated"
+    },
+    {
+      "id": "feature-56",
+      "title": "Move17",
+      "features": [
+        {
+          "index": 56,
+          "name": "Move17",
+          "kind": "MoveFeature"
+        }
+      ],
+      "duration_ms": 8000,
+      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Move17: This move may adjust alignment or placement relative to other parts.",
+      "parameters": [],
+      "reasoning_source": "simulated"
+    },
+    {
+      "id": "feature-57",
+      "title": "Sketch17",
+      "features": [
+        {
+          "index": 57,
+          "name": "Sketch17",
+          "kind": "Sketch"
+        }
+      ],
+      "duration_ms": 8000,
+      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Sketch17: This sketch may establish editable profiles or geometric constraints for a later operation.",
+      "parameters": [],
+      "reasoning_source": "simulated"
+    },
+    {
+      "id": "feature-58",
+      "title": "Extrude14",
+      "features": [
+        {
+          "index": 58,
+          "name": "Extrude14",
+          "kind": "ExtrudeFeature"
+        }
+      ],
+      "duration_ms": 8000,
+      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Extrude14: This extrusion may control material thickness, reach, or clearance.",
+      "parameters": [
+        {
+          "feature_index": 58,
+          "name": "d92",
+          "expression": "50.00 mm"
+        },
+        {
+          "feature_index": 58,
+          "name": "d93",
+          "expression": "0.0 deg"
+        }
+      ],
+      "reasoning_source": "simulated"
+    },
+    {
+      "id": "feature-59",
+      "title": "Revolve1",
+      "features": [
+        {
+          "index": 59,
+          "name": "Revolve1",
+          "kind": "RevolveFeature"
+        }
+      ],
+      "duration_ms": 8000,
+      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Revolve1: This revolve may help form a rotationally symmetric part around an axis.",
+      "parameters": [
+        {
+          "feature_index": 59,
+          "name": "d32",
+          "expression": "360.0 deg"
+        }
+      ],
+      "reasoning_source": "simulated"
+    }
+  ]
+}

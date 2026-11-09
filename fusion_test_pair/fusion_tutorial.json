@@ -1,0 +1,9 @@
+{
+  "format": "excadmple-pair",
+  "version": 1,
+  "title": "Fusion Real Model Test",
+  "model": "fusion(3).f3d",
+  "auto_generate": true,
+  "step_duration_ms": 8000,
+  "steps": []
+}
