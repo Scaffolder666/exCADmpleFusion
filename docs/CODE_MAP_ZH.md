@@ -21,11 +21,11 @@ exCADmpleFusion.py                 Fusion Add-in 入口
   │    ├─ core/him_fusion.py      Fusion API 适配
   │    ├─ core/him_wireframe.py   BRep ghost wireframe
   │    └─ core/him_filter.py      几何选择历史过滤
-  └─ ui/reference.html/js/css     HiM 参考窗口的控制和语音/动画同步
-       └─ ui/him_frame_clock.js   等待 Fusion 帧完成后的自适应调度
+  └─ ui/reference/index.html + player.js + style.css     HiM 参考窗口的控制和语音/动画同步
+       └─ ui/reference/frame_clock.js   等待 Fusion 帧完成后的自适应调度
 ```
 
-**注意：** `ui/player.js` + `ui/index.html` 是 overlay（版本 B）的播放器，**不是** HiM 参考窗口。修改 HiM 播放/语音时优先检查 `ui/reference.js`，不要只改 `player.js`。
+**注意：** `ui/overlay/player.js` + `ui/overlay/index.html` 是 overlay（版本 B）的播放器，**不是** HiM 参考窗口。修改 HiM 播放/语音时优先检查 `ui/reference/player.js`，不要只改 `player.js`。
 
 ## 示例与真实模型
 
@@ -39,8 +39,8 @@ exCADmpleFusion.py                 Fusion Add-in 入口
 
 ```bash
 python -m unittest discover -s tests -v
-node --check ui/reference.js
-node --check ui/player.js
+node --check ui/reference/player.js
+node --check ui/overlay/player.js
 node tests/test_him_frame_clock.js
 node tests/test_reference_scrubbing.js
 ```
@@ -49,7 +49,7 @@ node tests/test_reference_scrubbing.js
 
 ## 后续修改约定
 
-1. UI 与播放状态：`ui/reference.js`；CAD 逻辑：`core/him_reference.py`，避免互相复制控制状态。
+1. UI 与播放状态：`ui/reference/player.js`；CAD 逻辑：`core/him_reference.py`，避免互相复制控制状态。
 2. 模型参数动画：`core/him_motion.py`，不要为不支持的 Feature 伪造几何增长。
 3. 新真实模型先走 JSON + F3D 配对流程，不要改写 Phone Stand 示例。
 4. 保持原始 `.f3d` 不变，动画只作用于临时参考副本。
