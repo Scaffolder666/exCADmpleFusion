@@ -4,7 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>exCADmple · Reference</title>
-  <link rel="stylesheet" href="style.css">
+  <!-- Assets carry the page's ?v= version so Fusion never runs a cached
+       old copy after the add-in is updated. -->
+  <script>document.write('<link rel="stylesheet" href="style.css' + location.search + '">');</script>
 </head>
 <body>
   <!-- Version A control panel. It runs in the second (reference) Fusion
@@ -46,8 +48,10 @@
     <p id="status" class="status" role="status" aria-live="polite"></p>
   </footer>
   <audio id="audio" preload="metadata"></audio>
-  <script src="frame_clock.js"></script>
-  <script src="player.js"></script>
+  <script>
+    document.write('<script src="frame_clock.js' + location.search + '"><\/script>' +
+                   '<script src="player.js' + location.search + '"><\/script>');
+  </script>
 </body>
 </html>
 

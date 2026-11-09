@@ -44,7 +44,7 @@ from core.session_recorder import SessionRecorder
 from core.playback.tool_guide import ToolGuide
 
 # Shown in the panel at start so it is clear which code Fusion is running.
-BUILD = "same-viewport 2026-11-09 · tool guide v2"
+BUILD = "same-viewport 2026-11-09 · tool guide v3"
 PALETTE_ID = "excadmple_fusion_player"
 COMMAND_ID = "excadmple_fusion_open"
 REFERENCE_COMMAND_ID = "excadmple_fusion_reference_open"
@@ -303,6 +303,10 @@ class PaletteHandler(adsk.core.HTMLEventHandler):
         global _step_index, _filtering, _last_shown
         try:
             command = args.action
+            if command == "response":
+                # Fusion echoes the panel's reply to sendInfoToHTML back as a
+                # "response" event. It is an acknowledgement, not a request.
+                return
             body = json.loads(args.data or "{}")
             if command == "ready":
                 if _package:
@@ -541,6 +545,18 @@ def _start_link():
         _session = ReferenceSession(_app, _ui, lambda message: _app.log("exCADmple reference: " + message))
 
 
+def _panel_url(folder):
+    """The panel page, with a version taken from its files' modification
+    times: Fusion's browser otherwise keeps running a cached old player.js
+    after the add-in is updated."""
+    base = ROOT / "ui" / folder
+    try:
+        stamp = int(max(p.stat().st_mtime for p in base.iterdir() if p.is_file()))
+    except (OSError, ValueError):
+        stamp = 0
+    return (base / "index.html").resolve().as_uri() + "?v={}".format(stamp)
+
+
 def _create_palette():
     global _palette
     _palette = _ui.palettes.itemById(PALETTE_ID)
@@ -548,12 +564,12 @@ def _create_palette():
         _palette.deleteMe()          # the layout may have changed
     if ROLE == REFERENCE:
         # Version A: HiM control panel beside the reference instance's canvas.
-        _palette = _ui.palettes.add2(PALETTE_ID, "exCADmple ", (ROOT / "ui" / "reference" / "index.html").resolve().as_uri(),
+        _palette = _ui.palettes.add2(PALETTE_ID, "exCADmple ", _panel_url("reference"),
                                      True, True, True, 340, 740)
         _palette.dockingState = adsk.core.PaletteDockingStates.PaletteDockStateRight
     else:
         # Version B: a compact tutorial floating over the Fusion canvas.
-        _palette = _ui.palettes.add2(PALETTE_ID, "exCADmple · Tutorial", (ROOT / "ui" / "overlay" / "index.html").resolve().as_uri(),
+        _palette = _ui.palettes.add2(PALETTE_ID, "exCADmple · Tutorial", _panel_url("overlay"),
                                      True, True, True, 340, 640)
         _palette.dockingState = adsk.core.PaletteDockingStates.PaletteDockStateFloating
         try:
