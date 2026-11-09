@@ -325,7 +325,7 @@ function tick(now) {
     if (S.frameClock && !S.stepPending && !S.waitingForNarration) S.frameClock.tick(dt, S.speed);
     // Do not rebuild up to 150 timeline cards at 60 FPS while the CAD
     // kernel is busy computing a single native animation frame.
-    if (!S.inFlight) render();
+    if (!S.inFlight) render(true);
   }
   requestAnimationFrame(tick);
 }
@@ -408,7 +408,19 @@ function card(item) {
   return box;
 }
 
-function render() {
+// light: called from the playback loop. The step list is rebuilt only when
+// what it shows changed (step, clip, filter, current sentence, live
+// operation); otherwise only the progress bar moves.
+function railKey() {
+  const item = steps()[S.index];
+  let active = -1;
+  ((item && item.cues) || []).forEach((c, i) => { if (c.at_ms <= S.elapsed) active = i; });
+  const shown = S.shown && S.shown.step === S.index
+    ? [S.shown.feature, S.shown.fallback, S.shown.context_fallback] : null;
+  return JSON.stringify([S.index, S.clip, S.filtered, S.tags, active, shown,
+                         (S.plan[S.index] || []).length]);
+}
+function render(light = false) {
   if (!S.example) return;
   const progress = Math.max(0, Math.min(1, S.elapsed / duration()));
   const timing = clipTiming();
@@ -458,7 +470,7 @@ function render() {
       }
       // Paused/manual scrubbing and rapid step changes need a fresh frame,
       // but never dispatch overlapping expensive Fusion recomputations.
-      if (S.manualFrame || S.playing || S.overviewPending) render();
+      if (S.manualFrame || S.playing || S.overviewPending) render(S.playing && !S.manualFrame);
     });
   }
   $("play").innerHTML = '<span class="control-icon ' + (S.playing ? "pause-icon" : "play-icon") + '" aria-hidden="true"></span>';
@@ -472,6 +484,13 @@ function render() {
   $("showMore").hidden = !S.filtered || !S.canMore;
   $("showAll").hidden = !S.filtered;
   const rail = $("rail");
+  const key = railKey();
+  const fill = light && key === S.railKey ? rail.querySelector(".step.current .progress span") : null;
+  if (fill) {
+    fill.style.width = Math.round(progress * 100) + "%";
+    return;
+  }
+  S.railKey = key;
   rail.replaceChildren();
   S.clip.forEach((i) => {
     const item = steps()[i];

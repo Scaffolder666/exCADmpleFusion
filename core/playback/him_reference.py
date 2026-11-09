@@ -16,6 +16,8 @@ The copy is never saved. Every changed parameter is restored.
 If a package has no source model, the recorded step geometry is drawn
 instead (Custom Graphics), and the panel says so.
 """
+import time
+
 import adsk.core
 import adsk.fusion
 
@@ -50,6 +52,7 @@ class ReferenceSession:
         self.source_name = ""
         self.plan = []              # per step: how each feature is shown
         self.last_error = ""
+        self.last_timing = None
         # Same viewport: the user's Design stays active and editable; the
         # reference is drawn into it. The reference keeps its own document
         # and Timeline, never merged into the user's.
@@ -325,8 +328,11 @@ class ReferenceSession:
                 self.him.clip = [items[position]]
                 self.him.active_position = None
                 self.current = key
+            started = time.perf_counter()
             self.him._render(Frame(0, local))
+            computed = time.perf_counter()
             self.present(changing=self._changing_tokens())
+            self._note_timing(items[position], computed - started, time.perf_counter() - computed)
         except Exception as error:
             self.last_error = "{}: {}".format(items[position].name, error)
             self.log("HiM frame: " + self.last_error)
@@ -375,6 +381,19 @@ class ReferenceSession:
         except Exception as error:
             self.log("HiM geometry guidance: " + str(error))
         self.present()
+
+    SLOW_FRAME_SECONDS = 0.25
+
+    def _note_timing(self, feature, compute_seconds, display_seconds):
+        """Keep the last frame's timing; log slow frames so a slow model can
+        be diagnosed (Fusion recompute vs drawing in the user's viewport)."""
+        self.last_timing = {"feature": feature.name, "kind": feature.kind,
+                            "compute_ms": round(compute_seconds * 1000),
+                            "display_ms": round(display_seconds * 1000)}
+        if compute_seconds + display_seconds > self.SLOW_FRAME_SECONDS:
+            self.log("Slow frame {} ({}): recompute {} ms, reference display {} ms".format(
+                feature.name, feature.kind, self.last_timing["compute_ms"],
+                self.last_timing["display_ms"]))
 
     def _changing_tokens(self):
         """Bodies recomputed by the active parameter frame."""

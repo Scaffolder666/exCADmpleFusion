@@ -1014,13 +1014,14 @@ class HiMController:
         prepared = self.active
         if prepared["mode"] == PARAMETRIC:
             failure = None
-            for key, param, target in prepared["params"]:
-                try:
-                    param.value = interpolate(target, frame.progress)
-                except Exception as error:
-                    failure = "Fusion rejected {} = {:.4g}: {}".format(
-                        key, interpolate(target, frame.progress), error)
-                    break
+            if not self._set_together(prepared["params"], frame.progress):
+                for key, param, target in prepared["params"]:
+                    try:
+                        param.value = interpolate(target, frame.progress)
+                    except Exception as error:
+                        failure = "Fusion rejected {} = {:.4g}: {}".format(
+                            key, interpolate(target, frame.progress), error)
+                        break
             if failure is None and _feature_failed(prepared["entity"]):
                 failure = "the feature failed to compute at this parameter value"
             if failure is not None:
@@ -1028,6 +1029,25 @@ class HiMController:
         if prepared["mode"] in (FADE, PARAMETRIC):
             self._draw_overlay(prepared, frame.progress)
         self._refresh()
+
+    def _set_together(self, params, progress):
+        """Several parameters of one feature (two-sided extrude, pattern
+        X/Y, hole depth + diameter) in ONE recompute via
+        Design.modifyParameters, instead of one recompute per parameter.
+        False when not applicable or not available: set them one by one."""
+        if len(params) < 2:
+            return False
+        design = self.design()
+        modify = getattr(design, "modifyParameters", None)
+        if modify is None:
+            return False
+        try:
+            values = [adsk.core.ValueInput.createByReal(interpolate(target, progress))
+                      for _, _, target in params]
+            return modify([param for _, param, _ in params], values) is not False
+        except Exception as error:
+            self.log("HiM: batched parameter update unavailable: " + str(error))
+            return False
 
     def _fallback(self, prepared, reason):
         """A parameter frame failed: put the real values back and show this
