@@ -10,7 +10,7 @@
 1. 打开 https://github.com/Scaffolder666/exCADmpleFusion/tree/fusion-him ，点击 Code → Download ZIP，解压完整仓库；不要只下载 Python 入口。
 2. 关闭 Fusion。若之前安装过旧版，停止旧 Add-in 并用本分支完整文件替换，避免同名旧插件同时运行。
 3. 打开 Fusion → **Utilities → Scripts and Add-Ins → Add-Ins → +**，选择解压的整个 `exCADmpleFusion` 文件夹，运行插件。需要时勾选 **Run on Startup**。
-4. `fusion-him` 是独立参考窗口布局：在工具栏点击 **exCADmple Reference window**；如果没有第二个窗口，按仓库 README 的说明在第二个 Fusion 实例中运行 Add-in。参考窗口右侧才是 `ui/reference.js` 控制面板。
+4. `fusion-him` 是独立参考窗口布局：在工具栏点击 **exCADmple Reference window**；如果没有第二个窗口，按仓库 README 的说明在第二个 Fusion 实例中运行 Add-in。参考窗口右侧才是 `ui/reference/player.js` 控制面板。
 
 ## 2. 准备测试文件（仓库已经提供）
 
