@@ -31,14 +31,23 @@ function secs(ms) {
   return String(Math.floor(whole / 60)).padStart(2, "0") + ":" + String(whole % 60).padStart(2, "0");
 }
 const step = () => state.example?.steps[state.index] || null;
-const duration = () => step()?.duration_ms || 8000;
+const animationDuration = () => step()?.duration_ms || 8000;
+const duration = () => {
+  const media = mediaMaster();
+  const recorded = media && Number.isFinite(media.duration) ? Math.max(0, media.duration - mediaOffset()) * 1000 : 0;
+  return Math.max(animationDuration(), recorded);
+};
 const playbackSpeed = () => Number($("playbackSpeed").value) || 1;
 const hasRecordedVoice = () => !!(audio.getAttribute("src") || video.getAttribute("src"));
 
 /* ---------- voice: the recording, or synthetic speech of the transcript ---------- */
 let spokenCue = -1;
+let speechPending = false;
+let speechGeneration = 0;
 function stopNarration() {
   spokenCue = -1;
+  speechPending = false;
+  speechGeneration++;
   if ("speechSynthesis" in window) window.speechSynthesis.cancel();
 }
 function speakCue(index) {
@@ -46,10 +55,13 @@ function speakCue(index) {
   if (!("speechSynthesis" in window) || index < 0 || index === spokenCue) return;
   spokenCue = index;
   window.speechSynthesis.cancel();
+  const generation = ++speechGeneration;
   const text = step()?.cues?.[index]?.label;
   if (!text) return;
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.rate = Math.max(0.5, Math.min(2, playbackSpeed()));
+  speechPending = true;
+  utterance.onend = utterance.onerror = () => { if (generation === speechGeneration) speechPending = false; };
   window.speechSynthesis.speak(utterance);
 }
 function mediaOffset() { return (step()?.media?.offset_ms || 0) / 1000; }
@@ -158,6 +170,14 @@ function renderDetails() {
   if (media.video) video.src = media.video;
   if (media.audio) audio.src = media.audio;
   video.muted = !!media.audio;
+  for (const element of [video, audio]) {
+    element.onloadedmetadata = () => {
+      if (element.getAttribute("src")) {
+        renderTime();
+        if (state.playing && element.paused) playMedia();
+      }
+    };
+  }
   video.hidden = !media.video;
   $("noVideo").hidden = !!media.video;
   $("prev").disabled = state.index === 0;
@@ -192,11 +212,11 @@ function sendAnimationFrame(force = false) {
   if (state.animationInFlight || (!force && now - state.lastAnimationFrame < 145)) return;
   state.lastAnimationFrame = now;
   state.animationInFlight = true;
-  bridge("animation_frame", { step_id: current.id, progress: Math.max(0, Math.min(1, state.elapsed / duration())) })
+  bridge("animation_frame", { step_id: current.id, progress: Math.max(0, Math.min(1, state.elapsed / animationDuration())) })
     .finally(() => { state.animationInFlight = false; });
 }
 function pause() {
-  stopNarration();
+  if ("speechSynthesis" in window && window.speechSynthesis.speaking) window.speechSynthesis.pause();
   state.playing = false;
   cancelAnimationFrame(state.raf);
   video.pause(); audio.pause();
@@ -206,6 +226,7 @@ function pause() {
 function selectStep(index, keepPlaying = false) {
   if (!state.example || index < 0 || index >= state.example.steps.length) return;
   pause();
+  stopNarration();
   state.index = index;
   state.elapsed = 0;
   state.lastAnimationFrame = -Infinity;
@@ -214,6 +235,7 @@ function selectStep(index, keepPlaying = false) {
   if (keepPlaying) next.then(() => { if (state.index === index) play(); });
 }
 function seek(ms) {
+  stopNarration();
   state.elapsed = Math.max(0, Math.min(duration(), ms));
   state.startedAt = performance.now() - state.elapsed / playbackSpeed();
   for (const element of [video, audio]) {
@@ -232,8 +254,12 @@ function play() {
   $("play").innerHTML = "Ⅱ <span>Pause</span>";
   $("play").setAttribute("aria-label", "Pause");
   playMedia();
-  spokenCue = -1;
-  if (state.cueIndex >= 0) speakCue(state.cueIndex);
+  if ("speechSynthesis" in window && window.speechSynthesis.paused && speechPending)
+    window.speechSynthesis.resume();
+  else {
+    stopNarration();
+    if (state.cueIndex >= 0) speakCue(state.cueIndex);
+  }
   sendAnimationFrame(true);
   tick();
 }
@@ -245,7 +271,10 @@ function tick() {
   state.elapsed = mediaReady ? (master.currentTime - mediaOffset()) * 1000
                              : (performance.now() - state.startedAt) * playbackSpeed();
   state.elapsed = Math.max(0, state.elapsed);
-  if (state.elapsed >= duration() - 30) {
+  const mediaPending = master && master.getAttribute("src") &&
+    (master.readyState < 1 || (!master.ended &&
+      (!Number.isFinite(master.duration) || master.currentTime < master.duration - 0.03)));
+  if (state.elapsed >= duration() - 30 && !mediaPending && !speechPending) {
     if ($("playbackScope").value === "all" && state.index < state.example.steps.length - 1) {
       selectStep(state.index + 1, true);
     } else {
@@ -256,6 +285,7 @@ function tick() {
     }
     return;
   }
+  state.elapsed = Math.min(state.elapsed, duration());
   renderTime();
   sendAnimationFrame();
   state.raf = requestAnimationFrame(tick);
