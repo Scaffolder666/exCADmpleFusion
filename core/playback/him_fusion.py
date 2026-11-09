@@ -434,6 +434,12 @@ def _partial_line(geometry, fraction):
         return None
 
 
+def _short_number(value):
+    """6.1584118 -> '6.16', 12.0 -> '12', 0.5 -> '0.5'."""
+    text = "{:.2f}".format(value).rstrip("0").rstrip(".")
+    return "0" if text in ("-0", "") else text
+
+
 def _center(bodies):
     """Centre of the union of the bodies' bounding boxes."""
     lo, hi = [float("inf")] * 3, [float("-inf")] * 3
@@ -1233,13 +1239,14 @@ class HiMController:
             value = float(param.value) * (1.0 if fraction is None else fraction)
         except Exception:
             return ""
-        unit = getattr(param, "unit", "") or ("deg" if handle.get("unit") == "angle" else "mm")
+        angle = handle.get("unit") == "angle"
+        unit = getattr(param, "unit", "") or ("deg" if angle else "mm")
         try:
-            return self.design().unitsManager.formatInternalValue(value, unit, True)
+            # Internal units are cm and rad; show at most two decimals.
+            shown = self.design().unitsManager.convert(value, "rad" if angle else "cm", unit)
         except Exception:
-            if handle.get("unit") == "angle":
-                return "{:.0f} deg".format(math.degrees(value))
-            return "{:.1f} mm".format(value * 10)
+            shown, unit = (math.degrees(value), "deg") if angle else (value * 10, "mm")
+        return _short_number(shown) + " " + unit
 
     @staticmethod
     def _add_label(group, text, at, color):

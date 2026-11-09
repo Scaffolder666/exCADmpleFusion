@@ -68,6 +68,13 @@ class GeometryTests(unittest.TestCase):
         self.assertTrue(all(p[2] < 3 for p in points[2:]))            # head below the tip
 
 
+class NumberTests(unittest.TestCase):
+    def test_labels_have_at_most_two_decimals(self):
+        from core.playback.him_fusion import _short_number
+        self.assertEqual([_short_number(v) for v in (6.1584118, 12.0, 0.5, -0.0001, 90.004)],
+                         ["6.16", "12", "0.5", "0", "90"])
+
+
 class Lines:
     def __init__(self, coords):
         self.coords, self.color, self.isSelectable = coords, None, True
@@ -111,8 +118,7 @@ class ManipulatorPlaybackTests(fast.FastPlaybackTests):
         self.assertGreater(self.arrow_tip_z(), low)                  # the arrow rises with the face
         self.assertEqual(self.d1.writes, [])                          # still no recompute
         self.assertEqual(self.session.him._value_label(
-            self.session.him.active["handles"][0], interpolate(1.0, 0.9)), "{:.1f} mm".format(
-            10 * interpolate(1.0, 0.9)))
+            self.session.him.active["handles"][0], interpolate(1.0, 0.9)), "9.02 mm")
         self.session.stop()
         self.assertIsNone(self.session.him.handle_group)
 
