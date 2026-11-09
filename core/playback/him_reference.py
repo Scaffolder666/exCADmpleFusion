@@ -370,6 +370,10 @@ class ReferenceSession:
         self.stop(restore_timeline=False)
         features = animated(self.mapped[step_index]) if 0 <= step_index < len(self.mapped) else []
         self._read_inputs(features)
+        for feature in features:          # plane / axis for the manipulator arrows
+            if self.him.fast_motion and feature.index not in self.him.inputs_by_index:
+                self.model.go(feature.index)
+                self.him.capture_motion_inputs(feature)
         if step_index >= len(self.mapped) - 1:
             self.model.go(self.model.end_state())        # the finished model
         elif self.mapped[step_index]:

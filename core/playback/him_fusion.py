@@ -13,6 +13,7 @@ The paper renders on a copy in a second Fusion instance connected with web
 sockets. Fusion offers no in-process second 3D view, so this add-in animates
 in place and restores; see README "HiM implementation notes".
 """
+import math
 import time
 
 import adsk.core
@@ -36,7 +37,9 @@ INPUT_PROPERTIES = (
 )
 MAX_TIMELINE = 600
 HIGHLIGHT = (37, 99, 235, 255)  # blue: recorded feature input / target edges
-CHANGE_HIGHLIGHT = (20, 184, 166, 255)  # teal: geometry affected by feature
+CHANGE_HIGHLIGHT = (20, 184, 166, 255)
+NEUTRAL_FACE = (196, 202, 210, 255)  # faces of the feature that do not move
+HANDLE_COLOR = (235, 109, 35, 255)    # manipulator arrow + value, like Fusion's  # teal: geometry affected by feature
 GHOST_WIREFRAME = (155, 164, 175, 255)  # light gray: true BRep edge curves
 GHOST_SURFACE_OPACITY = 0.001         # Fusion keeps native topology selectable
 
@@ -472,7 +475,9 @@ class HiMController:
         # faces instead of recomputing every frame. Opt in (reference copy).
         self.fast_motion = False
         self.pending_inputs = {}
+        self.inputs_by_index = {}      # feature index -> plane / axis read before it
         self.fast_group = None
+        self.handle_group = None
         self.pending_ghost = None     # captured at Timeline marker BEFORE feature
         self.wireframe_context = False  # opt in only on the disposable reference copy
         self.instant_nonparametric = False  # reference: no invented fades or scale
@@ -710,6 +715,9 @@ class HiMController:
             prepared["mode"] = NONE
             prepared["fallback"] = "feature not found in the model"
         inputs, self.pending_inputs = self.pending_inputs, {}
+        if not inputs:
+            inputs = self.inputs_by_index.get(feature.index, {})
+        prepared["inputs"] = inputs
         plan = None
         native_reason = ""
         if self.fast_motion and entity is not None and mode in (PARAMETRIC, FADE):
@@ -849,11 +857,16 @@ class HiMController:
                 targets = self._change_targets(prepared)
             center = _center(targets) if prepared["mode"] == FADE else None
             draw_failed = False
-            for body in targets:
+            roles = self._target_roles(prepared["entity"], prepared["feature"].kind,
+                                       targets, prepared["bodies"])
+            for number, body in enumerate(targets):
+                role = roles[number] if roles else None
+                if role == "body" and not prepared.get("wireframe"):
+                    continue          # the native body already shows it
                 try:
                     overlay = group.addBRepBody(body)
                     overlay.color = adsk.fusion.CustomGraphicsSolidColorEffect.create(
-                        adsk.core.Color.create(*CHANGE_HIGHLIGHT))
+                        adsk.core.Color.create(*(NEUTRAL_FACE if role == "body" else CHANGE_HIGHLIGHT)))
                     if prepared["mode"] == PARAMETRIC:
                         # With the original shaded bodies hidden, opaque
                         # changed faces are the only visible solid geometry.
@@ -896,7 +909,12 @@ class HiMController:
                 return
             # A precise native face copy is a reliable target. A whole
             # result Body is not: omit the arrow rather than point vaguely.
-            self._add_geometry_arrow(group, targets, prepared["bodies"])
+            from .manipulator import handles
+            live = handles(prepared["feature"].kind, prepared["entity"], prepared.get("inputs", {}))
+            if roles and live:
+                self._draw_handles(live, prepared, group=group)
+            else:
+                self._add_geometry_arrow(group, targets, prepared["bodies"])
         self.group = self._placed(group)
 
     @staticmethod
@@ -991,9 +1009,16 @@ class HiMController:
             entity = self._feature_entity(feature)
             bodies = [b for b in _items(getattr(entity, "bodies", None)) if b] if entity is not None else []
             targets = self._change_targets({"entity": entity, "bodies": bodies})
-            if targets and any(all(target is not b for b in bodies) for target in targets):
+            roles = self._target_roles(entity, feature.kind, targets, bodies)
+            from .manipulator import handles
+            live = handles(feature.kind, entity, self.inputs_by_index.get(feature.index, {})) if roles else []
+            if live:
+                self._draw_handles(live, {"bodies": bodies}, group=group)
+            elif targets and any(all(target is not b for b in bodies) for target in targets):
                 arrow_target = (targets, bodies)
-            for body in targets:
+            for number, body in enumerate(targets):
+                if roles and roles[number] == "body":
+                    continue          # only the face that moved is marked
                 try:
                     overlay = group.addBRepBody(body)
                     overlay.color = adsk.fusion.CustomGraphicsSolidColorEffect.create(
@@ -1059,6 +1084,7 @@ class HiMController:
         entity = self._feature_entity(feature)
         if entity is not None:
             self.pending_inputs = capture_inputs(feature.kind, entity)
+            self.inputs_by_index[feature.index] = self.pending_inputs
 
     def _start_fast(self, prepared):
         """Copy the feature's real faces once; frames only move them."""
@@ -1070,6 +1096,11 @@ class HiMController:
             group = self._new_group(design)
             group.isSelectable = False
             color = adsk.fusion.CustomGraphicsSolidColorEffect.create(adsk.core.Color.create(*CHANGE_HIGHLIGHT))
+            neutral = adsk.fusion.CustomGraphicsSolidColorEffect.create(adsk.core.Color.create(*NEUTRAL_FACE))
+            from .manipulator import moving_faces, handles
+            kind = prepared["feature"].kind
+            moving = moving_faces(kind, prepared["entity"])
+            prepared["handles"] = handles(kind, prepared["entity"], prepared.get("inputs", {}))
             entities = []
             for piece in prepared["fast"].pieces:
                 for face in piece.faces:
@@ -1079,7 +1110,9 @@ class HiMController:
                     entity = group.addBRepBody(copy)
                     if entity is None:
                         raise RuntimeError("Fusion could not draw a feature face")
-                    entity.color = color
+                    # Only the face that moves is highlighted, as in Fusion's
+                    # own commands; the rest of the feature looks like a body.
+                    entity.color = neutral if moving and _token(face) not in moving else color
                     entity.depthPriority = 1
                     entity.isSelectable = False
                     entities.append((piece, entity))
@@ -1111,6 +1144,17 @@ class HiMController:
             if offset is not None:
                 matrix.transformBy(offset)
             entity.transform = matrix
+        if prepared.get("handles"):
+            from .fast_motion import apply
+            piece = prepared["fast"].pieces[0]
+            m = piece.matrix(progress)
+            moved = []
+            for h in prepared["handles"]:
+                tip = tuple(h["anchor"][i] + h["direction"][i] for i in range(3))
+                anchor, tip = apply(m, h["anchor"]), apply(m, tip)
+                moved.append(dict(h, anchor=anchor, direction=tuple(tip[i] - anchor[i] for i in range(3))))
+            fraction = interpolate(1.0, progress) if prepared["feature"].kind == "ExtrudeFeature" else progress
+            self._draw_handles(moved, prepared, value_fraction=fraction)
 
     def _settle(self, prepared, progress):
         """Paused: show Fusion's real recompute at this progress."""
@@ -1134,6 +1178,106 @@ class HiMController:
             for key, param, _ in prepared["params"]:
                 self.journal.capture(key, param)
             prepared["fast"] = None
+
+    def _draw_handles(self, handle_list, prepared, value_fraction=None, group=None):
+        """Orange arrow on each moving face plus the current distance/angle.
+        With ``group`` the handles join it; otherwise they get their own
+        group (fast motion rebuilds only this small group every frame)."""
+        from .manipulator import arrow_lines, arrow_length
+        own = group is None
+        if own:
+            self._delete_handles()
+            if not handle_list:
+                return
+            group = self._new_group(self.design())
+            group.isSelectable = False
+        span = self._feature_span(prepared)
+        color = adsk.fusion.CustomGraphicsSolidColorEffect.create(adsk.core.Color.create(*HANDLE_COLOR))
+        for h in handle_list:
+            shape = arrow_lines(h["anchor"], h["direction"], arrow_length(handle_list, span))
+            if shape is None:
+                continue
+            points, indices = shape
+            try:
+                lines = group.addLines(adsk.fusion.CustomGraphicsCoordinates.create(
+                    [c for p in points for c in p]), indices, False)
+                lines.color = color
+                lines.weight = 4
+                lines.depthPriority = 3
+                lines.isSelectable = False
+            except Exception as error:
+                self.log("HiM manipulator arrow: " + str(error))
+                continue
+            label = self._value_label(h, value_fraction)
+            if label:
+                self._add_label(group, label, points[1], color)
+        if own:
+            self.handle_group = self._placed(group)
+
+    def _feature_span(self, prepared):
+        bounds = []
+        for body in prepared.get("bodies") or []:
+            try:
+                box = body.boundingBox
+                bounds.append(math.dist((box.minPoint.x, box.minPoint.y, box.minPoint.z),
+                                        (box.maxPoint.x, box.maxPoint.y, box.maxPoint.z)))
+            except Exception:
+                continue
+        return max(bounds) if bounds else 0.0
+
+    def _value_label(self, handle, fraction=None):
+        """'12.5 mm' / '90 deg' from the real parameter (scaled by
+        ``fraction`` during fast motion, where the parameter is not changed)."""
+        param = handle.get("parameter")
+        try:
+            value = float(param.value) * (1.0 if fraction is None else fraction)
+        except Exception:
+            return ""
+        unit = getattr(param, "unit", "") or ("deg" if handle.get("unit") == "angle" else "mm")
+        try:
+            return self.design().unitsManager.formatInternalValue(value, unit, True)
+        except Exception:
+            if handle.get("unit") == "angle":
+                return "{:.0f} deg".format(math.degrees(value))
+            return "{:.1f} mm".format(value * 10)
+
+    @staticmethod
+    def _add_label(group, text, at, color):
+        try:
+            matrix = adsk.core.Matrix3D.create()
+            for i in range(3):
+                matrix.setCell(i, 3, at[i])
+            label = group.addText(text, "Arial", 0.3, matrix)
+            label.color = color
+            label.isSelectable = False
+            label.depthPriority = 3
+            anchor = adsk.core.Point3D.create(*at)
+            billboard = adsk.fusion.CustomGraphicsBillBoard.create(anchor)
+            billboard.billBoardStyle = adsk.fusion.CustomGraphicsBillBoardStyles.ScreenBillBoardStyle
+            label.billBoarding = billboard
+            label.viewScale = adsk.fusion.CustomGraphicsViewScale.create(40, anchor)
+        except Exception:
+            pass                       # the value label is optional
+
+    def _target_roles(self, entity, kind, targets, bodies):
+        """Per target: "moving" / "body", when targets are copies of the
+        feature's faces and the operation has a moving face; else None."""
+        from .manipulator import moving_faces, MOVING, BODY
+        moving = moving_faces(kind, entity)
+        if not moving or any(t in bodies for t in targets):
+            return None
+        faces = _items(getattr(entity, "faces", None), self.MAX_FACE_HIGHLIGHTS + 1)
+        if len(faces) != len(targets):
+            return None
+        return [MOVING if _token(f) in moving else BODY for f in faces]
+
+    def _delete_handles(self):
+        try:
+            if self.handle_group is not None and self.handle_group.isValid:
+                self.handle_group.deleteMe()
+        except Exception:
+            pass
+        self.handle_group = None
 
     def _delete_fast(self):
         try:
@@ -1268,6 +1412,7 @@ class HiMController:
             errors.append(str(error))
         self._delete_group()
         self._delete_fast()
+        self._delete_handles()
         for sketch in self.hidden_sketches:
             try:
                 sketch.isLightBulbOn = True
