@@ -7,7 +7,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const vm = require("node:vm");
 const path = require("node:path");
-const { HiMFrameClock, initialFrames } = require("../ui/him_frame_clock.js");
+const { HiMFrameClock, initialFrames } = require("../ui/reference/frame_clock.js");
 
 class MockElement {
   constructor() {
@@ -52,7 +52,7 @@ async function main() {
     requestAnimationFrame() {},
     HiMTiming: { HiMFrameClock, initialFrames },
   });
-  const source = fs.readFileSync(path.join(__dirname, "../ui/reference.js"), "utf8");
+  const source = fs.readFileSync(path.join(__dirname, "../ui/reference/player.js"), "utf8");
   vm.runInContext(source, context, { filename: "reference.js" });
   const flush = async () => { for (let i = 0; i < 10; i++) await Promise.resolve(); };
   const count = action => calls.filter(c => c.action === action).length;
