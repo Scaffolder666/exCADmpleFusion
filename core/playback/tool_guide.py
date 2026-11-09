@@ -3,9 +3,10 @@
 Fusion's API cannot make a toolbar button flash, and Custom Graphics are
 drawn only inside the canvas. So the tool is shown in two supported ways:
 
-* a temporary toolbar panel "exCADmple · this step" in the tab where the
-  tool lives, holding the step's *native* Fusion command buttons (clicking
-  one runs Fusion's own command); replaced on every step, removed on stop;
+* a temporary toolbar panel "exCADmple" in the tab where the tools live,
+  whose drop-down holds Fusion's own buttons for every tool the tutorial
+  uses; the current step's tools are pinned to the toolbar row (Fusion's
+  "Pin to Toolbar") and unpinned on the next step; removed on stop;
 * the tool's menu path (e.g. SOLID > CREATE > Extrude) for the panel, found
   at run time by walking the active workspace's toolbar, so it matches the
   user's Fusion version and layout. Nothing is hard-coded per version; a
@@ -13,7 +14,7 @@ drawn only inside the canvas. So the tool is shown in two supported ways:
 """
 
 PANEL_ID = "excadmple_step_tools"
-PANEL_NAME = "exCADmple · this step"
+PANEL_NAME = "exCADmple"
 
 # Tutorial tool label -> Fusion command names to look for (English UI).
 ALIASES = {
@@ -95,14 +96,23 @@ def find(workspace, label):
 
 
 class ToolGuide:
-    """Keeps the temporary toolbar panel in sync with the current step."""
+    """One "exCADmple" toolbar panel per tutorial.
+
+    Its drop-down holds Fusion's own buttons for every tool the tutorial
+    uses; the current step's tools are pinned (promoted) to the toolbar row,
+    exactly like Fusion's "Pin to Toolbar", and unpinned when the step
+    changes. The panel is removed when the tutorial closes, so nothing stays
+    pinned in the user's Fusion.
+    """
 
     def __init__(self, ui, log=None):
         self.ui = ui
         self.log = log or (lambda *_: None)
         self.panel = None
         self.panel_tab = None
-        self.matches = {}
+        self.matches = {}              # label -> match (or None if not found)
+        self.controls = {}             # label -> our CommandControl
+        self.loaded_for = None
         self.last_error = ""           # why the toolbar panel could not be filled
 
     def _workspace(self):
@@ -111,48 +121,78 @@ class ToolGuide:
         except Exception:
             return None
 
-    def show(self, labels):
-        """Find each tool; put the found native buttons in the temporary
-        panel. Returns [{label, path, found}] for the tutorial panel."""
-        self._clear_buttons()
-        self.last_error = ""
-        workspace = self._workspace()
-        report, matches = [], {}
+    @staticmethod
+    def _labels(labels):
+        out = []
         for label in labels:
             label = str(label or "").strip()
-            if not label or label in matches:
-                continue
-            match = find(workspace, label) if workspace is not None else None
-            matches[label] = match
-            report.append({"label": label, "path": match["path"] if match else [],
-                           "found": match is not None})
-        self.matches = matches
-        found = [m for m in matches.values() if m]
-        if found:
-            try:
-                self._fill_panel(found)
-            except Exception as error:
-                self.last_error = "{}: {}".format(type(error).__name__, error)
-                self.log("exCADmple tool panel: " + self.last_error)
-                self._remove_panel()
-        else:
-            self._remove_panel()
-        return report
+            if label and label not in out:
+                out.append(label)
+        return out
 
-    def _fill_panel(self, found):
-        tab = found[0]["tab"]
-        if self.panel is not None and self.panel_tab is not tab:
-            self._remove_panel()                      # the tools live in another tab now
-        if self.panel is None:
+    def load(self, key, labels):
+        """Build the panel for a tutorial (``key`` identifies it): every
+        tool it uses, in tutorial order, in the panel's drop-down."""
+        if key is not None and key == self.loaded_for and self.panel is not None:
+            return
+        self.close()
+        self.loaded_for = key
+        self.last_error = ""
+        workspace = self._workspace()
+        for label in self._labels(labels):
+            self.matches[label] = find(workspace, label) if workspace is not None else None
+        found = [(label, m) for label, m in self.matches.items() if m]
+        if not found:
+            return
+        try:
+            tab = found[0][1]["tab"]
             panels = tab.toolbarPanels
             self.panel = panels.itemById(PANEL_ID) or panels.add(PANEL_ID, PANEL_NAME)
             self.panel_tab = tab
-        for match in found:
-            control = self.panel.controls.addCommand(match["definition"])
-            try:
-                control.isPromoted = True             # show it in the toolbar row itself
-            except Exception:
-                pass
+            for label, match in found:
+                self.controls[label] = self.panel.controls.addCommand(match["definition"])
+        except Exception as error:
+            self.last_error = "{}: {}".format(type(error).__name__, error)
+            self.log("exCADmple tool panel: " + self.last_error)
+            self._remove_panel()
+
+    def show(self, labels):
+        """Pin the step's tools to the toolbar row, unpin the others.
+        Returns [{label, path, found}] for the tutorial panel."""
+        labels = self._labels(labels)
+        missing = [label for label in labels if label not in self.matches]
+        if missing:                                   # not loaded with the tutorial
+            workspace = self._workspace()
+            for label in missing:
+                self.matches[label] = find(workspace, label) if workspace is not None else None
+                match = self.matches[label]
+                if match and self.panel is not None:
+                    try:
+                        self.controls[label] = self.panel.controls.addCommand(match["definition"])
+                    except Exception as error:
+                        self.log("exCADmple tool panel: " + str(error))
+        for label, control in self.controls.items():
+            if label not in labels:
+                self._pin(control, False)
+        for label in labels:
+            if label in self.controls:
+                self._pin(self.controls[label], True)
+        return [{"label": label, "path": self.matches[label]["path"] if self.matches.get(label) else [],
+                 "found": self.matches.get(label) is not None} for label in labels]
+
+    def _pin(self, control, pinned):
+        try:
+            if control.isPromoted == pinned:
+                return
+            if pinned and hasattr(control, "promote"):
+                # byDefault=False: a UI reset never keeps it pinned.
+                if control.promote(False) is False:
+                    raise RuntimeError("Fusion did not pin the tool")
+            else:
+                control.isPromoted = pinned
+        except Exception as error:
+            self.last_error = "{}: {}".format(type(error).__name__, error)
+            self.log("exCADmple tool pin: " + self.last_error)
 
     def use(self, label):
         """Start the native Fusion command for this tool."""
@@ -162,18 +202,9 @@ class ToolGuide:
         match["definition"].execute()
         return " › ".join(match["path"])
 
-    def _clear_buttons(self):
-        self.matches = {}
-        if self.panel is None:
-            return
-        try:
-            for control in reversed(_items(self.panel.controls)):
-                control.deleteMe()
-        except Exception as error:
-            self.log("exCADmple tool panel cleanup: " + str(error))
-
     def _remove_panel(self):
         panel, self.panel, self.panel_tab = self.panel, None, None
+        self.controls = {}
         if panel is None:
             return
         try:
@@ -184,6 +215,7 @@ class ToolGuide:
             self.log("exCADmple tool panel cleanup: " + str(error))
 
     def close(self):
-        """Remove the temporary panel (tutorial closed or add-in stopped)."""
+        """Remove the panel (tutorial closed or add-in stopped)."""
         self.matches = {}
+        self.loaded_for = None
         self._remove_panel()

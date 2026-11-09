@@ -44,7 +44,7 @@ from core.session_recorder import SessionRecorder
 from core.playback.tool_guide import ToolGuide
 
 # Shown in the panel at start so it is clear which code Fusion is running.
-BUILD = "same-viewport 2026-11-09 · tool guide v3"
+BUILD = "same-viewport 2026-11-09 · pinned tools v4"
 PALETTE_ID = "excadmple_fusion_player"
 COMMAND_ID = "excadmple_fusion_open"
 REFERENCE_COMMAND_ID = "excadmple_fusion_reference_open"
@@ -186,6 +186,8 @@ def _update_tools(index):
     if not _tools or not _package:
         return
     try:
+        # The panel holds every tool of this tutorial; the step's are pinned.
+        _tools.load((str(getattr(_package, "source_path", "")), _package.data.get("id"), _package.data.get("title")), [t for step in _package.data["steps"] for t in step.get("tools", [])])
         report = _tools.show(_package.step(index).get("tools", []))
     except Exception as error:
         # Tool guidance must never block playback, but a failure is shown.

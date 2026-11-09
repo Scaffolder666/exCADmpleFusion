@@ -83,12 +83,12 @@ Check in Fusion:
 
 Fusion's API cannot make a toolbar button flash. Instead, each step shows its tools in two ways:
 
-- **Toolbar:** a temporary panel **"exCADmple · this step"** appears in the toolbar tab where the tool lives (usually SOLID). It holds Fusion's own buttons for the step's tools (e.g. the native Extrude), replaced on every step and removed when the tutorial closes.
+- **Toolbar:** when a tutorial loads, an **"exCADmple"** panel appears in the toolbar tab where its tools live (usually SOLID). Its drop-down holds Fusion's own buttons for every tool the tutorial uses. The current step's tools are **pinned to the toolbar row** (the same as Fusion's "Pin to Toolbar"); at the next step they go back into the drop-down and the new step's tools are pinned. The panel is removed when the tutorial closes, so nothing stays pinned in your Fusion.
 - **Tutorial panel:** the step card shows where the tool lives, e.g. `SOLID › CREATE › Extrude`, with a **Use** button. Use pauses the tutorial and starts the native command in your design.
 - **How tools are found:** the path is found at run time by walking the active workspace's toolbar, preferring the SOLID tab. A tool that is not found (other workspace, other UI language, no command, e.g. Base Feature) is shown as "not found in this workspace"; nothing is guessed.
 
 Check in Fusion:
-1. The panel appears next to the SOLID tab's panels and holds the right native button for each step.
+1. The "exCADmple" panel appears in the SOLID tab; its drop-down lists the tutorial's tools, and the current step's tool is pinned as a large icon in the toolbar row.
 2. The menu path matches where you would find the tool.
 3. Use starts the command in your own design, not in the reference copy.
 4. Closing the tutorial removes the panel.
