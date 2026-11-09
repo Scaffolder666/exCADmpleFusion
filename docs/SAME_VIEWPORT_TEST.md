@@ -58,3 +58,23 @@ changing its parameter values.
 - **Selecting reference geometry:** to filter steps by selecting reference geometry (HiM filtering), switch to the reference tab and select there. Reference graphics in your viewport are not selectable, by design, so that they never interfere with your modeling.
 - **Sketches:** only sketches in the reference root component are drawn in your viewport.
 - **Speed:** every animation frame copies the bodies that are being recomputed. Very large reference models may play more slowly.
+
+## Fast motion (moving real faces instead of recomputing)
+
+During playback, some operations no longer make Fusion recompute every frame:
+
+| Operation | During playback | Accuracy shown in the panel |
+|---|---|---|
+| Extrude, new body, distance extent, no taper, starting on the profile plane | The feature's real faces are scaled along the extrude direction about the profile plane | **same shape** as Fusion's recompute |
+| The same extrude joining or cutting other bodies | Same | approximate where it meets other geometry |
+| Rectangular / circular pattern | Each instance moves from the source along its real pattern transform (arc for circular) | illustrative path, real end state |
+| Mirror | The copy folds over the mirror plane | illustrative path, real end state |
+| Revolve with one angle | The revolved faces turn about the real axis into place | illustrative path, real end state |
+| Fillet, chamfer, shell, extrudes with taper / to-object / offset start, everything else | Fusion recomputes every frame as before | native |
+
+- **Pausing:** when you pause (or scrub), Fusion recomputes the real model at that position for operations that have parameters. Pressing Play goes back to moving copies.
+- **When fast motion is used:** only when the native result can be hidden (the HiM ghost context). It falls back to native recompute if face copies cannot be made.
+
+Check in Fusion:
+1. The moving faces line up with the real result at the end of each step, and with the paused (recomputed) model.
+2. Frame times in the Text Commands `Slow frame` log drop for these operations.

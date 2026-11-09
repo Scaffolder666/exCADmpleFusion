@@ -330,7 +330,7 @@ class PaletteHandler(adsk.core.HTMLEventHandler):
                     if _session and _session.live:
                         if isinstance(body.get("auto_focus"), bool):
                             _session.set_auto_focus(body["auto_focus"])
-                        shown = _session.frame(index, value)
+                        shown = _session.frame(index, value, settle=body.get("settle") is True)
                         if shown and shown != _last_shown:
                             _last_shown = shown
                             _post("animation", shown)

@@ -43,6 +43,9 @@ class ReferenceSession:
         # Operations with no editable numeric parameter appear immediately.
         # They do not grow by an invented fade/scale transformation.
         self.him.instant_nonparametric = True
+        # Move the feature's real faces between frames instead of
+        # recomputing the model every frame (pause recomputes natively).
+        self.him.fast_motion = True
         self.document = None
         self.model = None
         self.mapped = []
@@ -274,7 +277,7 @@ class ReferenceSession:
     def _roll_after(self, feature):
         self.model.go(feature.index + 1)
 
-    def frame(self, step_index, progress):
+    def frame(self, step_index, progress, settle=False):
         """Show step ``step_index`` at ``progress`` (0..1) on the real model.
         Returns what is being shown ({"feature", "mode", ...}) or None."""
         if not self.live or not 0 <= step_index < len(self.mapped) or not self._active():
@@ -324,12 +327,15 @@ class ReferenceSession:
                 if self.him.wireframe_context and self.him.dim_others:
                     self.model.go(items[position].index)
                     self.him.capture_ghost_context()
+                if self.him.fast_motion:
+                    self.model.go(items[position].index)
+                    self.him.capture_motion_inputs(items[position])
                 self._roll_after(items[position])
                 self.him.clip = [items[position]]
                 self.him.active_position = None
                 self.current = key
             started = time.perf_counter()
-            self.him._render(Frame(0, local))
+            self.him._render(Frame(0, local), settle=settle)
             computed = time.perf_counter()
             self.present(changing=self._changing_tokens())
             self._note_timing(items[position], computed - started, time.perf_counter() - computed)
@@ -398,6 +404,8 @@ class ReferenceSession:
     def _changing_tokens(self):
         """Bodies recomputed by the active parameter frame."""
         from .him_fusion import _token
+        if self.him._moving(self.him.active):
+            return set()                    # the native bodies are not being recomputed
         return {_token(b) for b in self.him.active.get("bodies", []) if _token(b)}
 
     def _read_inputs(self, features):

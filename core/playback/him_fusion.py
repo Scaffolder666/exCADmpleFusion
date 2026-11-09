@@ -468,6 +468,11 @@ class HiMController:
         self.group = None
         self.ghost_group = None       # persistent backdrop for ONE active Feature
         self.hidden_sketches = []     # native sketches hidden while being drawn
+        # Fast motion (core.playback.fast_motion): move the feature's real
+        # faces instead of recomputing every frame. Opt in (reference copy).
+        self.fast_motion = False
+        self.pending_inputs = {}
+        self.fast_group = None
         self.pending_ghost = None     # captured at Timeline marker BEFORE feature
         self.wireframe_context = False  # opt in only on the disposable reference copy
         self.instant_nonparametric = False  # reference: no invented fades or scale
@@ -704,10 +709,18 @@ class HiMController:
         if entity is None:
             prepared["mode"] = NONE
             prepared["fallback"] = "feature not found in the model"
+        inputs, self.pending_inputs = self.pending_inputs, {}
+        plan = None
+        if self.fast_motion and entity is not None and mode in (PARAMETRIC, FADE):
+            from .fast_motion import plan_for
+            plan = plan_for(feature.kind, entity, inputs)
+        if entity is None:
+            pass
         elif mode == PARAMETRIC:
             for param in _model_parameters(design, entity, feature.kind):
                 key = param.name
-                self.journal.capture(key, param)
+                if plan is None:          # fast motion captures only if it settles
+                    self.journal.capture(key, param)
                 prepared["params"].append((key, param, param.value))
             if not prepared["params"]:
                 prepared["mode"] = FADE
@@ -729,9 +742,21 @@ class HiMController:
                          .format(feature.name))
             self._apply_focus(prepared["bodies"], hide_result=(
                 prepared["mode"] == FADE and not self.instant_nonparametric))
+        if plan is not None and prepared["mode"] in (PARAMETRIC, FADE) and prepared["wireframe"]:
+            # Only with the native result hidden can moved face copies show
+            # the intermediate shape without the final one behind them.
+            prepared["fast"] = plan
+        elif plan is not None:
+            for key, param, _ in prepared["params"]:
+                self.journal.capture(key, param)
         if self.auto_focus:
             self.focus_feature(prepared)
         self._draw_overlay(prepared, 0.0)
+        if prepared.get("fast") and not self._start_fast(prepared):
+            for key, param, _ in prepared["params"]:
+                self.journal.capture(key, param)
+            prepared["fast"] = None
+            self._draw_overlay(prepared, 0.0)
         self.active_position = position
         self.active = prepared
 
@@ -794,7 +819,7 @@ class HiMController:
         # drawn; the whole result body only when no face is reported. Do not
         # pretend to know which face was selected when source inputs are
         # absent. The native feature itself supplies the actual motion.
-        if prepared["mode"] in (FADE, PARAMETRIC):
+        if prepared["mode"] in (FADE, PARAMETRIC) and not self._moving(prepared):
             targets = self._change_targets(prepared)
             if prepared.get("wireframe") and not targets:
                 # If Fusion rejects a transient copy of the Feature's
@@ -1008,10 +1033,118 @@ class HiMController:
             pass
         self.group = None
 
-    def _render(self, frame):
+    # --- fast motion ----------------------------------------------------------------
+    @staticmethod
+    def _moving(prepared):
+        return bool(prepared.get("fast")) and not prepared.get("settled")
+
+    def capture_motion_inputs(self, feature):
+        """Profile plane / axis / mirror plane, read with the Timeline marker
+        before the feature. Used by the next _prepare."""
+        self.pending_inputs = {}
+        if not self.fast_motion:
+            return
+        from .fast_motion import capture_inputs
+        entity = self._feature_entity(feature)
+        if entity is not None:
+            self.pending_inputs = capture_inputs(feature.kind, entity)
+
+    def _start_fast(self, prepared):
+        """Copy the feature's real faces once; frames only move them."""
+        self._delete_fast()
+        design = self.design()
+        group = None
+        try:
+            manager = adsk.fusion.TemporaryBRepManager.get()
+            group = self._new_group(design)
+            group.isSelectable = False
+            color = adsk.fusion.CustomGraphicsSolidColorEffect.create(adsk.core.Color.create(*CHANGE_HIGHLIGHT))
+            entities = []
+            for piece in prepared["fast"].pieces:
+                for face in piece.faces:
+                    copy = manager.copy(face)
+                    if copy is None:
+                        raise RuntimeError("Fusion could not copy a feature face")
+                    entity = group.addBRepBody(copy)
+                    if entity is None:
+                        raise RuntimeError("Fusion could not draw a feature face")
+                    entity.color = color
+                    entity.depthPriority = 1
+                    entity.isSelectable = False
+                    entities.append((piece, entity))
+            self.fast_group = group
+            prepared["fast_entities"] = entities
+            prepared["settled"] = False
+            return True
+        except Exception as error:
+            self.log("HiM fast motion unavailable for {}: {}".format(prepared["feature"].name, error))
+            try:
+                if group is not None and group.isValid:
+                    group.deleteMe()
+            except Exception:
+                pass
+            self.fast_group = None
+            return False
+
+    def _move_fast(self, prepared, progress):
+        offset = None
+        if any(self.display_offset):
+            from .same_viewport import offset_matrix
+            offset = offset_matrix(self.display_offset)
+        for piece, entity in prepared["fast_entities"]:
+            matrix = adsk.core.Matrix3D.create()
+            values = piece.matrix(progress)
+            for r in range(4):               # cell by cell: no row/column-order assumption
+                for c in range(4):
+                    matrix.setCell(r, c, values[r][c])
+            if offset is not None:
+                matrix.transformBy(offset)
+            entity.transform = matrix
+
+    def _settle(self, prepared, progress):
+        """Paused: show Fusion's real recompute at this progress."""
+        if not prepared["params"]:
+            return False                     # no real intermediate state exists
+        for key, param, _ in prepared["params"]:
+            self.journal.capture(key, param)
+        self._delete_fast()
+        prepared["settled"] = True
+        return True
+
+    def _resume_fast(self, prepared):
+        """Back to moving copies after a settled (paused) frame."""
+        try:
+            self.journal.restore([key for key, _, _ in prepared["params"]])
+        except Exception as error:
+            raise RuntimeError("Could not restore parameters after pause: " + str(error)) from error
+        prepared["settled"] = False
+        self._draw_overlay(prepared, 0.0)
+        if not self._start_fast(prepared):
+            for key, param, _ in prepared["params"]:
+                self.journal.capture(key, param)
+            prepared["fast"] = None
+
+    def _delete_fast(self):
+        try:
+            if self.fast_group is not None and self.fast_group.isValid:
+                self.fast_group.deleteMe()
+        except Exception:
+            pass
+        self.fast_group = None
+
+    def _render(self, frame, settle=False):
         if frame.position != self.active_position:
             self._prepare(frame.position)
         prepared = self.active
+        if prepared.get("fast"):
+            if settle and not prepared.get("settled") and self._settle(prepared, frame.progress):
+                pass                         # fall through to the native recompute below
+            elif not settle and prepared.get("settled"):
+                self._resume_fast(prepared)
+            if self._moving(prepared):
+                self._move_fast(prepared, frame.progress)
+                self._refresh()
+                return
         if prepared["mode"] == PARAMETRIC:
             failure = None
             if not self._set_together(prepared["params"], frame.progress):
@@ -1083,7 +1216,23 @@ class HiMController:
                 "fallback": prepared.get("fallback", ""),
                 "wireframe": bool(prepared.get("wireframe")),
                 "ghost_edges": prepared.get("ghost_edges", 0),
-                "context_fallback": prepared.get("context_fallback", "")}
+                "context_fallback": prepared.get("context_fallback", ""),
+                "motion": self._motion_kind(prepared),
+                "motion_note": self._motion_note(prepared)}
+
+    MOTION_NOTES = {
+        "exact": "Fast preview: same shape as Fusion's recompute",
+        "approximate": "Fast preview: may differ where it meets other geometry; pause shows the real model",
+        "illustrative": "Fast preview: illustrative motion; the end state is the real result",
+    }
+
+    def _motion_kind(self, prepared):
+        if self._moving(prepared):
+            return prepared["fast"].accuracy
+        return "native"
+
+    def _motion_note(self, prepared):
+        return self.MOTION_NOTES.get(self._motion_kind(prepared), "")
 
     def _finish_feature(self):
         """Restore parameters, opacity and overlay of the active feature."""
@@ -1097,6 +1246,7 @@ class HiMController:
         except Exception as error:
             errors.append(str(error))
         self._delete_group()
+        self._delete_fast()
         for sketch in self.hidden_sketches:
             try:
                 sketch.isLightBulbOn = True

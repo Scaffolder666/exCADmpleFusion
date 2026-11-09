@@ -398,7 +398,7 @@ function card(item) {
   }
   // Keep actual runtime limitations visible, without repeating operation names.
   if (S.shown && S.shown.step === S.index) {
-    const reason = S.shown.fallback || S.shown.context_fallback;
+    const reason = S.shown.fallback || S.shown.context_fallback || S.shown.motion_note;
     if (reason) box.appendChild(el("div", { class: "playback-note" }, reason));
   }
   if (active !== S.cue) {
@@ -416,7 +416,7 @@ function railKey() {
   let active = -1;
   ((item && item.cues) || []).forEach((c, i) => { if (c.at_ms <= S.elapsed) active = i; });
   const shown = S.shown && S.shown.step === S.index
-    ? [S.shown.feature, S.shown.fallback, S.shown.context_fallback] : null;
+    ? [S.shown.feature, S.shown.fallback, S.shown.context_fallback, S.shown.motion_note] : null;
   return JSON.stringify([S.index, S.clip, S.filtered, S.tags, active, shown,
                          (S.plan[S.index] || []).length]);
 }
@@ -444,7 +444,9 @@ function render(light = false) {
     const sentAt = performance.now();
     S.inFlight = true;
     S.manualFrame = false;
-    bridge("ref_frame", { index, progress: sentProgress, elapsed: S.elapsed, auto_focus: $("autoFocus").checked }).then((ok) => {
+    // settle: paused or scrubbing, so Fusion recomputes the real model here.
+    bridge("ref_frame", { index, progress: sentProgress, elapsed: S.elapsed, auto_focus: $("autoFocus").checked,
+                          settle: !S.playing }).then((ok) => {
       const renderedAt = performance.now();
       S.inFlight = false;
       if (!ok && epoch === S.epoch) {
