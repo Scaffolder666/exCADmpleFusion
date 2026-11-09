@@ -21,6 +21,7 @@ const S = { plan: [], shown: null,
   last: 0, cue: -1, fresh: true, tags: {}, inFlight: false,
   frameClock: null, nextFrameAt: 0, epoch: 0, manualFrame: false,
   stepPending: false, stepRequest: 0, overviewPending: false, overviewInFlight: false,
+  waitingForNarration: false, speechPending: false, speechToken: 0,
 };
 
 function bridge(action, payload = {}) {
@@ -54,6 +55,21 @@ function el(tag, attrs = {}, text) {
 const steps = () => (S.example ? S.example.steps : []);
 const step = () => steps()[S.index];
 const duration = () => (step() && step().duration_ms) || 8000;
+function narrationPending() {
+  if (S.direction < 0) return false;
+  if (S.speechPending) return true;
+  const media = step()?.media;
+  if (!media?.audio) return false;
+  if (audio.dataset.src !== media.audio || audio.readyState < 1) return true;
+  const offset = (media.offset_ms || 0) / 1000;
+  const end = Number.isFinite(audio.duration) ? Math.min(audio.duration, offset + duration() / 1000) : Infinity;
+  return !audio.ended && audio.currentTime < end - 0.03;
+}
+function completeAfterNarration() {
+  if (!S.playing || !S.waitingForNarration || narrationPending()) return;
+  S.waitingForNarration = false;
+  finishNativeStep();
+}
 function clipTiming() {
   let total = 0;
   const spans = S.clip.map((index, pos) => {
@@ -80,6 +96,7 @@ function seekClip(fraction) {
   S.direction = 1;
   S.frameClock = null;
   S.cue = -1;
+  S.waitingForNarration = false;
   S.fresh = fraction === 0 || fraction === 1;
   S.manualFrame = !S.fresh;
   S.overviewPending = S.fresh;
@@ -128,6 +145,7 @@ function setIndex(i, preview = true) {
   S.shown = null;
   S.epoch++;              // stale native frame replies cannot move a new step
   S.frameClock = null;
+  S.waitingForNarration = false;
   S.nextFrameAt = 0;
   S.manualFrame = false;
   // If the old native frame is still computing, request one final
@@ -151,7 +169,11 @@ function setIndex(i, preview = true) {
   });
 }
 function stopAudio() { audio.pause(); }
-function stopSpeech() { if ("speechSynthesis" in window) speechSynthesis.cancel(); }
+function stopSpeech() {
+  S.speechPending = false;
+  S.speechToken++;
+  if ("speechSynthesis" in window) speechSynthesis.cancel();
+}
 function speakCue(item, index) {
   if (!S.playing || S.direction < 0 || index < 0 || (item.media && item.media.audio) || !("speechSynthesis" in window)) return;
   stopSpeech();
@@ -159,6 +181,13 @@ function speakCue(item, index) {
   if (!cue || !cue.label) return;
   const utterance = new SpeechSynthesisUtterance(cue.label);
   utterance.rate = Math.max(0.5, Math.min(2, S.speed));
+  const token = ++S.speechToken;
+  S.speechPending = true;
+  utterance.onend = utterance.onerror = () => {
+    if (token !== S.speechToken) return;
+    S.speechPending = false;
+    completeAfterNarration();
+  };
   speechSynthesis.speak(utterance);
 }
 function syncAudio(force) {
@@ -169,7 +198,7 @@ function syncAudio(force) {
   if (!S.playing || S.direction < 0) { stopAudio(); return; }
   if (force || Math.abs(audio.currentTime - want) > 0.35) { try { audio.currentTime = want; } catch (_) {} }
   audio.playbackRate = S.speed;
-  if (audio.paused) audio.play().catch(() => {});
+  if (audio.paused && !audio.ended) audio.play().catch(() => {});
 }
 function resetNativeClock() {
   const travelled = S.direction > 0 ? S.elapsed : duration() - S.elapsed;
@@ -181,6 +210,7 @@ function play(continuous = true) {
   if (!S.clip.length) return;
   if (S.direction > 0 && S.elapsed >= duration() && S.pos >= S.clip.length - 1) { replay(); return; }
   S.playing = true;
+  S.waitingForNarration = false;
   S.cue = -1;
   S.fresh = false;
   S.continuous = continuous;
@@ -198,6 +228,7 @@ function pause() {
   S.manualFrame = !S.fresh;
   stopAudio();
   stopSpeech();
+  S.waitingForNarration = false;
   render();
 }
 function replay() {
@@ -233,6 +264,7 @@ function backward() {
 function selectStep(i, autoplay = false) {
   S.playing = false;
   S.manualFrame = false;
+  S.waitingForNarration = false;
   stopAudio();
   stopSpeech();
   const at = S.clip.indexOf(i);
@@ -250,6 +282,8 @@ function selectStep(i, autoplay = false) {
   else render();
 }
 function finishNativeStep() {
+  S.waitingForNarration = false;
+  stopSpeech();
   if (S.direction > 0 && S.continuous && S.pos < S.clip.length - 1) {
     S.pos++;
     // Intermediate continuous-play transitions do not flash the fully
@@ -277,13 +311,14 @@ function finishNativeStep() {
 }
 function tick(now) {
   if (S.playing) {
+    if (S.waitingForNarration) completeAfterNarration();
     const dt = Math.max(0, now - S.last);
     S.last = now;
     // Wall-time is accounted for while Fusion recomputes a frame, but
     // progress is advanced ONLY when that frame has finished rendering.
     // Feature duration starts after Fusion acknowledges the Timeline
     // transition, not while a complex model is still loading that step.
-    if (S.frameClock && !S.stepPending) S.frameClock.tick(dt, S.speed);
+    if (S.frameClock && !S.stepPending && !S.waitingForNarration) S.frameClock.tick(dt, S.speed);
     // Do not rebuild up to 150 timeline cards at 60 FPS while the CAD
     // kernel is busy computing a single native animation frame.
     if (!S.inFlight) render();
@@ -386,7 +421,7 @@ function render() {
       if (S.overviewPending || S.manualFrame || S.playing) render();
     });
   }
-  const due = (S.playing && performance.now() >= S.nextFrameAt) || S.manualFrame;
+  const due = (S.playing && !S.waitingForNarration && performance.now() >= S.nextFrameAt) || S.manualFrame;
   if (!S.fresh && !S.inFlight && !S.stepPending && !S.overviewInFlight && due) {
     const index = S.index, epoch = S.epoch;
     const sentProgress = progress, direction = S.direction;
@@ -406,7 +441,11 @@ function render() {
         const atEnd = direction > 0 ? sentProgress >= 1 : sentProgress <= 0;
         if (atEnd) {
           // The final native frame is acknowledged before step transitions.
-          finishNativeStep();
+          if (narrationPending()) {
+            S.elapsed = duration();
+            S.waitingForNarration = true;
+            S.nextFrameAt = Infinity;
+          } else finishNativeStep();
         } else {
           const travelled = S.frameClock.completed(renderedAt - sentAt, S.speed);
           S.elapsed = direction > 0 ? travelled : duration() - travelled;
@@ -529,6 +568,11 @@ $("speed").addEventListener("input", () => { S.speed = Number($("speed").value);
 $("import").addEventListener("click", () => { pause(); bridge("open_package"); });
 $("demo").addEventListener("click", () => { pause(); bridge("load_demo"); });
 
+audio.addEventListener("ended", completeAfterNarration);
+audio.addEventListener("loadedmetadata", () => {
+  if (S.playing && !S.waitingForNarration) syncAudio(true);
+  completeAfterNarration();
+});
 requestAnimationFrame(tick);
 bridge("ready");
 
