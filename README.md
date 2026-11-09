@@ -135,7 +135,7 @@ Fusion 参考副本（不改动自己的 CAD 工作区）：
 2. **提取**：在 Fusion 里打开完成的 `.f3d`，点教程面板底部的 **Extract tutorial draft…**，得到每个特征完成后的模型（`*.extract.json`）。
 3. **转写**：把录音转成带时间的文字稿。可以用任意工具导出 `.srt`，或在本地运行 `python tools/transcribe.py session.mp4 -o transcript.srt`（需要 `pip install faster-whisper`）。
 4. **切分步骤（AI）**：`python tools/author.py draft.extract.json transcript.srt --session tutorial.session.json --video session.mp4 --id phone-stand --title "Phone Stand" -o annotation.json`。Claude 根据特征出现的时间、用到的工具和设计师说的话，把录制切成步骤并起标题（尽量用设计师自己的话）；它不写任何推理。结果会自动检查，不合格时、加 `--no-ai`、或没有 API 凭据时，改用按特征的规则切分。需要 `pip install anthropic` 和 `ANTHROPIC_API_KEY`（或 `ant auth login`）。
-5. **人工检查**：在浏览器里打开 `ui/author.html`，载入 `annotation.json`、文字稿、录屏（可选：提取草稿）。对着视频调整每一步的标题、起止时间和包含的特征，可以拆分或合并步骤，然后导出。
+5. **人工检查**：在浏览器里打开 `ui/authoring/index.html`，载入 `annotation.json`、文字稿、录屏（可选：提取草稿）。对着视频调整每一步的标题、起止时间和包含的特征，可以拆分或合并步骤，然后导出。
 6. **合成**：`python tools/build_package.py draft.extract.json annotation.json transcript.srt --media session.mp4 --source Design.f3d -o phone-stand.excadmple`
 
 附带的 `examples/phone_stand.json`（九步）和 `examples/tablet_stand.json` 是手工编写的示例，不是真实录制。由 `python tools/build_examples.py` 生成。
@@ -197,7 +197,7 @@ Fusion 参考副本（不改动自己的 CAD 工作区）：
 
 ```bash
 python -m unittest discover -s tests -v
-node --check ui/player.js && node --check ui/reference.js
+node --check ui/overlay/player.js && node --check ui/reference/player.js
 ```
 
 尚未在 Fusion 桌面端实测。单元测试通过不等于 Fusion API 已验证；版本 A 的验收步骤见 [`docs/FUSION_DESKTOP_TEST.md`](docs/FUSION_DESKTOP_TEST.md)。
@@ -212,18 +212,18 @@ core/animation.py         模型状态动画
 core/renderer.py          画布中的参考模型、Ghost Pointer、文字
 core/pointer.py           鼠标轨迹
 core/link.py              版本 A：两个 Fusion 之间的本机连接
-core/him_reference.py     版本 A：在设计师模型副本上播放（HiM 参数动画、按几何过滤）
-core/reference_plan.py    版本 A：步骤与时间轴特征的对应
+core/playback/him_reference.py     版本 A：在设计师模型副本上播放（HiM 参数动画、按几何过滤）
+core/tutorial/reference_plan.py    版本 A：步骤与时间轴特征的对应
 core/him_filter.py, him_motion.py, him_fusion.py   History in Motion 的过滤算法与参数动画
-core/extract_fusion.py    从 .f3d 提取教程草稿
+core/tutorial/extract_fusion.py    从 .f3d 提取教程草稿
 core/authoring.py, transcript.py   合成教程包、读取文字稿
 core/spatial.py, focus.py, geometry_links.py      关联几何
 core/step_changes.py      空间引导：比较相邻两步的记录模型，找出这一步新增或修改的三角形（青色）
-ui/index.html, player.*   版本 B 的面板
-ui/reference.*            版本 A 的控制面板
+ui/overlay/index.html, player.js, style.css   版本 B 的面板
+ui/reference/index.html, player.js, style.css            版本 A 的控制面板
 core/session_log.py, session_recorder.py   制作：录制时记录工具、特征时间、选中位置
 core/ai_segment.py        制作：把录制切成步骤（Claude 提议 + 规则兜底 + 检查）
-ui/author.html            制作：在浏览器里对着视频检查、调整步骤
+ui/authoring/index.html            制作：在浏览器里对着视频检查、调整步骤
 tools/fusion_demo/        Fusion 脚本：生成版本 A 的验收模型和教程包（tools/demo_tutorial.py）
 tools/                    author.py（切分步骤）、transcribe.py（本地转写）、build_package.py（合成）、build_examples.py（示例）
 ```
