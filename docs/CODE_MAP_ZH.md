@@ -13,14 +13,14 @@
 
 ```text
 exCADmpleFusion.py                 Fusion Add-in 入口
-  ├─ core/example_pair.py         配对 JSON + F3D；生成教程步骤
-  ├─ core/packages.py             读取、验证教程包
-  ├─ core/him_reference.py        参考窗口、原生模型状态、Timeline 和几何
-  │    ├─ core/reference_plan.py  Step ↔ Feature 映射
-  │    ├─ core/him_motion.py      数值参数插值
-  │    ├─ core/him_fusion.py      Fusion API 适配
-  │    ├─ core/him_wireframe.py   BRep ghost wireframe
-  │    └─ core/him_filter.py      几何选择历史过滤
+  ├─ core/tutorial/example_pair.py         配对 JSON + F3D；生成教程步骤
+  ├─ core/tutorial/packages.py             读取、验证教程包
+  ├─ core/playback/him_reference.py        参考窗口、原生模型状态、Timeline 和几何
+  │    ├─ core/tutorial/reference_plan.py  Step ↔ Feature 映射
+  │    ├─ core/playback/him_motion.py      数值参数插值
+  │    ├─ core/playback/him_fusion.py      Fusion API 适配
+  │    ├─ core/playback/him_wireframe.py   BRep ghost wireframe
+  │    └─ core/playback/him_filter.py      几何选择历史过滤
   └─ ui/reference/index.html + player.js + style.css     HiM 参考窗口的控制和语音/动画同步
        └─ ui/reference/frame_clock.js   等待 Fusion 帧完成后的自适应调度
 ```
@@ -49,8 +49,8 @@ node tests/test_reference_scrubbing.js
 
 ## 后续修改约定
 
-1. UI 与播放状态：`ui/reference/player.js`；CAD 逻辑：`core/him_reference.py`，避免互相复制控制状态。
-2. 模型参数动画：`core/him_motion.py`，不要为不支持的 Feature 伪造几何增长。
+1. UI 与播放状态：`ui/reference/player.js`；CAD 逻辑：`core/playback/him_reference.py`，避免互相复制控制状态。
+2. 模型参数动画：`core/playback/him_motion.py`，不要为不支持的 Feature 伪造几何增长。
 3. 新真实模型先走 JSON + F3D 配对流程，不要改写 Phone Stand 示例。
 4. 保持原始 `.f3d` 不变，动画只作用于临时参考副本。
 5. 改动时增加相应测试，优先小范围修复，不做跨分支大重构。
