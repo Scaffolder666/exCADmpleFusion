@@ -230,8 +230,6 @@ class ReferenceSession:
         except Exception as error:
             self.last_error = "{}: {}".format(items[position].name, error)
             self.log("HiM frame: " + self.last_error)
-            import traceback
-            traceback.print_exc()
             try:
                 self.show_overview()
             except Exception as restore_error:
