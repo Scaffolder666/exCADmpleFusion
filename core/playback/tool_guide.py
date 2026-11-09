@@ -31,12 +31,32 @@ MAX_DEPTH = 4
 
 
 def _items(collection, limit=500):
+    """Items of a Fusion collection; an item Fusion refuses is skipped."""
     if collection is None:
         return []
     try:
-        return [collection.item(i) for i in range(min(collection.count, limit))]
+        count = min(collection.count, limit)
     except Exception:
         return []
+    out = []
+    for i in range(count):
+        try:
+            out.append(collection.item(i))
+        except Exception:
+            continue
+    return out
+
+
+def _read(obj, name, default=None):
+    """An attribute of a Fusion UI object. Fusion raises RuntimeError (not
+    AttributeError) for some controls, e.g. reading a drop-down's name
+    ("InternalValidationError : nuInputControl"); one such control must not
+    stop the search."""
+    try:
+        value = getattr(obj, name)
+    except Exception:
+        return default
+    return default if value is None else value
 
 
 def _norm(text):
@@ -55,17 +75,13 @@ def candidate_names(label):
 def walk(controls, path, depth=0):
     """(path, definition) for every command in a control tree."""
     for control in _items(controls):
-        definition = None
-        try:
-            definition = control.commandDefinition
-        except Exception:
-            definition = None
+        definition = _read(control, "commandDefinition")
         if definition is not None:
-            yield path + [getattr(definition, "name", "")], definition
+            yield path + [_read(definition, "name", "")], definition
             continue
-        nested = getattr(control, "controls", None)
+        nested = _read(control, "controls")
         if nested is not None and depth < MAX_DEPTH:
-            name = getattr(control, "name", "") or ""
+            name = _read(control, "name", "")
             yield from walk(nested, path + ([name] if name else []), depth + 1)
 
 
@@ -77,14 +93,14 @@ def find(workspace, label):
     if not wanted:
         return None
     found = []
-    for tab_rank, tab in enumerate(_items(getattr(workspace, "toolbarTabs", None))):
-        tab_name = getattr(tab, "name", "") or ""
-        solid = 0 if "solid" in (getattr(tab, "id", "") or "").lower() or tab_name.lower() == "solid" else 1
-        for panel in _items(getattr(tab, "toolbarPanels", None)):
-            if getattr(panel, "id", "") == PANEL_ID:
+    for tab_rank, tab in enumerate(_items(_read(workspace, "toolbarTabs"))):
+        tab_name = _read(tab, "name", "")
+        solid = 0 if "solid" in _read(tab, "id", "").lower() or tab_name.lower() == "solid" else 1
+        for panel in _items(_read(tab, "toolbarPanels")):
+            if _read(panel, "id", "") == PANEL_ID:
                 continue                              # our own copy of the button
-            for path, definition in walk(getattr(panel, "controls", None),
-                                         [tab_name, getattr(panel, "name", "") or ""]):
+            for path, definition in walk(_read(panel, "controls"),
+                                         [tab_name, _read(panel, "name", "")]):
                 key = _norm(path[-1])
                 if key in wanted:
                     found.append(((wanted[key], solid, len(path), tab_rank),

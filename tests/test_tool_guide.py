@@ -44,6 +44,21 @@ class DropDown:
         self.name, self.controls = name, Coll(controls)
 
 
+class BrokenDropDown:
+    """Like some real Fusion drop-downs: reading the name raises."""
+
+    def __init__(self, controls):
+        self.controls = Coll(controls)
+
+    @property
+    def name(self):
+        raise RuntimeError("2 : InternalValidationError : nuInputControl")
+
+    @property
+    def commandDefinition(self):
+        raise RuntimeError("2 : InternalValidationError : nuInputControl")
+
+
 class Controls(Coll):
     def addCommand(self, definition):
         control = CommandControl(definition, self)
@@ -78,7 +93,8 @@ def workspace():
         Panel("SolidCreatePanel", "CREATE", [CommandControl(d["Create Sketch"]), CommandControl(d["Extrude"]),
                                              DropDown("More", [CommandControl(d["Revolve"])]),
                                              DropDown("Pattern", [CommandControl(d["Mirror"])])]),
-        Panel("SolidModifyPanel", "MODIFY", [CommandControl(d["Fillet"])])])
+        Panel("SolidModifyPanel", "MODIFY", [BrokenDropDown([CommandControl(Definition("Draft"))]),
+                                             CommandControl(d["Fillet"])])])
     surface = Tab("SurfaceTab", "SURFACE", [Panel("SurfaceCreatePanel", "CREATE",
                                                   [CommandControl(surface_extrude)])])
     # The surface tab comes first, to check that solid modelling is preferred.
@@ -95,6 +111,10 @@ class FindTests(unittest.TestCase):
         self.assertEqual(find(self.ws, "Revolve")["path"], ["SOLID", "CREATE", "More", "Revolve"])
         self.assertEqual(find(self.ws, "Sketch")["path"], ["SOLID", "CREATE", "Create Sketch"])
         self.assertEqual(find(self.ws, "Fillet")["path"], ["SOLID", "MODIFY", "Fillet"])
+
+    def test_a_control_fusion_refuses_to_describe_does_not_stop_the_search(self):
+        self.assertEqual(find(self.ws, "Fillet")["path"], ["SOLID", "MODIFY", "Fillet"])
+        self.assertEqual(find(self.ws, "Draft")["path"], ["SOLID", "MODIFY", "Draft"])   # nameless menu
 
     def test_unknown_tools_are_not_guessed(self):
         self.assertIsNone(find(self.ws, "Loft"))

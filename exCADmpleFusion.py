@@ -44,7 +44,7 @@ from core.session_recorder import SessionRecorder
 from core.playback.tool_guide import ToolGuide
 
 # Shown in the panel at start so it is clear which code Fusion is running.
-BUILD = "same-viewport 2026-11-09 · pinned tools v4"
+BUILD = "same-viewport 2026-11-09 · pinned tools v5"
 PALETTE_ID = "excadmple_fusion_player"
 COMMAND_ID = "excadmple_fusion_open"
 REFERENCE_COMMAND_ID = "excadmple_fusion_reference_open"
