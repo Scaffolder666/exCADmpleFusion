@@ -62,7 +62,7 @@ function narrationPending() {
   if (!media?.audio) return false;
   if (audio.dataset.src !== media.audio || audio.readyState < 1) return true;
   const offset = (media.offset_ms || 0) / 1000;
-  const end = Number.isFinite(audio.duration) ? Math.min(audio.duration, offset + duration() / 1000) : Infinity;
+  const end = Number.isFinite(audio.duration) ? (offset > 0 ? Math.min(audio.duration, offset + duration() / 1000) : audio.duration) : Infinity;
   return !audio.ended && audio.currentTime < end - 0.03;
 }
 function completeAfterNarration() {
