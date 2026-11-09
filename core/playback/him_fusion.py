@@ -25,6 +25,7 @@ from core.him_motion import (Playback, RestoreJournal, animation_mode, parameter
                          interpolate, short_kind, PARAMETRIC, FADE, NONE)
 from core.focus import OpacityFocus, FocusError
 from core.him_wireframe import capture_before_feature, can_isolate_feature, WireframeOverflow
+from core.playback.fast_motion import EXACT
 
 GEOMETRY_TYPES = (("face", adsk.fusion.BRepFace), ("edge", adsk.fusion.BRepEdge),
                   ("vertex", adsk.fusion.BRepVertex))
@@ -40,6 +41,7 @@ HIGHLIGHT = (37, 99, 235, 255)  # blue: recorded feature input / target edges
 CHANGE_HIGHLIGHT = (20, 184, 166, 255)
 NEUTRAL_FACE = (196, 202, 210, 255)  # faces of the feature that do not move
 HANDLE_COLOR = (235, 109, 35, 255)    # manipulator arrow + value, like Fusion's
+REAL_GROWTH = "real growth: its parameters are animated"
 OUTLINE_COLOR = (12, 84, 77, 255)     # edges of highlighted faces, so their shape reads
 MAX_OUTLINE_EDGES = 3000  # teal: geometry affected by feature
 GHOST_WIREFRAME = (155, 164, 175, 255)  # light gray: true BRep edge curves
@@ -799,6 +801,15 @@ class HiMController:
             if not prepared["params"]:
                 prepared["mode"] = FADE
                 prepared["fallback"] = "no animatable parameter for this extent type"
+        if plan is not None and prepared["params"] and plan.accuracy != EXACT:
+            # A feature that can grow grows for real, as in HiM: Fusion
+            # recomputes it at each parameter value. Fast motion is kept only
+            # where it is the same shape (a new-body extrude) or where the
+            # operation has no parameter to grow (move, mirror, combine...).
+            for key, param, _ in prepared["params"]:
+                self.journal.capture(key, param)
+            plan = None
+            native_reason = REAL_GROWTH
         try:
             prepared["bodies"] = [b for b in _items(getattr(entity, "bodies", None)) if b]
         except Exception:
@@ -1579,6 +1590,8 @@ class HiMController:
             if not self.fast_motion or prepared["mode"] not in (PARAMETRIC, FADE):
                 return ""
             reason = prepared.get("native_reason")
+            if reason == REAL_GROWTH:
+                return "Real growth: Fusion computes the feature at every step of its parameter"
             return "Fusion recomputes every frame" + (" (" + reason + ")" if reason else "")
         return self.MOTION_NOTES.get(kind, "")
 

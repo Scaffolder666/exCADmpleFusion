@@ -220,10 +220,9 @@ class FastPlaybackTests(unittest.TestCase):
     def test_step_change_and_end_clean_up(self):
         self.session.frame(0, 0.5)
         group = self.session.him.fast_group
-        self.session.frame(1, 0.5)                                   # fillet: its own (crossfade) group
+        self.session.frame(1, 0.5)                                   # fillet: grows for real
         self.assertFalse(group.isValid)
-        self.assertIsNot(self.session.him.fast_group, group)
-        self.assertEqual(native.param(self.entities, "fi1").writes, [])
+        self.assertAlmostEqual(native.param(self.entities, "fi1").value, interpolate(0.2, 0.5))
         self.session.frame(0, 1.0)                                    # step end: final position
         self.assertAlmostEqual(native.param(self.entities, "fi1").value, 0.2)
         self.assertIsNotNone(self.session.him.fast_group)
@@ -266,22 +265,29 @@ class FastPlaybackTests(unittest.TestCase):
         self.session.frame(0, 0.8)
         self.assertAlmostEqual(group.curves[0].transform.cells[(2, 2)], interpolate(1.0, 0.8))
 
-    def test_fillet_crossfades_without_recompute(self):
+    def test_a_join_extrude_grows_for_real_a_new_body_extrude_stays_fast(self):
+        self.entities["ex1"].operation = 0                              # join: scaling is only approximate
+        shown = self.session.frame(0, 0.5)
+        self.assertEqual(shown["motion"], "native")
+        self.assertAlmostEqual(self.d1.value, interpolate(1.0, 0.5))
+        self.session.stop()
+        self.entities["ex1"].operation = 3                              # new body: identical shape, fast
+        self.assertEqual(self.session.frame(0, 0.5)["motion"], "exact")
+
+    def test_a_fillet_grows_for_real(self):
+        """A feature with a parameter grows as in HiM: its radius really goes
+        from ~0 to its value, recomputed by Fusion (no crossfade)."""
         self.entities["fi1"].faces = Coll([Obj("BRepFace", "round-face")])
         shown = self.session.frame(1, 0.25)
-        self.assertEqual(shown["motion"], "illustrative")
         radius = native.param(self.entities, "fi1")
-        self.assertEqual(radius.writes, [])                            # no parameter change
-        bodies = self.session.him.fast_group.bodies
-        roles = [(piece.role, entity.opacity) for piece, entity in self.session.him.active["fast_entities"]]
-        self.assertIn(("before", 0.75), roles)                         # body1 as it was, fading out
-        self.assertIn(("after", 0.25), roles)                          # the filleted body, fading in
-        self.assertIn(("change", 0.25), roles)                         # its new face, teal
+        self.assertEqual(shown["motion"], "native")
+        self.assertIn("Real growth", shown["motion_note"])
+        self.assertAlmostEqual(radius.value, interpolate(0.2, 0.25))
         self.session.frame(1, 0.8)
-        self.assertIn(("before", 0.2), [(p.role, round(e.opacity, 6))
-                                        for p, e in self.session.him.active["fast_entities"]])
-        self.session.stop()
+        self.assertAlmostEqual(radius.value, interpolate(0.2, 0.8))
         self.assertIsNone(self.session.him.fast_group)
+        self.session.stop()
+        self.assertAlmostEqual(radius.value, 0.2)
 
     def test_without_hidden_native_result_it_stays_native(self):
         self.session.him._start_ghost_context = lambda prepared, snapshot: False
@@ -308,8 +314,10 @@ class FastPlaybackTests(unittest.TestCase):
         self.entities["ex1"].taperAngleOne = types.SimpleNamespace(value=0.2)
         self.session.frame(1, 0.5)
         self.session.frame(0, 0.5)                                    # Extrude1 again, now tapered
-        self.assertTrue(any(line.startswith("HiM motion Extrude1 (ExtrudeFeature): fast, illustrative (")
-                            and "taper angle" in line for line in logged), logged)
+        # A tapered extrude cannot be scaled exactly: it grows for real.
+        self.assertIn("HiM motion Extrude1 (ExtrudeFeature): Fusion recompute, real growth: "
+                      "its parameters are animated", logged)
+        self.assertAlmostEqual(self.d1.value, interpolate(1.0, 0.5))
 
 
 class RefusalReasonTests(unittest.TestCase):

@@ -61,17 +61,18 @@ changing its parameter values.
 
 ## Fast motion (moving real faces instead of recomputing)
 
-During playback, some operations no longer make Fusion recompute every frame:
+Every feature that has a parameter to grow (extrude, revolve, fillet, chamfer, offset faces, shell, hole, pattern, ...) **grows for real**, as in History in Motion: Fusion recomputes it at each step of its parameter. Fast motion is used only where it gives the same shape or where there is nothing to grow:
 
 | Operation | During playback | Accuracy shown in the panel |
 |---|---|---|
 | Extrude, new body, distance extent, no taper, starting on the profile plane | The feature's real faces are scaled along the extrude direction about the profile plane | **same shape** as Fusion's recompute |
-| The same extrude joining or cutting other bodies | Same | approximate where it meets other geometry |
-| Rectangular / circular pattern | Each instance moves from the source along its real pattern transform (arc for circular) | illustrative path, real end state |
+| The same extrude joining or cutting other bodies | Grows for real (Fusion recomputes) | real |
+| Rectangular / circular pattern | Grows for real when its spacing/angle parameter can be animated; otherwise each instance moves from the source along its real transform | real / illustrative |
 | Mirror | The copy folds over the mirror plane | illustrative path, real end state |
-| Revolve with one angle | The profile (blue) sweeps about the real axis while the revolved faces appear | illustrative path, real end state |
+| Revolve | Grows for real (the angle grows); only if the angle cannot be animated, the profile sweeps about the axis while the faces appear | real / illustrative |
 | Move (bodies or faces, rigid transform) | The moved bodies travel from their old place to the new one along the real transform (on the arc for a rotation) | illustrative path, real end state |
-| Everything else: combine, offset faces, copy/paste, fillet, chamfer, shell, extrudes with taper / to-object / offset start, ... | The affected bodies as they were fade out, the result fades in with the feature's own faces in teal; consumed tools fade out, new bodies fade in | illustrative path, real end state |
+| Features with a parameter (fillet, chamfer, offset faces, shell, hole, tapered extrudes, ...) | Grow for real | real |
+| Combine, copy/paste and other features without a parameter | The affected bodies as they were fade out, the result fades in with the feature's own faces in teal; consumed tools fade out, new bodies fade in | illustrative, real end state |
 
 - **Pausing:** when you pause (or scrub), Fusion recomputes the real model at that position for operations that have parameters. Pressing Play goes back to moving copies.
 - **When fast motion is used:** only when the native result can be hidden (the HiM ghost context). It falls back to native recompute if face copies cannot be made.
