@@ -167,7 +167,8 @@ class FastPlaybackTests(unittest.TestCase):
         self.session.frame(0, 0.4)
         group = self.session.him.fast_group
         shown = self.session.frame(0, 0.5, settle=True)              # paused
-        self.assertEqual(shown["motion"], "native")
+        self.assertEqual(shown["motion"], "settled")
+        self.assertIn("Paused: Fusion's real recompute", shown["motion_note"])
         self.assertAlmostEqual(self.d1.value, interpolate(1.0, 0.5))  # Fusion's real shape
         self.assertFalse(group.isValid)
         shown = self.session.frame(0, 0.6)                            # play again
@@ -194,6 +195,7 @@ class FastPlaybackTests(unittest.TestCase):
         self.session.him._start_ghost_context = lambda prepared, snapshot: False
         shown = self.session.frame(0, 0.5)
         self.assertEqual(shown["motion"], "native")
+        self.assertIn("ghost context unavailable", shown["motion_note"])
         self.assertAlmostEqual(self.d1.value, interpolate(1.0, 0.5))
         self.session.stop()
         self.assertAlmostEqual(self.d1.value, 1.0)
@@ -203,7 +205,32 @@ class FastPlaybackTests(unittest.TestCase):
             get=lambda: types.SimpleNamespace(copy=lambda face: None))
         shown = self.session.frame(0, 0.5)
         self.assertEqual(shown["motion"], "native")
+        self.assertIn("could not be copied", shown["motion_note"])
         self.assertAlmostEqual(self.d1.value, interpolate(1.0, 0.5))
+
+    def test_each_feature_logs_which_motion_it_uses_and_why(self):
+        logged = []
+        self.session.him.log = logged.append
+        self.session.frame(0, 0.5)
+        self.assertIn("HiM motion Extrude1 (ExtrudeFeature): fast, exact", logged)
+        self.entities["ex1"].taperAngleOne = types.SimpleNamespace(value=0.2)
+        self.session.frame(1, 0.5)
+        self.session.frame(0, 0.5)                                    # Extrude1 again, now tapered
+        self.assertIn("HiM motion Extrude1 (ExtrudeFeature): Fusion recompute, the extrude has a taper angle",
+                      logged)
+        self.assertIn("taper angle", self.session.him.status()["motion_note"])
+
+
+class RefusalReasonTests(unittest.TestCase):
+    def test_reasons_are_reported(self):
+        cases = [("ExtrudeFeature", extrude(), {}, "profile plane could not be read"),
+                 ("ExtrudeFeature", extrude(extentOne=typed("ToEntityExtentDefinition")), PLANE,
+                  "ToEntityExtentDefinition cannot be scaled"),
+                 ("FilletFeature", extrude(), PLANE, "no fast motion for FilletFeature")]
+        for kind, entity, inputs, expected in cases:
+            reasons = []
+            self.assertIsNone(fm.plan_for(kind, entity, inputs, reasons=reasons))
+            self.assertIn(expected, reasons[0])
 
 
 if __name__ == "__main__":

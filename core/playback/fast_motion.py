@@ -215,6 +215,10 @@ def capture_inputs(kind, entity):
     return {k: v for k, v in inputs.items() if v}
 
 
+class Refused(Exception):
+    """This feature keeps native recompute, for the given reason."""
+
+
 class Piece:
     """Faces that move together, and their transform at each progress."""
 
@@ -232,24 +236,24 @@ class Plan:
 
 def _extrude_plan(entity, inputs, start_fraction):
     if not inputs.get("plane"):
-        return None
+        raise Refused("the profile plane could not be read")
     if "ProfilePlaneStart" not in _type(getattr(entity, "startExtent", None)) and \
             getattr(entity, "startExtent", None) is not None:
-        return None                                   # offset / from-object start
+        raise Refused("the extrude does not start on the profile plane")
     for name in ("extentOne", "extentTwo"):
         extent = getattr(entity, name, None)
         if extent is not None and _type(extent) not in ("DistanceExtentDefinition",
                                                          "SymmetricExtentDefinition", ""):
-            return None                               # to-object / all / to-next
+            raise Refused("extent type " + _type(extent) + " cannot be scaled")
     if getattr(entity, "extentOne", None) is None:
-        return None
+        raise Refused("no extent")
     for name in ("taperAngleOne", "taperAngleTwo"):
         value = _value(getattr(entity, name, None))
         if value is not None and abs(value) > 1e-9:
-            return None
+            raise Refused("the extrude has a taper angle")
     faces = _items(getattr(entity, "faces", None))
     if not faces:
-        return None
+        raise Refused("the feature reports no faces")
     origin, normal = inputs["plane"]
 
     def motion(t):
@@ -269,7 +273,7 @@ def _pattern_plan(entity):
             transform = element.transform
             final = [[float(transform.getCell(r, c)) for c in range(4)] for r in range(4)]
         except Exception:
-            return None
+            raise Refused("a pattern transform could not be read")
         faces = _items(getattr(element, "faces", None))
         if not faces:
             continue
@@ -277,15 +281,17 @@ def _pattern_plan(entity):
             continue                                  # the source itself
         back = invert_rigid(final)
         pieces.append(Piece(faces, lambda t, final=final, back=back: matmul(screw_partial(final, t), back)))
-    return Plan(pieces, ILLUSTRATIVE, "instances move from the source") if pieces else None
+    if not pieces:
+        raise Refused("the pattern instances report no faces")
+    return Plan(pieces, ILLUSTRATIVE, "instances move from the source")
 
 
 def _mirror_plan(entity, inputs):
     if not inputs.get("mirror"):
-        return None
+        raise Refused("the mirror plane could not be read")
     faces = _items(getattr(entity, "faces", None))
     if not faces:
-        return None
+        raise Refused("the feature reports no faces")
     origin, normal = inputs["mirror"]
     reflect = scale_along(normal, origin, -1.0)
     return Plan([Piece(faces, lambda t: matmul(scale_along(normal, origin, 1.0 - 2.0 * t), reflect))],
@@ -294,22 +300,23 @@ def _mirror_plan(entity, inputs):
 
 def _revolve_plan(entity, inputs):
     if not inputs.get("axis"):
-        return None
+        raise Refused("the revolve axis could not be read")
     extent = getattr(entity, "extentDefinition", None)
     if _type(extent) != "AngleExtentDefinition":
-        return None
+        raise Refused("extent type " + _type(extent) + " is not a single angle")
     angle = _value(getattr(extent, "angle", None))
     faces = _items(getattr(entity, "faces", None))
     if not angle or not faces:
-        return None
+        raise Refused("no angle or no faces")
     point, direction = inputs["axis"]
     # Rotate so the faces start at the profile and end at their real angle.
     return Plan([Piece(faces, lambda t: rotation_about(direction, point, -(1.0 - t) * angle))],
                 ILLUSTRATIVE, "the revolved faces turn about the axis")
 
 
-def plan_for(kind, entity, inputs, start_fraction=0.02):
-    """A fast-motion Plan for this feature, or None (keep native recompute)."""
+def plan_for(kind, entity, inputs, start_fraction=0.02, reasons=None):
+    """A fast-motion Plan for this feature, or None (keep native recompute).
+    Why it was refused is appended to ``reasons`` when a list is given."""
     try:
         if kind == "ExtrudeFeature":
             return _extrude_plan(entity, inputs, start_fraction)
@@ -319,6 +326,11 @@ def plan_for(kind, entity, inputs, start_fraction=0.02):
             return _mirror_plan(entity, inputs)
         if kind == "RevolveFeature":
             return _revolve_plan(entity, inputs)
-    except Exception:
-        return None
+        reason = "no fast motion for " + (kind or "this feature")
+    except Refused as refused:
+        reason = str(refused)
+    except Exception as error:
+        reason = "{}: {}".format(type(error).__name__, error)
+    if reasons is not None:
+        reasons.append(reason)
     return None

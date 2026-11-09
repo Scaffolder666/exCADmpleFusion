@@ -711,9 +711,12 @@ class HiMController:
             prepared["fallback"] = "feature not found in the model"
         inputs, self.pending_inputs = self.pending_inputs, {}
         plan = None
+        native_reason = ""
         if self.fast_motion and entity is not None and mode in (PARAMETRIC, FADE):
             from .fast_motion import plan_for
-            plan = plan_for(feature.kind, entity, inputs)
+            reasons = []
+            plan = plan_for(feature.kind, entity, inputs, reasons=reasons)
+            native_reason = reasons[0] if reasons else ""
         if entity is None:
             pass
         elif mode == PARAMETRIC:
@@ -747,8 +750,10 @@ class HiMController:
             # the intermediate shape without the final one behind them.
             prepared["fast"] = plan
         elif plan is not None:
+            native_reason = "the finished result cannot be hidden (ghost context unavailable)"
             for key, param, _ in prepared["params"]:
                 self.journal.capture(key, param)
+        prepared["native_reason"] = native_reason
         if self.auto_focus:
             self.focus_feature(prepared)
         self._draw_overlay(prepared, 0.0)
@@ -756,7 +761,13 @@ class HiMController:
             for key, param, _ in prepared["params"]:
                 self.journal.capture(key, param)
             prepared["fast"] = None
+            prepared["native_reason"] = "the feature's faces could not be copied"
             self._draw_overlay(prepared, 0.0)
+        if self.fast_motion and prepared["mode"] in (PARAMETRIC, FADE):
+            self.log("HiM motion {} ({}): {}".format(
+                feature.name, feature.kind,
+                "fast, " + prepared["fast"].accuracy if prepared.get("fast")
+                else "Fusion recompute, " + (prepared["native_reason"] or "no reason recorded")))
         self.active_position = position
         self.active = prepared
 
@@ -1229,10 +1240,20 @@ class HiMController:
     def _motion_kind(self, prepared):
         if self._moving(prepared):
             return prepared["fast"].accuracy
+        if prepared.get("settled"):
+            return "settled"
         return "native"
 
     def _motion_note(self, prepared):
-        return self.MOTION_NOTES.get(self._motion_kind(prepared), "")
+        kind = self._motion_kind(prepared)
+        if kind == "settled":
+            return "Paused: Fusion's real recompute at this point"
+        if kind == "native":
+            if not self.fast_motion or prepared["mode"] not in (PARAMETRIC, FADE):
+                return ""
+            reason = prepared.get("native_reason")
+            return "Fusion recomputes every frame" + (" (" + reason + ")" if reason else "")
+        return self.MOTION_NOTES.get(kind, "")
 
     def _finish_feature(self):
         """Restore parameters, opacity and overlay of the active feature."""
