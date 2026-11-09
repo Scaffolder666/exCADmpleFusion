@@ -23,6 +23,7 @@ from core import him_filter
 from core.him_fusion import FusionTimelineModel, HiMController, _model_parameters
 from core.him_motion import Frame, animation_mode, PARAMETRIC, FADE
 from core.reference_plan import map_steps, animated, frame_target, steps_for_features
+from .same_viewport import SameViewportPresenter, side_by_side_offset
 
 
 class ReferenceSession:
@@ -49,6 +50,12 @@ class ReferenceSession:
         self.source_name = ""
         self.plan = []              # per step: how each feature is shown
         self.last_error = ""
+        # Same viewport: the user's Design stays active and editable; the
+        # reference is drawn into it. The reference keeps its own document
+        # and Timeline, never merged into the user's.
+        self.same_viewport = True
+        self.user_document = None
+        self.presenter = SameViewportPresenter(self.log)
 
     @property
     def live(self):
@@ -62,12 +69,14 @@ class ReferenceSession:
         path = package.source_model_path()
         if path is None:
             return False
+        user_document = self._user_document() if self.same_viewport else None
         manager = self.app.importManager
         options = manager.createFusionArchiveImportOptions(str(path))
         document = manager.importToNewDocument(options)
         if document is None:
             raise RuntimeError("Fusion could not open " + path.name)
-        document.activate()
+        if user_document is None:
+            document.activate()
         try:
             design = adsk.fusion.Design.cast(document.products.itemByProductType("DesignProductType"))
             model = FusionTimelineModel(design)
@@ -80,6 +89,8 @@ class ReferenceSession:
                 document.close(False)
             except Exception:
                 pass
+            if user_document is not None:
+                self._activate(user_document)
             raise
         self.document = document
         self.model = model
@@ -88,6 +99,16 @@ class ReferenceSession:
         self.source_name = path.name
         self.plan = self.animation_plan()
         self.model.go(self.model.end_state())
+        if user_document is not None:
+            # The user's Design is the active, editable workspace again.
+            self._activate(user_document)
+            self.user_document = user_document
+            target = self._user_design()
+            offset = side_by_side_offset(target, design, package.data.get("reference_offset_cm"))
+            self.presenter.attach(design, target, offset)
+            self.him.graphics_design = self._user_design
+            self.him.display_offset = offset
+            self.present()
         try:
             if self.him.auto_focus:
                 self.app.activeViewport.fit()
@@ -95,14 +116,79 @@ class ReferenceSession:
             pass
         return True
 
+    # --- the user's document (same viewport) ---------------------------------------------
+    def _user_document(self):
+        """The user's active Design document; a new one if none is open."""
+        document = None
+        try:
+            document = self.app.activeDocument
+            if document is not None and not adsk.fusion.Design.cast(
+                    document.products.itemByProductType("DesignProductType")):
+                document = None
+        except Exception:
+            document = None
+        if document is None:
+            document = self.app.documents.add(adsk.core.DocumentTypes.FusionDesignDocumentType)
+        return document
+
+    @staticmethod
+    def _activate(document):
+        try:
+            document.activate()
+        except Exception:
+            pass
+
+    def _user_design(self):
+        if self.user_document is None:
+            return None
+        try:
+            return adsk.fusion.Design.cast(self.user_document.products.itemByProductType("DesignProductType"))
+        except Exception:
+            return None
+
+    def present(self, changing=()):
+        """Draw the reference's current state into the user's viewport."""
+        if not self.presenter.attached:
+            return
+        if not getattr(self.user_document, "isValid", True):
+            self.presenter.detach()
+            raise RuntimeError("Your design was closed; load the tutorial again to show the reference")
+        try:
+            self.presenter.refresh(self.current, changing)
+        except Exception as error:
+            self.log("Reference display: " + str(error))
+            raise
+
+    def hide(self):
+        """Remove the reference graphics from the user's design (e.g. before save)."""
+        self.presenter.clear()
+
+    def owns(self, entity):
+        """True when ``entity`` (a selected face/edge/vertex) belongs to the
+        reference copy, not to the user's own design."""
+        if not self.live:
+            return False
+        try:
+            body = entity.body if hasattr(entity, "body") else None
+            if body is None:
+                edges = getattr(entity, "edges", None)
+                body = edges.item(0).body if edges is not None and edges.count else None
+            return body.parentComponent.parentDesign == self.model.design
+        except Exception:
+            return False
+
     def close(self):
         self.stop()
+        self.presenter.detach()
+        self.him.graphics_design = None
+        self.him.display_offset = (0.0, 0.0, 0.0)
         if self.document is not None:
             try:
                 self.document.close(False)        # a copy: never saved
             except Exception:
                 pass
         self.document = self.model = None
+        self.user_document = None
         self.mapped, self.unmatched, self.filter_result = [], [], None
         self.plan = []
 
@@ -119,10 +205,14 @@ class ReferenceSession:
         self.current = None
 
     def _active(self):
-        """Only animate while the reference copy is the active document."""
+        """Playback may run. Same viewport: while the reference copy is still
+        open, whichever document is active (it only ever changes the copy).
+        Otherwise only while the reference copy is the active document."""
         if self.document is None:
             return True
         try:
+            if self.presenter.attached:
+                return bool(self.document.isValid)
             return self.app.activeDocument == self.document
         except Exception:
             return False
@@ -169,6 +259,7 @@ class ReferenceSession:
         self.stop(restore_timeline=False)  # restores parameter expressions and opacity
         self.model.go(self.model.end_state())
         self.current = ("overview",)
+        self.present()
         try:
             if self.him.auto_focus and self._active():
                 self.app.activeViewport.fit()
@@ -193,6 +284,7 @@ class ReferenceSession:
             if self.current != (step_index, "result"):
                 self.show_result(step_index)
                 self.current = (step_index, "result")
+                self.present()
             features = self.mapped[step_index]
             return {"step": step_index,
                     "feature": features[-1].name if features else None,
@@ -209,6 +301,7 @@ class ReferenceSession:
             if self.current != (step_index, "result"):
                 self.show_result(step_index)
                 self.current = (step_index, "result")
+                self.present()
             return {"step": step_index, "feature": None, "mode": "result"}
         position, local = frame_target(self.mapped[step_index], progress)
         key = (step_index, position)
@@ -227,6 +320,7 @@ class ReferenceSession:
                 self.him.active_position = None
                 self.current = key
             self.him._render(Frame(0, local))
+            self.present(changing=self._changing_tokens())
         except Exception as error:
             self.last_error = "{}: {}".format(items[position].name, error)
             self.log("HiM frame: " + self.last_error)
@@ -257,6 +351,12 @@ class ReferenceSession:
             self.him.draw_guidance(features)
         except Exception as error:
             self.log("HiM geometry guidance: " + str(error))
+        self.present()
+
+    def _changing_tokens(self):
+        """Bodies recomputed by the active parameter frame."""
+        from .him_fusion import _token
+        return {_token(b) for b in self.him.active.get("bodies", []) if _token(b)}
 
     def _read_inputs(self, features):
         """Record each feature's input profile/edges (blue), once. The
@@ -285,6 +385,8 @@ class ReferenceSession:
         """Selected geometry -> relevant features (HiM Algorithm 1) -> steps."""
         if not self.live:
             return None
+        if self.presenter.attached and not self.owns(entity):
+            return None          # the user's own geometry: never filter on it
         ref = FusionTimelineModel._ref(entity)
         if not ref:
             return None
@@ -292,6 +394,8 @@ class ReferenceSession:
         self.model.go(self.model.end_state())
         result = him_filter.extract_relevant_features(self.model, ref)
         self.model.go(self.model.end_state())
+        self.current = None
+        self.present()
         self.filter_result = result
         return self._describe(result)
 
@@ -301,6 +405,8 @@ class ReferenceSession:
         self.stop()
         him_filter.show_more(self.model, self.filter_result)
         self.model.go(self.model.end_state())
+        self.current = None
+        self.present()
         return self._describe(self.filter_result)
 
     def _describe(self, result):

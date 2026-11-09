@@ -335,7 +335,9 @@ class PaletteHandler(adsk.core.HTMLEventHandler):
                             _last_shown = shown
                             _post("animation", shown)
                         if shown is None:
-                            raise RuntimeError("Activate the reference document to continue playback")
+                            raise RuntimeError("The reference model is not open any more; load the tutorial again"
+                                               if _session.presenter.attached else
+                                               "Activate the reference document to continue playback")
                         if shown.get("mode") == "error":
                             raise RuntimeError(shown.get("fallback") or "Native frame failed")
                     elif step.get("animation"):
@@ -547,6 +549,7 @@ class BeforeSave(adsk.core.DocumentEventHandler):
         try:
             if _session:
                 _session.stop()           # never save an animated parameter
+                _session.hide()           # no reference graphics in the user's saved design
             if _spatial:
                 _spatial.clear_overlay()  # restore the user's opacities
             if _renderer:

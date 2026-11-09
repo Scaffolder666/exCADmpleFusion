@@ -440,6 +440,10 @@ class HiMController:
         # Version A passes the reference copy's design here, so animation
         # never touches whatever document happens to be active.
         self._design_provider = design_provider
+        # Same-viewport mode: overlays are drawn into the user's design
+        # (callable returning it) and moved beside the user's model.
+        self.graphics_design = None
+        self.display_offset = (0.0, 0.0, 0.0)
         self.log = log or (lambda *_: None)
         self.result = None
         self.clip = []
@@ -471,6 +475,17 @@ class HiMController:
         if self._design_provider is not None:
             return self._design_provider()
         return adsk.fusion.Design.cast(self.app.activeProduct)
+
+    def _new_group(self, design):
+        """A Custom Graphics group where the user sees the reference."""
+        target = self.graphics_design() if self.graphics_design else None
+        return (target or design).rootComponent.customGraphicsGroups.add()
+
+    def _placed(self, group):
+        if any(self.display_offset):
+            from .same_viewport import place
+            place(group, self.display_offset)
+        return group
 
     def _document_key(self):
         design = self.design()
@@ -615,7 +630,7 @@ class HiMController:
         design = self.design()
         group = None
         try:
-            group = design.rootComponent.customGraphicsGroups.add()
+            group = self._new_group(design)
             group.isSelectable = False
             color = adsk.fusion.CustomGraphicsSolidColorEffect.create(
                 adsk.core.Color.create(*GHOST_WIREFRAME))
@@ -631,6 +646,7 @@ class HiMController:
                 drawn += 1
             if drawn != len(snapshot["curves"]):
                 raise RuntimeError("Incomplete background wireframe")
+            self._placed(group)
             from core.spatial import _model_bodies
             # Hide native shaded faces; ONLY the precise feature-owned face
             # copies (or a provably newly created Body) will be opaque.
@@ -714,7 +730,9 @@ class HiMController:
         try:
             entity = prepared.get("entity")
             geometry = _items(getattr(entity, "faces", None)) or prepared.get("bodies", [])
-            return focus_geometry(self.app.activeViewport, geometry, adsk.core.Point3D.create)
+            ox, oy, oz = self.display_offset
+            return focus_geometry(self.app.activeViewport, geometry,
+                                  lambda x, y, z: adsk.core.Point3D.create(x + ox, y + oy, z + oz))
         except Exception as error:
             self.log("HiM auto-focus: " + str(error))
             return False  # camera guidance must not interrupt native reconstruction
@@ -742,7 +760,7 @@ class HiMController:
         design = self.design()
         if not design:
             return
-        group = design.rootComponent.customGraphicsGroups.add()
+        group = self._new_group(design)
         self.group = group  # own it before any draw can fail
         group.isSelectable = False
         curves = self.model_highlights.get(prepared["feature"].index, [])
@@ -827,7 +845,7 @@ class HiMController:
             # A precise native face copy is a reliable target. A whole
             # result Body is not: omit the arrow rather than point vaguely.
             self._add_geometry_arrow(group, targets, prepared["bodies"])
-        self.group = group
+        self.group = self._placed(group)
 
     @staticmethod
     def _add_geometry_arrow(group, targets, result_bodies):
@@ -851,7 +869,7 @@ class HiMController:
         design = self.design()
         if not design or not features:
             return None
-        group = design.rootComponent.customGraphicsGroups.add()
+        group = self._new_group(design)
         group.isSelectable = False
         arrow_target = None
         for feature in features:
@@ -881,7 +899,7 @@ class HiMController:
                     self.log("HiM geometry guidance: " + str(error))
         if arrow_target:
             self._add_geometry_arrow(group, *arrow_target)
-        self.group = group
+        self.group = self._placed(group)
         self._refresh()
         return group
 
