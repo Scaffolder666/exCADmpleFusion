@@ -39,6 +39,24 @@ class VisualConsistencyTests(unittest.TestCase):
         self.session.stop()
         self.assertEqual(self.opacities(), [0.6, 1.0, 1.0])
 
+    def test_a_sketch_step_shows_the_same_context_look_as_feature_steps(self):
+        """Translucent white faces with a dark outline, like every other
+        step - not merely dimmed bodies."""
+        for token in ("body0", "body1", "body2"):
+            self.entities[token].edges = Coll([types.SimpleNamespace(geometry="edge-of-" + token)])
+            self.entities[token].isVisible = True
+        self.session.him.wireframe_context = True
+        self.session.mapped, _ = map_steps([{"id": "s", "source_features": [{"name": "Sketch1", "index": 0}]}],
+                                           self.session.model.features())
+        self.session.frame(0, 0.5)
+        ghost = self.session.him.ghost_group
+        self.assertIsNotNone(ghost)
+        self.assertEqual(len(ghost.curves), 3)                               # dark outline
+        self.assertEqual([b.opacity for b in ghost.bodies], [0.28, 0.28, 0.28])   # translucent white faces
+        self.assertTrue(all(o < 0.01 for o in self.opacities()))              # native bodies hidden
+        self.session.stop()
+        self.assertEqual(self.opacities(), [0.6, 1.0, 1.0])
+
     def test_changed_faces_are_opaque_teal(self):
         fillet = self.entities["fi1"]
         fillet.faces = Coll([Obj("BRepFace", "round-face")])

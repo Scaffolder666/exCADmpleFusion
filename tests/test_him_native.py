@@ -177,6 +177,10 @@ class WireframePlaybackTests(unittest.TestCase):
         self.assertTrue(seen["wireframe"])
         self.assertEqual(seen["ghost_edges"], 3)
         self.assertEqual(session.him.ghost_group.curves[0].color, ("solid", adsk.core.Color.create(*GHOST_COLOR)))
+        # ... over translucent white faces of the same pre-feature bodies.
+        fills = session.him.ghost_group.bodies
+        self.assertEqual(len(fills), 3)
+        self.assertTrue(all(f.opacity == 0.28 for f in fills))
         self.assertTrue(all(entities[name].opacity < 0.01
                             for name in original))   # no shaded source Body
         self.assertTrue(session.him.group.bodies)
@@ -257,7 +261,7 @@ class WireframePlaybackTests(unittest.TestCase):
         self.assertTrue(all(not group.isValid for group in groups))
 
 
-GHOST_COLOR = (155, 164, 175, 255)
+GHOST_COLOR = (40, 44, 52, 255)          # dark outline of the model before the feature
 
 
 class ParameterDiscoveryTests(unittest.TestCase):

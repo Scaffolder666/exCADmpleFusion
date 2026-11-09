@@ -44,7 +44,9 @@ HANDLE_COLOR = (235, 109, 35, 255)    # manipulator arrow + value, like Fusion's
 REAL_GROWTH = "real growth: its parameters are animated"
 OUTLINE_COLOR = (12, 84, 77, 255)     # edges of highlighted faces, so their shape reads
 MAX_OUTLINE_EDGES = 3000  # teal: geometry affected by feature
-GHOST_WIREFRAME = (155, 164, 175, 255)  # light gray: true BRep edge curves
+GHOST_WIREFRAME = (40, 44, 52, 255)     # near-black outline of the model before the feature
+CONTEXT_FILL = (232, 236, 241, 255)     # its faces: white, translucent
+CONTEXT_FILL_OPACITY = 0.28
 GHOST_SURFACE_OPACITY = 0.001         # Fusion keeps native topology selectable
 
 
@@ -698,6 +700,10 @@ class HiMController:
             return
         try:
             self.pending_ghost = capture_before_feature(design)
+            if self.pending_ghost is not None:
+                copies = self._copy_bodies_before() or {}
+                self.pending_ghost["copies"] = {t: c for t, c in copies.items()
+                                                if t in self.pending_ghost["body_tokens"]}
         except WireframeOverflow as error:
             self.log("HiM wireframe disabled for this step: " + str(error))
         except Exception as error:
@@ -722,14 +728,26 @@ class HiMController:
             group.isSelectable = False
             color = adsk.fusion.CustomGraphicsSolidColorEffect.create(
                 adsk.core.Color.create(*GHOST_WIREFRAME))
+            # One look for "the model before this step" in every step:
+            # translucent white faces with a dark outline.
+            fill = _surface(CONTEXT_FILL)
+            for copy in (snapshot.get("copies") or {}).values():
+                try:
+                    face = group.addBRepBody(copy)
+                    face.color = fill
+                    face.setOpacity(CONTEXT_FILL_OPACITY, True)
+                    face.depthPriority = 0
+                    face.isSelectable = False
+                except Exception as error:
+                    self.log("HiM context fill: " + str(error))
             drawn = 0
             for curve in snapshot["curves"]:
                 line = group.addCurve(curve)
                 if line is None:
                     raise RuntimeError("Fusion could not draw a BRep wireframe curve")
                 line.color = color
-                line.weight = 1
-                line.depthPriority = 0
+                line.weight = 1.2
+                line.depthPriority = 1
                 line.isSelectable = False
                 drawn += 1
             if drawn != len(snapshot["curves"]):
@@ -880,10 +898,16 @@ class HiMController:
     CONTEXT_OPACITY = 0.2
 
     def dim_context(self):
-        """Dim every body (a sketch step has no result body of its own), with
-        the same opacity as the context of any other step."""
+        """A sketch step's context in the same look as every other step
+        (translucent white faces, dark outline); dimmed bodies only if that
+        cannot be drawn."""
         if not self.dim_others:
             return
+        if self.wireframe_context:
+            self.capture_ghost_context()
+            snapshot, self.pending_ghost = self.pending_ghost, None
+            if snapshot is not None and self._start_ghost_context({}, snapshot):
+                return
         from core.spatial import _model_bodies
         try:
             self.focus.apply(self._document_key(), _model_bodies(self.design()), {"\0none"},
@@ -1181,7 +1205,8 @@ class HiMController:
             self.pending_inputs = capture_inputs(feature.kind, entity)
             from .fast_motion import SPECIFIC
             if feature.kind not in SPECIFIC or feature.kind == "RevolveFeature":
-                before = self._copy_bodies_before()
+                ghost = self.pending_ghost or {}
+                before = ghost.get("copies") if ghost.get("copies") is not None else self._copy_bodies_before()
                 if before is not None:
                     self.pending_inputs["before_bodies"] = before
             self.inputs_by_index[feature.index] = self.pending_inputs
