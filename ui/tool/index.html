@@ -56,7 +56,7 @@
         else icon.textContent = (tool.name || tool.label || "?").charAt(0).toUpperCase();
         const text = el("div", "text");
         text.appendChild(el("div", "name", tool.found ? tool.name : tool.label));
-        text.appendChild(el("div", "path", tool.found ? tool.path.slice(0, -1).join(" › ") : "Not found in this workspace"));
+        text.appendChild(el("div", "path", tool.found ? tool.path.slice(0, -1).join(" › ") : (tool.hint || "Not found in this workspace")));
         row.append(icon, text);
         if (tool.found) {
           const use = el("button", "use", "Use");

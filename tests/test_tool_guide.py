@@ -116,6 +116,12 @@ class FindTests(unittest.TestCase):
         self.assertEqual(find(self.ws, "Fillet")["path"], ["SOLID", "MODIFY", "Fillet"])
         self.assertEqual(find(self.ws, "Draft")["path"], ["SOLID", "MODIFY", "Draft"])   # nameless menu
 
+    def test_copy_paste_is_shown_as_its_shortcut(self):
+        guide = ToolGuide(type("UI", (), {"activeWorkspace": self.ws})())
+        report = guide.describe(["CopyPasteBody"])
+        self.assertFalse(report[0]["found"])
+        self.assertIn("Ctrl+C", report[0]["hint"])
+
     def test_unknown_tools_are_not_guessed(self):
         self.assertIsNone(find(self.ws, "Loft"))
         self.assertIsNone(find(self.ws, "Base Feature"))

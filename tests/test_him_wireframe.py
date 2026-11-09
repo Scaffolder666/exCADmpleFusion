@@ -30,6 +30,18 @@ class GhostContextTests(unittest.TestCase):
         self.assertEqual(result["body_tokens"], frozenset({"a", "b"}))
         self.assertEqual(result["body_count"], 2)
 
+    def test_an_edge_without_geometry_is_skipped_not_fatal(self):
+        """A revolved body's degenerate apex edge has no curve. It used to
+        discard the whole context (steps fell back to Fusion recompute)."""
+        before = self.model([self.body("cone", "rim-circle", None, "seam-line")])
+        result = capture_before_feature(before)
+        self.assertEqual(result["curves"], ("rim-circle", "seam-line"))
+        self.assertEqual(result["body_tokens"], frozenset({"cone"}))
+
+    def test_nothing_before_the_first_solid_is_an_empty_context(self):
+        result = capture_before_feature(self.model([]))
+        self.assertEqual((result["curves"], result["body_count"]), ((), 0))
+
     def test_existing_hidden_body_is_not_drawn(self):
         before = self.model([self.body("a", "line"),
                              self.body("secret", "should-not-display", visible=False)])

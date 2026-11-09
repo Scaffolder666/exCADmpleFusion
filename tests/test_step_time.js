@@ -68,5 +68,20 @@ class El {
   const clock = value("S.stepClock");
   for (let i = 0; i < 5; i++) { now += 50; value("tick(performance.now())"); await flush(); }
   assert.equal(value("S.stepClock"), clock, "paused: the step clock stands still");
+  // A single step played on its own ends like continuous playback: it keeps
+  // its final frame; only the last step returns to the complete model.
+  const sent = [];
+  window.adsk.fusionSendData = (a, d) => { sent.push([a, JSON.parse(d)]); return Promise.resolve(JSON.stringify({ ok: true })); };
+  delete window.speechSynthesis;                             // no read-aloud: steps last their animation
+  delete ctx.speechSynthesis;
+  value("selectStep(0, true)");
+  for (let i = 0; i < 400 && value("S.playing"); i++) { now += 50; value("tick(performance.now())"); await flush(); }
+  assert.equal(value("S.playing"), false);
+  assert.equal(value("S.index"), 0, "a single step does not run on into the next");
+  assert.ok(!sent.some(([a]) => a === "ref_overview"), "no jump to the full model after a single step");
+  assert.equal(value("stepProgress()"), 1);
+  value("selectStep(1, true)");
+  for (let i = 0; i < 400 && value("S.playing"); i++) { now += 50; value("tick(performance.now())"); await flush(); }
+  assert.ok(sent.some(([a]) => a === "ref_overview"), "the last step ends on the complete model");
   console.log("Whole-step progress and stable play button: PASS");
 })().catch(e => { console.error(e); process.exit(1); });

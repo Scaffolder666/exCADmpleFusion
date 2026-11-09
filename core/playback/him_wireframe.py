@@ -43,12 +43,14 @@ def capture_before_feature(design, max_bodies=MAX_GHOST_BODIES,
         if count > max_edges - len(curves):
             raise WireframeOverflow("ghost context exceeds {} BRep edges".format(max_edges))
         for i in range(count):
+            # An edge without geometry (e.g. a degenerate apex of a revolved
+            # body) is skipped; it used to discard the whole context.
             try:
                 geometry = edges.item(i).geometry
             except Exception:
-                return None
+                continue
             if geometry is None:
-                return None
+                continue
             curves.append(geometry)
         tokens.add(token)
     return {"curves": tuple(curves), "body_tokens": frozenset(tokens),

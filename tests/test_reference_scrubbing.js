@@ -138,23 +138,26 @@ async function main() {
   assert.equal(value("S.elapsed"), 2000, "Seek is weighted by duration, not step count");
   assert.equal(get("clock").textContent, "00:04 / 00:08");
   value("S.example.steps[1].duration_ms=2000");
-  // Selection is navigation, including re-selecting the current step.
+  // Selecting a step shows its first frame in the playback look (the same
+  // as continuous playback reaching it), including re-selecting it.
   let frames = count("ref_frame");
   value("selectStep(0)");
   await flush();
   assert.equal(value("S.playing"), false);
-  assert.equal(value("S.fresh"), true);
-  assert.equal(count("ref_frame"), frames);
+  let shownFrame = calls.filter(c => c.action === "ref_frame").at(-1).payload;
+  assert.equal(count("ref_frame"), frames + 1);
+  assert.deepEqual([shownFrame.index, shownFrame.progress, shownFrame.settle], [0, 0, true]);
   value("selectStep(0)");
   await flush();
-  assert.equal(count("ref_frame"), frames);
-  assert.equal(calls.at(-1).action, "ref_overview");
+  assert.equal(count("ref_frame"), frames + 2);
+  assert.equal(calls.at(-1).action, "ref_frame");
+  frames = count("ref_frame");
 
-  // Filtering must not animate before Play either.
+  // Filtering selects a step: it shows that step's first frame, not playback.
   value('applyFilter({steps:[1], tags:{1:"changed here"}, features:["Mirror1"]})');
   await flush();
   assert.equal(value("S.playing"), false);
-  assert.equal(count("ref_frame"), frames);
+  assert.equal(calls.filter(c => c.action === "ref_frame").at(-1).payload.progress, 0);
 
   // Selecting a step during an expensive native frame cannot let its old
   // acknowledgement restart playback or overwrite the final overview.
@@ -168,12 +171,13 @@ async function main() {
   assert.equal(value("S.inFlight"), true);
   value("selectStep(1)");
   await flush();
-  frames = count("ref_frame");
   release(JSON.stringify({ok:true}));
   await flush();
   assert.equal(value("S.playing"), false);
-  assert.equal(count("ref_frame"), frames);
-  assert.equal(calls.at(-1).action, "ref_overview");
+  // The stale acknowledgement neither restarts playback nor wins: the last
+  // request is the selected step's first frame.
+  const last = calls.filter(c => c.action === "ref_frame").at(-1).payload;
+  assert.deepEqual([last.index, last.progress], [1, 0]);
   console.log("Reference full/focus/full, selection, filtering and delayed scrubbing: PASS");
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });

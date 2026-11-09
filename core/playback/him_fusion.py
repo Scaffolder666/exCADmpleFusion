@@ -39,7 +39,9 @@ MAX_TIMELINE = 600
 HIGHLIGHT = (37, 99, 235, 255)  # blue: recorded feature input / target edges
 CHANGE_HIGHLIGHT = (20, 184, 166, 255)
 NEUTRAL_FACE = (196, 202, 210, 255)  # faces of the feature that do not move
-HANDLE_COLOR = (235, 109, 35, 255)    # manipulator arrow + value, like Fusion's  # teal: geometry affected by feature
+HANDLE_COLOR = (235, 109, 35, 255)    # manipulator arrow + value, like Fusion's
+OUTLINE_COLOR = (12, 84, 77, 255)     # edges of highlighted faces, so their shape reads
+MAX_OUTLINE_EDGES = 3000  # teal: geometry affected by feature
 GHOST_WIREFRAME = (155, 164, 175, 255)  # light gray: true BRep edge curves
 GHOST_SURFACE_OPACITY = 0.001         # Fusion keeps native topology selectable
 
@@ -434,6 +436,47 @@ def _partial_line(geometry, fraction):
         return None
 
 
+def _surface(rgb):
+    """A lit colour for highlighted geometry: shaded like a body, so the
+    shape reads (a flat solid colour turns it into a silhouette)."""
+    r, g, b = rgb[:3]
+    try:
+        return adsk.fusion.CustomGraphicsBasicMaterialColorEffect.create(
+            adsk.core.Color.create(r, g, b, 255),
+            adsk.core.Color.create(int(r * 0.45), int(g * 0.45), int(b * 0.45), 255),
+            adsk.core.Color.create(70, 70, 70, 255),
+            adsk.core.Color.create(0, 0, 0, 255), 25.0, 1.0)
+    except Exception:
+        return adsk.fusion.CustomGraphicsSolidColorEffect.create(adsk.core.Color.create(r, g, b, 255))
+
+
+def _outline(group, item, budget):
+    """Dark edges of a highlighted face or body copy. Returns the curve
+    entities (fast motion moves them with their faces)."""
+    added = []
+    try:
+        edges = item.edges
+        count = min(edges.count, budget[0])
+    except Exception:
+        return added
+    color = adsk.fusion.CustomGraphicsSolidColorEffect.create(adsk.core.Color.create(*OUTLINE_COLOR))
+    for i in range(count):
+        try:
+            geometry = edges.item(i).geometry
+            if geometry is None:
+                continue
+            line = group.addCurve(geometry)
+            line.color = color
+            line.weight = 1.5
+            line.depthPriority = 2
+            line.isSelectable = False
+            added.append(line)
+        except Exception:
+            continue
+    budget[0] -= len(added)
+    return added
+
+
 def _short_number(value):
     """6.1584118 -> '6.16', 12.0 -> '12', 0.5 -> '0.5'."""
     text = "{:.2f}".format(value).rstrip("0").rstrip(".")
@@ -666,8 +709,10 @@ class HiMController:
         If a complete ghost cannot be drawn, use the established 20%-opacity
         fallback instead of hiding parts of the actual model.
         """
-        if snapshot is None or not snapshot["curves"]:
+        if snapshot is None:
             return False
+        # No bodies before this feature (e.g. the first solid): an empty
+        # context is still exact; there is just nothing to draw.
         design = self.design()
         group = None
         try:
@@ -893,14 +938,15 @@ class HiMController:
             draw_failed = False
             roles = self._target_roles(prepared["entity"], prepared["feature"].kind,
                                        targets, prepared["bodies"])
+            outline_budget = [MAX_OUTLINE_EDGES]
             for number, body in enumerate(targets):
                 role = roles[number] if roles else None
                 if role == "body" and not prepared.get("wireframe"):
                     continue          # the native body already shows it
                 try:
                     overlay = group.addBRepBody(body)
-                    overlay.color = adsk.fusion.CustomGraphicsSolidColorEffect.create(
-                        adsk.core.Color.create(*(NEUTRAL_FACE if role == "body" else CHANGE_HIGHLIGHT)))
+                    overlay.color = _surface(NEUTRAL_FACE if role == "body" else CHANGE_HIGHLIGHT)
+                    _outline(group, body, outline_budget)
                     if prepared["mode"] == PARAMETRIC:
                         # One look for every step: the feature's changed
                         # faces are opaque teal, whatever the context style.
@@ -1054,8 +1100,8 @@ class HiMController:
                     continue          # only the face that moved is marked
                 try:
                     overlay = group.addBRepBody(body)
-                    overlay.color = adsk.fusion.CustomGraphicsSolidColorEffect.create(
-                        adsk.core.Color.create(*CHANGE_HIGHLIGHT))
+                    overlay.color = _surface(CHANGE_HIGHLIGHT)
+                    _outline(group, body, [MAX_OUTLINE_EDGES])
                     overlay.setOpacity(1.0, True)          # same opaque teal as the animation
                     overlay.depthPriority = 1
                     overlay.isSelectable = False
@@ -1128,8 +1174,9 @@ class HiMController:
             manager = adsk.fusion.TemporaryBRepManager.get()
             group = self._new_group(design)
             group.isSelectable = False
-            color = adsk.fusion.CustomGraphicsSolidColorEffect.create(adsk.core.Color.create(*CHANGE_HIGHLIGHT))
-            neutral = adsk.fusion.CustomGraphicsSolidColorEffect.create(adsk.core.Color.create(*NEUTRAL_FACE))
+            color = _surface(CHANGE_HIGHLIGHT)
+            neutral = _surface(NEUTRAL_FACE)
+            outline_budget = [MAX_OUTLINE_EDGES]
             from .manipulator import moving_faces, handles
             kind = prepared["feature"].kind
             moving = moving_faces(kind, prepared["entity"])
@@ -1149,6 +1196,8 @@ class HiMController:
                     entity.depthPriority = 1
                     entity.isSelectable = False
                     entities.append((piece, entity))
+                    for line in _outline(group, copy, outline_budget):
+                        entities.append((piece, line))      # the outline moves with its face
             if kind == "MoveFeature":
                 self._add_move_path(group, prepared["fast"])
                 self._placed(group)          # the path; moving entities are placed per frame

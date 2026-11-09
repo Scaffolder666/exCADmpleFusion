@@ -193,6 +193,42 @@ class FastPlaybackTests(unittest.TestCase):
         self.session.stop()
         self.assertIsNone(self.session.him.fast_group)
 
+    def test_the_first_solid_uses_fast_motion_with_an_empty_context(self):
+        """Extrude2 in the real model: nothing exists before it, so the
+        ghost context is empty. That is valid, not a reason to fall back."""
+        him = self.session.him
+        del him._start_ghost_context                                  # the real method
+        him.capture_ghost_context = lambda: setattr(him, "pending_ghost",
+                                                    {"curves": (), "body_tokens": frozenset()})
+        shown = self.session.frame(0, 0.5)
+        self.assertEqual(shown["motion"], "exact")
+        self.assertTrue(shown["wireframe"])
+        self.assertEqual(self.d1.writes, [])
+
+    def test_highlight_is_lit_and_outlined_and_the_outline_moves(self):
+        made = []
+        previous = getattr(adsk.fusion, "CustomGraphicsBasicMaterialColorEffect", None)
+        adsk.fusion.CustomGraphicsBasicMaterialColorEffect = types.SimpleNamespace(
+            create=lambda diffuse, *rest: made.append(diffuse) or ("lit", diffuse))
+        edge = types.SimpleNamespace(geometry="edge-curve")
+        adsk.fusion.TemporaryBRepManager = types.SimpleNamespace(get=lambda: types.SimpleNamespace(
+            copy=lambda face: types.SimpleNamespace(entityToken=face.entityToken, edges=Coll([edge]))))
+        try:
+            self.session.frame(0, 0.5)
+        finally:
+            if previous is None:
+                del adsk.fusion.CustomGraphicsBasicMaterialColorEffect
+            else:
+                adsk.fusion.CustomGraphicsBasicMaterialColorEffect = previous
+        group = self.session.him.fast_group
+        self.assertTrue(made)                                          # shaded material, not flat colour
+        self.assertTrue(all(b.color[0] == "lit" for b in group.bodies))
+        self.assertEqual(len(group.curves), 2)                         # one outline edge per face copy
+        moved = [entity for _, entity in self.session.him.active["fast_entities"]]
+        self.assertTrue(all(curve in moved for curve in group.curves))
+        self.session.frame(0, 0.8)
+        self.assertAlmostEqual(group.curves[0].transform.cells[(2, 2)], interpolate(1.0, 0.8))
+
     def test_without_hidden_native_result_it_stays_native(self):
         self.session.him._start_ghost_context = lambda prepared, snapshot: False
         shown = self.session.frame(0, 0.5)

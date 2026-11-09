@@ -27,6 +27,12 @@ ALIASES = {
     "split face": ("Split Face",),
     "paste bodies": (),
     "base feature": (),
+    "copypastebody": (),
+}
+# Tools that are not toolbar commands: how the designer used them instead.
+SHORTCUTS = {
+    "copypastebody": "Copy and paste the body: Ctrl+C, then Ctrl+V",
+    "paste bodies": "Copy and paste the body: Ctrl+C, then Ctrl+V",
 }
 MAX_DEPTH = 4
 
@@ -216,6 +222,7 @@ class ToolGuide:
         for label in self._labels(labels):
             match = self._match(label)
             out.append({"label": label, "path": match["path"] if match else [], "found": match is not None,
+                        "hint": "" if match else SHORTCUTS.get(label.lower(), ""),
                         "name": _read(match["definition"], "name", label) if match else label,
                         "icon": icon_uri(match["definition"]) if match else ""})
         return out

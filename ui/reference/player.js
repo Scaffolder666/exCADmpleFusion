@@ -324,15 +324,16 @@ function selectStep(i, autoplay = false) {
   const at = S.clip.indexOf(i);
   if (at < 0) { S.filtered = false; S.changed = []; S.more = []; setClip(false); }
   S.pos = S.clip.indexOf(i);
-  // Re-selecting the current step must also restore overview.
-  if (i === S.index) {
-    S.epoch++;
-    S.fresh = true;
-    S.overviewPending = true;
-  } else setIndex(i);
+  // Selecting a step shows it exactly as continuous playback reaches it:
+  // the step's first frame, in the same look (no full-model detour).
+  if (i === S.index) S.epoch++;
+  else setIndex(i, false);
   S.elapsed = 0;
   S.stepClock = 0;
   S.direction = 1;
+  S.fresh = false;
+  S.overviewPending = false;
+  S.manualFrame = true;
   if (autoplay) play(false);
   else render();
 }
@@ -355,12 +356,15 @@ function finishNativeStep() {
     S.direction = 1;
     S.fresh = true;     // do not send another native frame after playback
     S.frameClock = null;
-    S.shown = null;
     stopAudio();
     stopSpeech();
-    // The final clip item might not be the source model's final feature
-    // (e.g. a face-filtered clip). Restore the COMPLETE shaded design.
-    S.overviewPending = true;
+    if (S.pos >= S.clip.length - 1) {
+      // End of the tutorial (or of a filtered clip): the COMPLETE shaded design.
+      S.shown = null;
+      S.overviewPending = true;
+    }
+    // A single step that finishes keeps its final frame, exactly as in
+    // continuous playback.
     render();
   }
 }
@@ -456,7 +460,7 @@ function card(item) {
       if (tool.error) { box.appendChild(el("div", { class: "playback-note" }, "Tool lookup failed: " + tool.error)); continue; }
       const row = el("div", { class: "tool-guide" + (tool.found ? "" : " missing") });
       row.appendChild(el("span", { class: "tool-path" },
-        tool.found ? tool.path.join(" › ") : tool.label + " · not found in this workspace"));
+        tool.found ? tool.path.join(" › ") : tool.label + " · " + (tool.hint || "not found in this workspace")));
       if (tool.found) {
         const use = el("button", { class: "tool-use", type: "button" }, "Use");
         use.addEventListener("click", (e) => { e.stopPropagation(); if (S.playing) pause(); bridge("use_tool", { label: tool.label }); });
