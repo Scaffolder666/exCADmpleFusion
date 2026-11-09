@@ -526,6 +526,15 @@ class HiMController:
         except Exception:
             return ""
 
+    def _resolve_token(self, token):
+        """Any entity of the reference design by its entity token."""
+        try:
+            for entity in self.design().findEntityByToken(token) or []:
+                return entity
+        except Exception:
+            pass
+        return None
+
     def _resolve_body(self, token):
         design = self.design()
         try:
@@ -729,7 +738,7 @@ class HiMController:
         if self.fast_motion and entity is not None and mode in (PARAMETRIC, FADE):
             from .fast_motion import plan_for
             reasons = []
-            plan = plan_for(feature.kind, entity, inputs, reasons=reasons)
+            plan = plan_for(feature.kind, entity, dict(inputs, resolve=self._resolve_token), reasons=reasons)
             native_reason = reasons[0] if reasons else ""
         if entity is None:
             pass
@@ -1140,6 +1149,9 @@ class HiMController:
                     entity.depthPriority = 1
                     entity.isSelectable = False
                     entities.append((piece, entity))
+            if kind == "MoveFeature":
+                self._add_move_path(group, prepared["fast"])
+                self._placed(group)          # the path; moving entities are placed per frame
             self.fast_group = group
             prepared["fast_entities"] = entities
             prepared["settled"] = False
@@ -1153,6 +1165,42 @@ class HiMController:
                 pass
             self.fast_group = None
             return False
+
+    def _add_move_path(self, group, plan):
+        """Orange arrow from where the moved bodies were to where they end,
+        labelled with the distance: makes "from where to where" readable
+        while the bodies travel along it."""
+        from .fast_motion import apply
+        from .manipulator import arrow_lines
+        piece = plan.pieces[0]
+        end = _center(piece.faces)
+        start = apply(piece.matrix(0.0), end)
+        distance = math.dist(start, end)
+        if distance < 1e-6:
+            return                                   # a pure rotation in place
+        shape = arrow_lines(start, tuple(end[i] - start[i] for i in range(3)), distance)
+        if shape is None:
+            return
+        points, indices = shape
+        color = adsk.fusion.CustomGraphicsSolidColorEffect.create(adsk.core.Color.create(*HANDLE_COLOR))
+        try:
+            lines = group.addLines(adsk.fusion.CustomGraphicsCoordinates.create(
+                [c for p in points for c in p]), indices, False)
+            lines.color = color
+            lines.weight = 3
+            lines.depthPriority = 3
+            lines.isSelectable = False
+        except Exception as error:
+            self.log("HiM move path: " + str(error))
+            return
+        try:
+            units = self.design().unitsManager
+            unit = units.defaultLengthUnits
+            text = _short_number(units.convert(distance, "cm", unit)) + " " + unit
+        except Exception:
+            text = _short_number(distance * 10) + " mm"
+        middle = tuple((start[i] + end[i]) / 2 for i in range(3))
+        self._add_label(group, text, middle, color)
 
     def _move_fast(self, prepared, progress):
         offset = None

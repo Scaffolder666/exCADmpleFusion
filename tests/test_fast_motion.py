@@ -247,11 +247,17 @@ class MovePlannerTests(unittest.TestCase):
     def body(self, token="b"):
         return types.SimpleNamespace(objectType="adsk::fusion::BRepBody", entityToken=token)
 
+    def plan(self, cells, targets=None, reasons=None):
+        body = self.body()
+        entity = types.SimpleNamespace(transform=matrix_obj(cells), inputEntities=Coll([body]))
+        inputs = fm.capture_inputs("MoveFeature", entity) if targets is None else targets
+        inputs = dict(inputs, resolve={"b": body}.get)
+        return fm.plan_for("MoveFeature", entity, inputs, reasons=reasons)
+
     def test_translation_moves_from_the_old_place_to_the_new_one(self):
         cells = fm.identity()
         cells[0][3], cells[2][3] = 6.0, 2.0
-        plan = fm.plan_for("MoveFeature", types.SimpleNamespace(
-            transform=matrix_obj(cells), inputEntities=Coll([self.body()])), {})
+        plan = self.plan(cells)
         piece = plan.pieces[0]
         self.assertEqual(plan.accuracy, fm.ILLUSTRATIVE)
         final = (7.0, 0.0, 2.0)                                   # was at (1, 0, 0)
@@ -260,12 +266,46 @@ class MovePlannerTests(unittest.TestCase):
         self.assertTrue(close(fm.apply(piece.matrix(1), final), final))
 
     def test_rotation_travels_on_the_arc(self):
-        cells = fm.rotation_about((0, 0, 1), (0, 0, 0), math.pi / 2)
-        plan = fm.plan_for("MoveFeature", types.SimpleNamespace(
-            transform=matrix_obj(cells), inputEntities=Coll([self.body()])), {})
+        plan = self.plan(fm.rotation_about((0, 0, 1), (0, 0, 0), math.pi / 2))
         mid = fm.apply(plan.pieces[0].matrix(0.5), (0, 2, 0))       # final point; started at (2, 0, 0)
         self.assertAlmostEqual(math.dist(mid, (0, 0, 0)), 2.0)
         self.assertTrue(close(fm.apply(plan.pieces[0].matrix(0), (0, 2, 0)), (2, 0, 0)))
+
+    def test_inputs_read_before_the_move_work_when_fusion_refuses_after_it(self):
+        """Fusion: reading a Move's transform or inputEntities with the
+        marker after the Move raises "Didn't roll editing feature back"."""
+        cells = fm.identity()
+        cells[0][3] = 5.0
+        body = self.body()
+
+        class Move:
+            rolled_back = True
+            objectType = "adsk::fusion::MoveFeature"
+
+            def _guard(self):
+                if not self.rolled_back:
+                    raise RuntimeError("3 : Didn't roll editing feature back.")
+
+            @property
+            def transform(self):
+                self._guard()
+                return matrix_obj(cells)
+
+            @property
+            def inputEntities(self):
+                self._guard()
+                return Coll([body])
+        move = Move()
+        inputs = fm.capture_inputs("MoveFeature", move)          # marker before the Move
+        move.rolled_back = False                                  # marker after it
+        reasons = []
+        plan = fm.plan_for("MoveFeature", move, dict(inputs, resolve={"b": body}.get), reasons=reasons)
+        self.assertIsNotNone(plan, reasons)
+        self.assertEqual(plan.pieces[0].faces, [body])
+        # Without the early read, the refusal names the cause instead of crashing.
+        reasons = []
+        self.assertIsNone(fm.plan_for("MoveFeature", move, {}, reasons=reasons))
+        self.assertIn("transform could not be read", reasons[0])
 
     def test_definition_transform_and_result_bodies_are_used_when_needed(self):
         cells = fm.identity()
@@ -277,14 +317,15 @@ class MovePlannerTests(unittest.TestCase):
     def test_refusals_are_explained(self):
         scaled = fm.identity()
         scaled[0][0] = 2.0
-        cases = [(types.SimpleNamespace(inputEntities=Coll([self.body()])), "could not be read"),
-                 (types.SimpleNamespace(transform=matrix_obj(scaled), inputEntities=Coll([self.body()])),
-                  "not a rigid motion"),
-                 (types.SimpleNamespace(transform=matrix_obj(fm.identity()), inputEntities=Coll(
-                     [types.SimpleNamespace(objectType="adsk::fusion::Occurrence")])), "Occurrence")]
-        for entity, expected in cases:
+        occurrence = {"move_matrix": fm.identity(), "move_targets": [("Occurrence", "o")]}
+        lost = {"move_matrix": fm.identity(), "move_targets": [("BRepBody", "gone")]}
+        cases = [(types.SimpleNamespace(inputEntities=Coll([self.body()])), {}, "could not be read"),
+                 (types.SimpleNamespace(transform=matrix_obj(scaled)), {}, "not a rigid motion"),
+                 (types.SimpleNamespace(), occurrence, "Occurrence"),
+                 (types.SimpleNamespace(), lost, "could not be found after the move")]
+        for entity, inputs, expected in cases:
             reasons = []
-            self.assertIsNone(fm.plan_for("MoveFeature", entity, {}, reasons=reasons))
+            self.assertIsNone(fm.plan_for("MoveFeature", entity, inputs, reasons=reasons))
             self.assertIn(expected, reasons[0])
 
 
@@ -300,7 +341,17 @@ class MovePlaybackTests(unittest.TestCase):
         move.transform = matrix_obj(cells)
         body = self.entities["body2"]
         body.objectType = "adsk::fusion::BRepBody"
-        move.inputEntities = Coll([body])
+        timeline = self.design.timeline
+
+        class AfterMoveRefuses(Coll):
+            """Like Fusion: readable only with the marker before the Move."""
+            @property
+            def count(inner):
+                if timeline.markerPosition > 5:
+                    raise RuntimeError("3 : Didn't roll editing feature back.")
+                return len(inner)
+        move.inputEntities = AfterMoveRefuses([body])
+        move.bodies = Coll()                                      # no fallback: inputs must be read early
         self.copies = []
         adsk.fusion.TemporaryBRepManager = types.SimpleNamespace(
             get=lambda: types.SimpleNamespace(copy=lambda item: self.copies.append(item.entityToken)
@@ -326,6 +377,25 @@ class MovePlaybackTests(unittest.TestCase):
     def tearDown(self):
         self.session.close()
         del adsk.fusion.TemporaryBRepManager
+
+    def test_an_arrow_shows_from_where_to_where(self):
+        lines = []
+        native.Group.addLines = lambda group, coords, indices, strip: lines.append(list(coords)) or \
+            types.SimpleNamespace()
+        coords = getattr(adsk.fusion, "CustomGraphicsCoordinates", None)
+        adsk.fusion.CustomGraphicsCoordinates = types.SimpleNamespace(create=lambda flat: list(flat))
+        try:
+            self.session.frame(0, 0.3)
+        finally:
+            del native.Group.addLines
+            if coords is None:
+                del adsk.fusion.CustomGraphicsCoordinates
+            else:
+                adsk.fusion.CustomGraphicsCoordinates = coords
+        self.assertEqual(len(lines), 1)
+        start, tip = lines[0][0:3], lines[0][3:6]
+        self.assertEqual([round(v, 6) for v in start], [-9.0, 1.0, 1.0])   # body2's centre before the move
+        self.assertEqual([round(v, 6) for v in tip], [1.0, 1.0, 1.0])      # and after it (+10 cm in x)
 
     def test_the_moved_body_slides_into_place_without_recompute(self):
         logged = []

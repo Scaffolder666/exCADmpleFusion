@@ -154,6 +154,21 @@ def _xyz(point):
     return (float(point.x), float(point.y), float(point.z))
 
 
+def _token_of(obj):
+    try:
+        return obj.entityToken or ""
+    except Exception:
+        return ""
+
+
+def _attr(obj, name):
+    """An attribute Fusion may refuse to read (RuntimeError) in this state."""
+    try:
+        return getattr(obj, name)
+    except Exception:
+        return None
+
+
 def _type(obj):
     try:
         return (obj.objectType or "").split("::")[-1]
@@ -214,6 +229,14 @@ def capture_inputs(kind, entity):
             inputs["plane"] = plane_of(first)
         elif kind == "MirrorFeature":
             inputs["mirror"] = plane_of(entity.mirrorPlane)
+        elif kind == "MoveFeature":
+            # Fusion reads a Move's transform and inputs only with the
+            # marker before it ("Didn't roll editing feature back").
+            inputs["move_matrix"] = _move_transform(entity)
+            targets = []
+            for item in _items(entity.inputEntities):
+                targets.append((_type(item), _token_of(item)))
+            inputs["move_targets"] = targets
     except Exception:
         pass
     return {k: v for k, v in inputs.items() if v}
@@ -343,23 +366,30 @@ def _move_transform(entity):
     return None
 
 
-def _move_plan(entity):
-    final = _move_transform(entity)
+def _move_plan(entity, inputs):
+    final = inputs.get("move_matrix") or _move_transform(entity)
     if final is None:
         raise Refused("the move transform could not be read")
     if not _is_rigid(final):
         raise Refused("the move is not a rigid motion")
     # What moved: the input bodies (whole bodies, copied as one piece each)
-    # or input faces; occurrences (component moves) are not handled.
+    # or input faces, read before the feature and found again by token
+    # now that the marker is after it. Occurrences (component moves) are
+    # not handled.
+    targets = inputs.get("move_targets")
+    if targets is None:
+        targets = [(_type(item), _token_of(item)) for item in _items(_attr(entity, "inputEntities"))]
+    resolve = inputs.get("resolve") or (lambda token: None)
     moved = []
-    for item in _items(getattr(entity, "inputEntities", None)):
-        kind = _type(item)
-        if kind in ("BRepBody", "BRepFace"):
-            moved.append(item)
-        elif kind:
-            raise Refused("moving a " + kind + " is not animated")
+    for kind, token in targets:
+        if kind not in ("BRepBody", "BRepFace"):
+            raise Refused("moving a " + (kind or "component") + " is not animated")
+        item = resolve(token) if token else None
+        if item is None:
+            raise Refused("a moved " + kind + " could not be found after the move")
+        moved.append(item)
     if not moved:
-        moved = _items(getattr(entity, "bodies", None))
+        moved = _items(_attr(entity, "bodies"))
     if not moved:
         raise Refused("the moved bodies could not be read")
     back = invert_rigid(final)
@@ -380,7 +410,7 @@ def plan_for(kind, entity, inputs, start_fraction=0.02, reasons=None):
         if kind == "RevolveFeature":
             return _revolve_plan(entity, inputs)
         if kind == "MoveFeature":
-            return _move_plan(entity)
+            return _move_plan(entity, inputs)
         reason = "no fast motion for " + (kind or "this feature")
     except Refused as refused:
         reason = str(refused)
