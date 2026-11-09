@@ -41,6 +41,7 @@ from core.extract_fusion import extract_with_dialog
 from core.link import InstanceLink, WORKSPACE, REFERENCE
 from core.him_reference import ReferenceSession
 from core.session_recorder import SessionRecorder
+from core.playback.tool_guide import ToolGuide
 
 PALETTE_ID = "excadmple_fusion_player"
 COMMAND_ID = "excadmple_fusion_open"
@@ -70,6 +71,7 @@ _step_index = 0
 _link = None
 _link_event = None
 _session = None
+_tools = None                # version A: the step's native Fusion tools in the toolbar
 _last_shown = None           # version A: what the last frame showed (parameter / visual)
 _filtering = False
 _saving_document = False
@@ -172,7 +174,21 @@ def _set_step(index, preview=True):
         else:
             _spatial.clear_overlay()
         _post_links()
+    _update_tools(index)
     _post("step", {"index": index})
+
+
+def _update_tools(index):
+    """Show the step's Fusion tools: native buttons in a temporary toolbar
+    panel, and their menu path in the tutorial panel."""
+    if not _tools or not _package:
+        return
+    try:
+        report = _tools.show(_package.step(index).get("tools", []))
+    except Exception:
+        report = []
+        _log_error()            # tool guidance must never block playback
+    _post("tools", {"index": index, "tools": report})
 
 
 def _open_reference_session():
@@ -378,6 +394,11 @@ class PaletteHandler(adsk.core.HTMLEventHandler):
                 _ui.activeSelections.clear()
             elif command == "fit_view":
                 _app.activeViewport.fit()
+            elif command == "use_tool":
+                if not _tools:
+                    raise ValueError("Tool guidance is not available in this layout")
+                path = _tools.use(body.get("label"))
+                _status("Started " + path + " in your design")
             elif command == "him_dim":
                 if _session:
                     _session.set_dim(bool(body.get("enabled", True)))
@@ -606,6 +627,8 @@ def run(_context):
             global ROLE, _session
             ROLE = REFERENCE
             _session = ReferenceSession(_app, _ui, lambda message: _app.log("exCADmple reference: " + message))
+            global _tools
+            _tools = ToolGuide(_ui, lambda message: _app.log(message))
 
         for event, handler in ((_app.documentSaving, BeforeSave()), (_app.documentSaved, AfterSave()),
                                (_app.documentDeactivating, BeforeDeactivate())):
@@ -647,6 +670,8 @@ def stop(_context):
         if _session:
             _session.close()
             _session = None
+        if _tools:
+            _tools.close()
         if _link:
             _link.stop()
             _link = None

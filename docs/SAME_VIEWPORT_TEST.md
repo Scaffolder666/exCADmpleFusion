@@ -78,3 +78,17 @@ During playback, some operations no longer make Fusion recompute every frame:
 Check in Fusion:
 1. The moving faces line up with the real result at the end of each step, and with the paused (recomputed) model.
 2. Frame times in the Text Commands `Slow frame` log drop for these operations.
+
+## Tools for this step (toolbar)
+
+Fusion's API cannot make a toolbar button flash. Instead, each step shows its tools in two ways:
+
+- **Toolbar:** a temporary panel **"exCADmple · this step"** appears in the toolbar tab where the tool lives (usually SOLID). It holds Fusion's own buttons for the step's tools (e.g. the native Extrude), replaced on every step and removed when the tutorial closes.
+- **Tutorial panel:** the step card shows where the tool lives, e.g. `SOLID › CREATE › Extrude`, with a **Use** button. Use pauses the tutorial and starts the native command in your design.
+- **How tools are found:** the path is found at run time by walking the active workspace's toolbar, preferring the SOLID tab. A tool that is not found (other workspace, other UI language, no command, e.g. Base Feature) is shown as "not found in this workspace"; nothing is guessed.
+
+Check in Fusion:
+1. The panel appears next to the SOLID tab's panels and holds the right native button for each step.
+2. The menu path matches where you would find the tool.
+3. Use starts the command in your own design, not in the reference copy.
+4. Closing the tutorial removes the panel.

@@ -15,7 +15,7 @@
 "use strict";
 const $ = (id) => document.getElementById(id);
 const audio = $("audio");
-const S = { plan: [], shown: null,
+const S = { tools: null, plan: [], shown: null,
   example: null, geometry: [], index: 0, clip: [], pos: 0, elapsed: 0, playing: false,
   direction: 1, continuous: true, speed: 1, filtered: false, changed: [], more: [], picked: null,
   last: 0, cue: -1, fresh: true, tags: {}, inFlight: false,
@@ -396,6 +396,20 @@ function card(item) {
     section.appendChild(list);
     box.appendChild(section);
   }
+  // Where to find this step's tools in Fusion (path read from the toolbar).
+  if (S.tools && S.tools.index === S.index) {
+    for (const tool of S.tools.tools || []) {
+      const row = el("div", { class: "tool-guide" + (tool.found ? "" : " missing") });
+      row.appendChild(el("span", { class: "tool-path" },
+        tool.found ? tool.path.join(" › ") : tool.label + " · not found in this workspace"));
+      if (tool.found) {
+        const use = el("button", { class: "tool-use", type: "button" }, "Use");
+        use.addEventListener("click", (e) => { e.stopPropagation(); if (S.playing) pause(); bridge("use_tool", { label: tool.label }); });
+        row.appendChild(use);
+      }
+      box.appendChild(row);
+    }
+  }
   // Keep actual runtime limitations visible, without repeating operation names.
   if (S.shown && S.shown.step === S.index) {
     const reason = S.shown.fallback || S.shown.context_fallback || S.shown.motion_note;
@@ -417,7 +431,7 @@ function railKey() {
   ((item && item.cues) || []).forEach((c, i) => { if (c.at_ms <= S.elapsed) active = i; });
   const shown = S.shown && S.shown.step === S.index
     ? [S.shown.feature, S.shown.fallback, S.shown.context_fallback, S.shown.motion_note] : null;
-  return JSON.stringify([S.index, S.clip, S.filtered, S.tags, active, shown,
+  return JSON.stringify([S.index, S.clip, S.filtered, S.tags, active, shown, S.tools,
                          (S.plan[S.index] || []).length]);
 }
 function render(light = false) {
@@ -538,6 +552,7 @@ window.fusionJavaScriptHandler = {
       const payload = JSON.parse(raw || "{}");
       if (action === "example") loadExample(payload);
       else if (action === "filter") applyFilter(payload);
+      else if (action === "tools") { S.tools = payload; render(); }
       else if (action === "animation") {
         S.shown = payload;
         if (payload.mode === "error" && payload.step === S.index) {
