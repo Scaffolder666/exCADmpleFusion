@@ -2,7 +2,7 @@
    Run with: node tests/test_him_frame_clock.js */
 "use strict";
 const assert = require("node:assert/strict");
-const { HiMFrameClock, initialFrames } = require("../ui/him_frame_clock.js");
+const { HiMFrameClock, initialFrames } = require("../ui/reference/frame_clock.js");
 
 assert.equal(initialFrames(2000), 15);
 assert.equal(initialFrames(10000), 75);
