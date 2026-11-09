@@ -235,3 +235,107 @@ class RefusalReasonTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def matrix_obj(cells):
+    return types.SimpleNamespace(getCell=lambda r, c: cells[r][c])
+
+
+class MovePlannerTests(unittest.TestCase):
+    def body(self, token="b"):
+        return types.SimpleNamespace(objectType="adsk::fusion::BRepBody", entityToken=token)
+
+    def test_translation_moves_from_the_old_place_to_the_new_one(self):
+        cells = fm.identity()
+        cells[0][3], cells[2][3] = 6.0, 2.0
+        plan = fm.plan_for("MoveFeature", types.SimpleNamespace(
+            transform=matrix_obj(cells), inputEntities=Coll([self.body()])), {})
+        piece = plan.pieces[0]
+        self.assertEqual(plan.accuracy, fm.ILLUSTRATIVE)
+        final = (7.0, 0.0, 2.0)                                   # was at (1, 0, 0)
+        self.assertTrue(close(fm.apply(piece.matrix(0), final), (1, 0, 0)))
+        self.assertTrue(close(fm.apply(piece.matrix(0.5), final), (4, 0, 1)))
+        self.assertTrue(close(fm.apply(piece.matrix(1), final), final))
+
+    def test_rotation_travels_on_the_arc(self):
+        cells = fm.rotation_about((0, 0, 1), (0, 0, 0), math.pi / 2)
+        plan = fm.plan_for("MoveFeature", types.SimpleNamespace(
+            transform=matrix_obj(cells), inputEntities=Coll([self.body()])), {})
+        mid = fm.apply(plan.pieces[0].matrix(0.5), (0, 2, 0))       # final point; started at (2, 0, 0)
+        self.assertAlmostEqual(math.dist(mid, (0, 0, 0)), 2.0)
+        self.assertTrue(close(fm.apply(plan.pieces[0].matrix(0), (0, 2, 0)), (2, 0, 0)))
+
+    def test_definition_transform_and_result_bodies_are_used_when_needed(self):
+        cells = fm.identity()
+        cells[1][3] = 3.0
+        entity = types.SimpleNamespace(definition=types.SimpleNamespace(transform=matrix_obj(cells)),
+                                       bodies=Coll(["body"]))
+        self.assertEqual(fm.plan_for("MoveFeature", entity, {}).pieces[0].faces, ["body"])
+
+    def test_refusals_are_explained(self):
+        scaled = fm.identity()
+        scaled[0][0] = 2.0
+        cases = [(types.SimpleNamespace(inputEntities=Coll([self.body()])), "could not be read"),
+                 (types.SimpleNamespace(transform=matrix_obj(scaled), inputEntities=Coll([self.body()])),
+                  "not a rigid motion"),
+                 (types.SimpleNamespace(transform=matrix_obj(fm.identity()), inputEntities=Coll(
+                     [types.SimpleNamespace(objectType="adsk::fusion::Occurrence")])), "Occurrence")]
+        for entity, expected in cases:
+            reasons = []
+            self.assertIsNone(fm.plan_for("MoveFeature", entity, {}, reasons=reasons))
+            self.assertIn(expected, reasons[0])
+
+
+class MovePlaybackTests(unittest.TestCase):
+    """Mirror1 of the stub design turned into a Move of body2."""
+
+    def setUp(self):
+        self.design, self.entities, self.groups = native.build()
+        move = self.entities["mi1"]
+        move.objectType = "adsk::fusion::MoveFeature"
+        cells = fm.identity()
+        cells[0][3] = 10.0
+        move.transform = matrix_obj(cells)
+        body = self.entities["body2"]
+        body.objectType = "adsk::fusion::BRepBody"
+        move.inputEntities = Coll([body])
+        self.copies = []
+        adsk.fusion.TemporaryBRepManager = types.SimpleNamespace(
+            get=lambda: types.SimpleNamespace(copy=lambda item: self.copies.append(item.entityToken)
+                                              or ("copy", item.entityToken)))
+        from core.him_fusion import FusionTimelineModel
+        from core.him_reference import ReferenceSession
+        from core.reference_plan import map_steps
+        self.session = ReferenceSession(native.FakeApp(self.design), None)
+        self.session.him.dim_others = True
+        self.session.him.wireframe_context = True
+        him = self.session.him
+        him.capture_ghost_context = lambda: setattr(him, "pending_ghost",
+                                                    {"curves": ["edge"], "body_tokens": frozenset()})
+
+        def ghost(prepared, snapshot):
+            prepared["wireframe"] = True
+            return True
+        him._start_ghost_context = ghost
+        self.session.model = FusionTimelineModel(self.design)
+        self.session.mapped, _ = map_steps([{"id": "move", "source_features": [{"name": "Mirror1", "index": 5}]}],
+                                           self.session.model.features())
+
+    def tearDown(self):
+        self.session.close()
+        del adsk.fusion.TemporaryBRepManager
+
+    def test_the_moved_body_slides_into_place_without_recompute(self):
+        logged = []
+        self.session.him.log = logged.append
+        shown = self.session.frame(0, 0.5)
+        self.assertEqual(shown["motion"], "illustrative")
+        self.assertEqual(self.copies, ["body2"])                    # the whole body, copied once
+        transform = self.session.him.active["fast_entities"][0][1].transform.cells
+        self.assertAlmostEqual(transform[(0, 3)], -5.0)             # halfway back from +10
+        self.session.frame(0, 0.9)
+        self.assertEqual(self.copies, ["body2"])
+        self.assertAlmostEqual(self.session.him.active["fast_entities"][0][1].transform.cells[(0, 3)], -1.0)
+        self.assertIn("HiM motion Mirror1 (MoveFeature): fast, illustrative", logged)
+        self.session.frame(0, 1.0)
+        self.assertIsNone(self.session.him.fast_group)

@@ -749,6 +749,10 @@ class HiMController:
         faces = _items(getattr(entity, "faces", None), self.MAX_FACE_HIGHLIGHTS + 1)
         suitable = len(faces) <= self.MAX_FACE_HIGHLIGHTS and can_isolate_feature(
             feature.kind, faces, prepared["bodies"], prepared["before_tokens"])
+        if plan is not None:
+            # Fast motion draws exactly what moves (e.g. a Move's bodies), so
+            # the native result can be hidden behind the ghost context.
+            suitable = True
         if (self.wireframe_context and self.dim_others and suitable
                 and prepared["mode"] in (PARAMETRIC, FADE)):
             self._start_ghost_context(prepared, snapshot)

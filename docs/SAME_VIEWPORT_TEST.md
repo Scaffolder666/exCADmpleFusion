@@ -70,6 +70,7 @@ During playback, some operations no longer make Fusion recompute every frame:
 | Rectangular / circular pattern | Each instance moves from the source along its real pattern transform (arc for circular) | illustrative path, real end state |
 | Mirror | The copy folds over the mirror plane | illustrative path, real end state |
 | Revolve with one angle | The revolved faces turn about the real axis into place | illustrative path, real end state |
+| Move (bodies or faces, rigid transform) | The moved bodies travel from their old place to the new one along the real transform (on the arc for a rotation) | illustrative path, real end state |
 | Fillet, chamfer, shell, extrudes with taper / to-object / offset start, everything else | Fusion recomputes every frame as before | native |
 
 - **Pausing:** when you pause (or scrub), Fusion recomputes the real model at that position for operations that have parameters. Pressing Play goes back to moving copies.

@@ -17,6 +17,10 @@ compute the result once:
   plane. End state exact; path illustrative.
 * Revolve (one angle): the revolved faces turn about the real axis from
   the profile position to their final angle. Illustrative.
+* Move (bodies or faces, rigid transform): the moved bodies travel from
+  where they were to where they end, along the real transform (rotation
+  about its own axis). The end state is exact; the path is illustrative,
+  since the designer's drag path was not recorded.
 
 Fillet, chamfer, shell and anything not recognised keep native recompute.
 When playback pauses the panel asks for one more frame marked ``settle``;
@@ -314,6 +318,55 @@ def _revolve_plan(entity, inputs):
                 ILLUSTRATIVE, "the revolved faces turn about the axis")
 
 
+def _is_rigid(m, tol=1e-6):
+    """Rotation (orthonormal, det +1) plus translation."""
+    for r in range(3):
+        for c in range(3):
+            dot = sum(m[k][r] * m[k][c] for k in range(3))
+            if abs(dot - (1.0 if r == c else 0.0)) > tol:
+                return False
+    det = (m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1])
+           - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0])
+           + m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]))
+    return abs(det - 1.0) < tol and all(abs(m[3][c] - (1.0 if c == 3 else 0.0)) < tol for c in range(4))
+
+
+def _move_transform(entity):
+    """The Move feature's real transform: MoveFeature.transform (free move),
+    else its definition's transform."""
+    for getter in (lambda e: e.transform, lambda e: e.definition.transform):
+        try:
+            transform = getter(entity)
+            return [[float(transform.getCell(r, c)) for c in range(4)] for r in range(4)]
+        except Exception:
+            continue
+    return None
+
+
+def _move_plan(entity):
+    final = _move_transform(entity)
+    if final is None:
+        raise Refused("the move transform could not be read")
+    if not _is_rigid(final):
+        raise Refused("the move is not a rigid motion")
+    # What moved: the input bodies (whole bodies, copied as one piece each)
+    # or input faces; occurrences (component moves) are not handled.
+    moved = []
+    for item in _items(getattr(entity, "inputEntities", None)):
+        kind = _type(item)
+        if kind in ("BRepBody", "BRepFace"):
+            moved.append(item)
+        elif kind:
+            raise Refused("moving a " + kind + " is not animated")
+    if not moved:
+        moved = _items(getattr(entity, "bodies", None))
+    if not moved:
+        raise Refused("the moved bodies could not be read")
+    back = invert_rigid(final)
+    return Plan([Piece(moved, lambda t: matmul(screw_partial(final, t), back))],
+                ILLUSTRATIVE, "the bodies move along the real transform")
+
+
 def plan_for(kind, entity, inputs, start_fraction=0.02, reasons=None):
     """A fast-motion Plan for this feature, or None (keep native recompute).
     Why it was refused is appended to ``reasons`` when a list is given."""
@@ -326,6 +379,8 @@ def plan_for(kind, entity, inputs, start_fraction=0.02, reasons=None):
             return _mirror_plan(entity, inputs)
         if kind == "RevolveFeature":
             return _revolve_plan(entity, inputs)
+        if kind == "MoveFeature":
+            return _move_plan(entity)
         reason = "no fast motion for " + (kind or "this feature")
     except Refused as refused:
         reason = str(refused)
