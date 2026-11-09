@@ -67,6 +67,7 @@
         box.appendChild(row);
       }
     }
+    window.addEventListener("error", (e) => send("client_log", { message: "tool window error: " + (e.message || e) }));
     window.fusionJavaScriptHandler = {
       handle(action, raw) {
         try {

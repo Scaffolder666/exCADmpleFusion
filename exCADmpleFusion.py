@@ -42,9 +42,10 @@ from core.link import InstanceLink, WORKSPACE, REFERENCE
 from core.him_reference import ReferenceSession
 from core.session_recorder import SessionRecorder
 from core.playback.tool_guide import ToolGuide
+from core.diagnostics import DiagnosticLog
 
 # Shown in the panel at start so it is clear which code Fusion is running.
-BUILD = "same-viewport 2026-11-10 · move from-to v10"
+BUILD = "same-viewport 2026-11-10 · diagnostic log v11"
 PALETTE_ID = "excadmple_fusion_player"
 TOOL_PALETTE_ID = "excadmple_tool_window"   # version A: "tool in use" window at the left
 COMMAND_ID = "excadmple_fusion_open"
@@ -77,6 +78,7 @@ _link = None
 _link_event = None
 _session = None
 _tools = None                # version A: the step's native Fusion tools in the toolbar
+_diag = None                 # logs/latest.log: what happened in this run, to send for diagnosis
 _last_shown = None           # version A: what the last frame showed (parameter / visual)
 _filtering = False
 _saving_document = False
@@ -97,10 +99,35 @@ def _post_tool(action, payload):
 
 
 def _status(message, is_error=False):
+    if is_error:
+        _note("status", "error shown to the user: " + str(message))
     _post("status", {"message": message, "error": is_error})
 
 
+def _note(category, message, data=None):
+    """Write to logs/latest.log (never raises)."""
+    if _diag:
+        try:
+            _diag.write(category, message, data)
+        except Exception:
+            pass
+
+
+def _session_log(message):
+    """The reference session's messages: Text Commands and the log file."""
+    try:
+        _app.log("exCADmple reference: " + message)
+    except Exception:
+        pass
+    _note("playback", message)
+
+
 def _log_error():
+    if _diag:
+        try:
+            _diag.exception()
+        except Exception:
+            pass
     if _app:
         try:
             _app.log("exCADmple: " + traceback.format_exc())
@@ -117,6 +144,17 @@ def _post_source():
     if ROLE == REFERENCE and _session:
         _post("source", {"live": _session.live, "file": _session.source_name,
                          "unmatched": _session.unmatched, "plan": _session.plan})
+        timeline = []
+        try:
+            if _session.live:
+                timeline = [[f.index, f.name, f.kind] for f in _session.model.features()]
+        except Exception:
+            pass
+        _note("tutorial", "loaded" if _session.live else "no live reference model", {
+            "title": _package.data.get("title") if _package else None,
+            "source": str(getattr(_package, "source_path", "")) if _package else None,
+            "model": _session.source_name, "steps": len(_package.data["steps"]) if _package else 0,
+            "timeline": timeline, "unmatched": _session.unmatched, "plan": _session.plan})
 
 
 # --- the tutorial ----------------------------------------------------------------------------
@@ -209,6 +247,9 @@ def _update_tools(index, fill=True):
         report = [{"label": "", "path": [], "found": False, "error": "{}: {}".format(type(error).__name__, error)}]
         _log_error()
     _post("tools", {"index": index, "tools": report, "panel_error": _tools.last_error})
+    _note("tools", "step {}".format(index + 1), {"tools": [
+        {k: t.get(k) for k in ("label", "path", "found", "error")} for t in report],
+        "panel_error": _tools.last_error, "pinned": fill})
     global _tool_payload
     step = _package.step(index)
     _tool_payload = {"step": "Step {} · {}".format(index + 1, step.get("title", "")),
@@ -233,6 +274,7 @@ def _open_reference_session():
 
 def _load(filename):
     """Open a tutorial (replacing the current one)."""
+    _note("tutorial", "open " + str(filename))
     global _package
     package = open_package(filename)
     if getattr(package, "needs_populate", False):
@@ -329,6 +371,10 @@ class PaletteHandler(adsk.core.HTMLEventHandler):
                 # Fusion echoes the panel's reply to sendInfoToHTML back as a
                 # "response" event. It is an acknowledgement, not a request.
                 return
+            if command == "client_log":
+                _note("panel", str(json.loads(args.data or "{}").get("message", ""))[:4000])
+                args.returnData = json.dumps({"ok": True})
+                return
             body = json.loads(args.data or "{}")
             if command == "ready":
                 if _package:
@@ -379,6 +425,7 @@ class PaletteHandler(adsk.core.HTMLEventHandler):
                         if shown and shown != _last_shown:
                             _last_shown = shown
                             _post("animation", shown)
+                            _note("frame", "step {} at {:.0%}".format(index + 1, value), shown)
                             if shown.get("kind"):
                                 _post_tool("active", {"label": active_fusion_command(step, shown.get("kind")) or ""})
                         if shown is None:
@@ -566,7 +613,7 @@ def _start_link():
     _link = InstanceLink(lambda message: _app.fireCustomEvent(LINK_EVENT, json.dumps(message)))
     ROLE = _link.start()
     if ROLE == REFERENCE:
-        _session = ReferenceSession(_app, _ui, lambda message: _app.log("exCADmple reference: " + message))
+        _session = ReferenceSession(_app, _ui, _session_log)
 
 
 def _panel_url(folder):
@@ -617,6 +664,8 @@ class ToolPaletteHandler(adsk.core.HTMLEventHandler):
             body = json.loads(args.data or "{}")
             if command == "ready":
                 _post_tool("tool", _tool_payload)
+            elif command == "client_log":
+                _note("tool window", str(body.get("message", ""))[:4000])
             elif command == "use_tool":
                 if not _tools:
                     raise ValueError("Tool guidance is not available in this layout")
@@ -700,10 +749,16 @@ class BeforeDeactivate(adsk.core.DocumentEventHandler):
 
 # --- add-in lifecycle ---------------------------------------------------------------------------
 def run(_context):
-    global _app, _ui, _renderer, _spatial, _recorder
+    global _app, _ui, _renderer, _spatial, _recorder, _diag
     try:
         _app = adsk.core.Application.get()
         _ui = _app.userInterface
+        _diag = DiagnosticLog(ROOT / "logs", BUILD)
+        try:
+            fusion_version = _app.version
+        except Exception:
+            fusion_version = "unknown"
+        _diag.header(fusion=fusion_version, layout=LAYOUT, folder=str(ROOT))
         _renderer = ReferenceRenderer(_app)
         _spatial = SpatialLinkController(_app, _ui)
         if LAYOUT == "reference":
@@ -711,9 +766,9 @@ def run(_context):
             # A second Fusion process is not needed for example playback.
             global ROLE, _session
             ROLE = REFERENCE
-            _session = ReferenceSession(_app, _ui, lambda message: _app.log("exCADmple reference: " + message))
+            _session = ReferenceSession(_app, _ui, _session_log)
             global _tools
-            _tools = ToolGuide(_ui, lambda message: _app.log(message))
+            _tools = ToolGuide(_ui, lambda message: (_app.log(message), _note("tools", message)))
 
         for event, handler in ((_app.documentSaving, BeforeSave()), (_app.documentSaved, AfterSave()),
                                (_app.documentDeactivating, BeforeDeactivate())):

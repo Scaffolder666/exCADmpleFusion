@@ -43,7 +43,15 @@ function bridge(action, payload = {}) {
     return false;
   });
 }
+// Errors also go to the add-in's diagnostic log (logs/latest.log). Sent
+// directly, never through bridge()/status(), so a failure cannot loop.
+function clientLog(message) {
+  try { window.adsk && window.adsk.fusionSendData && window.adsk.fusionSendData("client_log", JSON.stringify({ message: String(message) })); } catch (_) {}
+}
+window.addEventListener && window.addEventListener("error", (e) => clientLog("panel script error: " + (e.message || e) + " at " + (e.filename || "") + ":" + (e.lineno || "")));
+window.addEventListener && window.addEventListener("unhandledrejection", (e) => clientLog("panel promise error: " + (e.reason && (e.reason.stack || e.reason))));
 function status(message, error = false) {
+  if (error) clientLog("panel status error: " + message);
   $("status").textContent = message || "";
   $("status").classList.toggle("error", !!error);
 }

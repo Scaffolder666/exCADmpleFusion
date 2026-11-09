@@ -103,3 +103,17 @@ A small **"exCADmple · Tool"** window is docked at the left of the canvas. It s
 - a **Use** button. Use pauses the tutorial and starts the native command in your design.
 
 When a step uses several tools, they are all listed, and the one being animated is highlighted. The window is empty until a step plays. It can be undocked or moved like any Fusion palette, and it is removed when the add-in stops.
+
+## Diagnostic log
+
+Every start of the add-in writes `logs/latest.log` in the add-in folder, and keeps the last 10 runs as `logs/session-*.log`. The `logs/` folder is ignored by git. After a test run, send `logs/latest.log`.
+
+It records:
+- the build, the Fusion version and the operating system;
+- the tutorial loaded, its Timeline (index, name, type), unmatched steps and the planned motion per feature;
+- for each feature: fast motion or Fusion recompute, and why;
+- slow frames, with recompute time and display time;
+- the tools found for each step;
+- errors shown in the panels, panel script errors and full Python tracebacks.
+
+A log stops growing at 5 MB.
