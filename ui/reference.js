@@ -62,8 +62,12 @@ function narrationPending() {
   if (!media?.audio) return false;
   if (audio.dataset.src !== media.audio || audio.readyState < 1) return true;
   const offset = (media.offset_ms || 0) / 1000;
-  const end = Number.isFinite(audio.duration) ? (offset > 0 ? Math.min(audio.duration, offset + duration() / 1000) : audio.duration) : Infinity;
-  return !audio.ended && audio.currentTime < end - 0.03;
+  // An offset points into a shared recording; otherwise the entire
+  // per-step audio file must finish, even if CAD animation is shorter.
+  const audioEnd = Number.isFinite(audio.duration)
+    ? (offset > 0 ? Math.min(audio.duration, offset + duration() / 1000) : audio.duration)
+    : Infinity;
+  return !audio.ended && audio.currentTime < audioEnd - 0.03;
 }
 function completeAfterNarration() {
   if (!S.playing || !S.waitingForNarration || narrationPending()) return;
