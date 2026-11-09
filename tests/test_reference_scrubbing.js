@@ -90,7 +90,7 @@ async function main() {
   assert.equal(value("S.fresh"), true);
 
   const scrub = get("scrub");
-  scrub.handlers.input({ currentTarget: { value: "50" } });
+  scrub.handlers.input({ currentTarget: { value: "25" } });
   await flush();
   assert.equal(calls.filter(c => c.action === "ref_frame").at(-1).payload.progress, 0.5);
   assert.equal(value("S.playing"), false);
@@ -115,9 +115,29 @@ async function main() {
   assert.equal(value("S.fresh"), true);
   assert.equal(count("ref_overview"), 3,
     "Finishing both steps must restore the complete model");
-  assert.deepEqual(calls.filter(c => c.action === "set_step").map(c => c.payload.index), [0, 1]);
+  assert.deepEqual(calls.filter(c => c.action === "set_step").map(c => c.payload.index), [0, 1, 0, 1]);
   assert.deepEqual(calls.filter(c => c.action === "set_step").map(c => c.payload.preview),
-                   [true, false], "Only the initial step previews the full solid model; continuous Feature playback does not flash the overview");
+                   [true, false, false, false], "Only the initial step previews the full solid model; continuous Feature playback does not flash the overview");
+  // Whole-tutorial seeking crosses boundaries and preserves local progress.
+  scrub.handlers.input({currentTarget:{value:"75"}});
+  await flush();
+  let lastFrame = calls.filter(c => c.action === "ref_frame").at(-1).payload;
+  assert.equal(lastFrame.index, 1);
+  assert.equal(lastFrame.progress, .5);
+  assert.equal(get("scrubValue").textContent, "75%");
+  assert.equal(get("clock").textContent, "00:03 / 00:04");
+  scrub.handlers.input({currentTarget:{value:"50"}});
+  await flush();
+  lastFrame = calls.filter(c => c.action === "ref_frame").at(-1).payload;
+  assert.equal(lastFrame.index, 1);
+  assert.equal(lastFrame.progress, 0, "Internal step boundary reconstructs, not overview");
+  value("S.example.steps[1].duration_ms=6000");
+  scrub.handlers.input({currentTarget:{value:"50"}});
+  await flush();
+  assert.equal(value("S.index"), 1);
+  assert.equal(value("S.elapsed"), 2000, "Seek is weighted by duration, not step count");
+  assert.equal(get("clock").textContent, "00:04 / 00:08");
+  value("S.example.steps[1].duration_ms=2000");
   // Selection is navigation, including re-selecting the current step.
   let frames = count("ref_frame");
   value("selectStep(0)");

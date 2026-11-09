@@ -54,6 +54,39 @@ function el(tag, attrs = {}, text) {
 const steps = () => (S.example ? S.example.steps : []);
 const step = () => steps()[S.index];
 const duration = () => (step() && step().duration_ms) || 8000;
+function clipTiming() {
+  let total = 0;
+  const spans = S.clip.map((index, pos) => {
+    const length = steps()[index].duration_ms || 8000;
+    const span = {index, pos, start:total, length};
+    total += length;
+    return span;
+  });
+  const current = spans.find(span => span.index === S.index);
+  const elapsed = current ? current.start + Math.max(0, Math.min(current.length, S.elapsed)) : 0;
+  return {spans, total, elapsed};
+}
+function seekClip(fraction) {
+  const {spans, total} = clipTiming();
+  if (!spans.length || !Number.isFinite(fraction)) return;
+  fraction = Math.max(0, Math.min(1, fraction));
+  const time = fraction * total;
+  const target = spans.find(span => time < span.start + span.length) || spans[spans.length - 1];
+  S.playing = false;
+  S.epoch++;
+  S.pos = target.pos;
+  setIndex(target.index, false);
+  S.elapsed = Math.max(0, Math.min(target.length, time - target.start));
+  S.direction = 1;
+  S.frameClock = null;
+  S.cue = -1;
+  S.fresh = fraction === 0 || fraction === 1;
+  S.manualFrame = !S.fresh;
+  S.overviewPending = S.fresh;
+  stopAudio();
+  stopSpeech();
+  render();
+}
 function kindOf(item) {
   // Prefer the actual Fusion Feature type when the tutorial came from a
   // real .f3d Timeline; legacy snapshot examples still use tool labels.
@@ -339,8 +372,10 @@ function card(item) {
 function render() {
   if (!S.example) return;
   const progress = Math.max(0, Math.min(1, S.elapsed / duration()));
-  $("scrub").value = Math.round(progress * 200) / 2;
-  $("scrubValue").textContent = Math.round(progress * 100) + "%";
+  const timing = clipTiming();
+  const overall = timing.total ? timing.elapsed / timing.total : 0;
+  $("scrub").value = Math.round(overall * 200) / 2;
+  $("scrubValue").textContent = Math.round(overall * 100) + "%";
   // A full-model request must not race an unfinished native recompute.
   if (S.overviewPending && !S.inFlight && !S.stepPending && !S.overviewInFlight) {
     S.overviewPending = false;
@@ -385,7 +420,7 @@ function render() {
   }
   $("play").innerHTML = '<span class="control-icon ' + (S.playing ? "pause-icon" : "play-icon") + '" aria-hidden="true"></span>';
   $("play").setAttribute("aria-label", S.playing ? "Pause" : "Play");
-  $("clock").textContent = secs(S.elapsed) + " / " + secs(duration());
+  $("clock").textContent = secs(timing.elapsed) + " / " + secs(timing.total);
   const mode = $("mode");
   mode.classList.toggle("filtered", S.filtered);
   mode.hidden = !S.filtered;
@@ -481,18 +516,7 @@ window.fusionJavaScriptHandler = {
 /* ---------- controls ---------- */
 $("scrub").addEventListener("input", (event) => {
   if (!S.example || !S.clip.length) return;
-  const pct = Math.max(0, Math.min(100, Number(event.currentTarget.value)));
-  S.playing = false;             // scrubbing takes precedence over autoplay
-  S.epoch++;                     // ignore obsolete native frame replies
-  S.elapsed = duration() * pct / 100;
-  S.frameClock = null;
-  S.cue = -1;
-  S.fresh = pct === 0 || pct === 100;
-  S.manualFrame = !S.fresh;
-  S.overviewPending = S.fresh;   // endpoints always show the COMPLETE model
-  stopAudio();
-  stopSpeech();
-  render();
+  seekClip(Number(event.currentTarget.value) / 100);
 });
 $("play").addEventListener("click", () => (S.playing ? pause() : play(true)));
 $("replay").addEventListener("click", replay);
