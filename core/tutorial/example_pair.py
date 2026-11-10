@@ -77,6 +77,45 @@ def feature_parameters_by_index(model):
     return grouped
 
 
+# A tutorial can travel inside its .f3d: the same pair JSON, stored as
+# Fusion attributes on the Design (split into chunks of a safe size).
+EMBED_GROUP = "exCADmple"
+EMBED_CHUNK = 60000
+
+
+def embedded_chunks(text):
+    """(name, value) attributes that store ``text`` in a Design."""
+    parts = [text[i:i + EMBED_CHUNK] for i in range(0, len(text), EMBED_CHUNK)] or [""]
+    return [("tutorial-count", str(len(parts)))] + [
+        ("tutorial-{}".format(i), part) for i, part in enumerate(parts)]
+
+
+def read_embedded(design):
+    """The pair JSON stored in a Fusion Design by the authoring tool, or None."""
+    try:
+        attributes = design.attributes
+        count = attributes.itemByName(EMBED_GROUP, "tutorial-count")
+        if count is None:
+            return None
+        parts = []
+        for i in range(int(count.value)):
+            part = attributes.itemByName(EMBED_GROUP, "tutorial-{}".format(i))
+            if part is None:
+                raise PackageError("The tutorial stored in this .f3d is incomplete")
+            parts.append(part.value)
+    except PackageError:
+        raise
+    except Exception as error:
+        raise PackageError("Cannot read the tutorial stored in this .f3d: {}".format(error)) from error
+    try:
+        data = json.loads("".join(parts))
+    except ValueError as error:
+        raise PackageError("The tutorial stored in this .f3d is damaged") from error
+    if not isinstance(data, dict) or data.get("format") != "excadmple-pair":
+        raise PackageError("The tutorial stored in this .f3d is not an exCADmple tutorial")
+    return data
+
+
 def _local_filename(raw, label):
     if not isinstance(raw, str) or not raw or raw in (".", ".."):
         raise PackageError(label + " must be a filename in the JSON folder")
@@ -122,6 +161,7 @@ class LocalPairPackage(ExamplePackage):
         self.temporary = None
         self.generated_path = None
         self.raw = raw
+        self.embedded = raw.get("embedded") is True
         model = _local_filename(raw.get("model"), "model")
         if not model.lower().endswith(".f3d"):
             raise PackageError("The model must be a Fusion .f3d archive")
@@ -148,8 +188,27 @@ class LocalPairPackage(ExamplePackage):
             "steps": [],
         }
 
+    @classmethod
+    def from_f3d(cls, path):
+        """A .f3d that carries its own tutorial (read after Fusion imports it)."""
+        path = Path(path).resolve()
+        return cls({"format": "excadmple-pair", "version": 1, "model": path.name,
+                    "embedded": True, "steps": []}, path)
+
     def source_model_path(self):
         return self.model_path
+
+    def _read_embedded(self, model):
+        data = read_embedded(getattr(model, "design", None)) if model is not None else None
+        if data is None:
+            raise PackageError("{} has no exCADmple tutorial inside. Prepare one with "
+                               "\"exCADmple: Author tutorial\".".format(self.model_path.name))
+        raw = dict(data, model=self.model_path.name, embedded=True, auto_generate=False)
+        raw.pop("model_sha256", None)          # a file cannot contain its own hash
+        self.raw = raw
+        for key in ("title", "id", "description"):
+            if data.get(key):
+                self.data[key] = data[key]
 
     def _edited_steps(self, target):
         """Steps of an existing ``<name>.generated.json`` for the same model."""
@@ -171,6 +230,8 @@ class LocalPairPackage(ExamplePackage):
     def populate_from_features(self, features, model=None):
         """Build player steps from the imported, real .f3d Feature Timeline."""
         features = sorted(features, key=lambda f: f.index)
+        if self.embedded:
+            self._read_embedded(model)
         if not features:
             raise PackageError("This .f3d has no accessible parametric Feature Timeline")
         if len(features) > MAX_STEPS:
@@ -230,8 +291,9 @@ class LocalPairPackage(ExamplePackage):
             used_ids.add(step_id)
             title = str(item.get("title") or matched[-1].name)
             step_duration = item.get("duration_ms", duration)
-            if isinstance(step_duration, bool) or not isinstance(step_duration, int) or not 500 <= step_duration <= 60000:
-                raise PackageError("Step duration_ms must be 500–60000")
+            # A recorded step lasts as long as the designer talked (up to an hour).
+            if isinstance(step_duration, bool) or not isinstance(step_duration, int) or not 500 <= step_duration <= 3600000:
+                raise PackageError("Step duration_ms must be 500 ms to 1 hour")
             cues = item.get("cues")
             narration = item.get("transcript", "")
             if cues is None:
@@ -254,6 +316,8 @@ class LocalPairPackage(ExamplePackage):
                 if (self.asset_root / filename).is_file():
                     media["audio"] = filename
                     media["offset_ms"] = int(item.get("audio_offset_ms", 0))
+                    if item.get("audio_slice") is True:
+                        media["slice"] = True     # this step is a slice of one long recording
                 else:
                     raise PackageError("Audio file not found: " + filename)
             recorded_parameters = [

@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>exCADmple · Author</title>
+  <script>document.write('<link rel="stylesheet" href="author.css' + location.search + '">');</script>
+</head>
+<body>
+  <!-- Authoring tool: record while modeling, then group the features into
+       reasoning steps and save the tutorial into the .f3d. -->
+  <header class="bar">
+    <div class="brand"><strong>exCADmple</strong><span>Author a tutorial</span></div>
+    <span id="design" class="design"></span>
+  </header>
+
+  <section class="record">
+    <button id="record" class="rec" type="button"><span class="dot" aria-hidden="true"></span><span id="recordLabel">Record</span></button>
+    <span id="timer" class="timer">00:00</span>
+    <label class="voice"><input id="voice" type="checkbox" checked> Record my voice</label>
+  </section>
+  <p id="hint" class="hint">Press Record, then model in your design and say why you do what you do.</p>
+  <button id="prepare" class="link pad" type="button">No recording? Explain this design with an existing recording</button>
+
+  <section id="sources" class="sources" hidden>
+    <div class="row">
+      <span class="label">Recording</span>
+      <span id="audioName" class="value">—</span>
+      <button id="importAudio" class="quiet" type="button">Import…</button>
+    </div>
+    <div id="leadRow" class="row" hidden>
+      <span class="label"></span>
+      <label class="value small">It started <input id="lead" type="number" step="0.5" value="0"> s before Record</label>
+      <button id="applyLead" class="quiet" type="button">Apply</button>
+    </div>
+    <div class="row">
+      <span class="label">Transcript</span>
+      <span id="transcriptState" class="value">—</span>
+      <button id="importTranscript" class="quiet" type="button">Import…</button>
+      <button id="transcribe" class="quiet" type="button" title="Run tools/transcribe.py (faster-whisper) on this computer">Transcribe</button>
+    </div>
+    <div class="row">
+      <span class="label">Title</span>
+      <input id="title" class="value" type="text" placeholder="Tutorial title">
+    </div>
+  </section>
+
+  <ol id="steps" class="steps" aria-label="Reasoning steps"></ol>
+
+  <footer class="foot" id="foot" hidden>
+    <div class="actions">
+      <button id="regroup" class="quiet" type="button" title="Start the grouping again from the Timeline">Regroup</button>
+      <span class="grow"></span>
+      <button id="preview" class="quiet" type="button" title="Play the tutorial in the exCADmple player">Preview</button>
+      <button id="save" class="primary" type="button">Save into .f3d…</button>
+    </div>
+  </footer>
+  <p id="status" class="status" role="status" aria-live="polite"></p>
+  <audio id="audio" preload="metadata"></audio>
+  <script>document.write('<script src="author.js' + location.search + '"><\/script>');</script>
+</body>
+</html>

@@ -28,8 +28,9 @@ def timeline_items(design):
                 entity = obj.entity
                 if entity is None:
                     continue
-                out.append((obj.index, getattr(entity, "name", "") or "",
-                            short_kind(getattr(entity, "objectType", ""))))
+                kind = short_kind(getattr(entity, "objectType", ""))
+                # Named as the player names it (core/playback/him_fusion.py).
+                out.append((obj.index, getattr(entity, "name", "") or kind, kind))
             except Exception:
                 continue
     if design:
@@ -113,6 +114,7 @@ class SessionRecorder:
     def __init__(self, app, ui):
         self.app, self.ui = app, ui
         self.log = None
+        self._design = None
         self._handlers = []
 
     @property
@@ -120,6 +122,12 @@ class SessionRecorder:
         return self.log is not None
 
     def design(self):
+        """The design being recorded (even if another document is active)."""
+        try:
+            if self._design is not None and self._design.isValid:
+                return self._design
+        except Exception:
+            pass
         return adsk.fusion.Design.cast(self.app.activeProduct)
 
     def start(self):
@@ -135,6 +143,12 @@ class SessionRecorder:
             "Record a tutorial", adsk.core.MessageBoxButtonTypes.OKCancelButtonType)
         if ok != adsk.core.DialogResults.DialogOK:
             return "Recording not started."
+        self.begin(design)
+        return "Recording. Stop it when you stop the screen recording."
+
+    def begin(self, design):
+        """Start logging now (no prompt; the authoring panel starts it)."""
+        self._design = design
         self.log = SessionLog()
         self.log.baseline(timeline_items(design))
         for event, handler in ((self.ui.commandStarting, _CommandStarting(self)),
@@ -142,7 +156,6 @@ class SessionRecorder:
                                (self.ui.activeSelectionChanged, _SelectionChanged(self))):
             event.add(handler)
             self._handlers.append((event, handler))
-        return "Recording. Stop it when you stop the screen recording."
 
     def check_timeline(self):
         if self.log is not None:
@@ -159,10 +172,7 @@ class SessionRecorder:
     def stop(self):
         if not self.recording:
             return "Not recording."
-        self.check_timeline()
-        data = self.log.to_dict()
-        self.log = None
-        self._detach()
+        data = self.finish()
         dialog = self.ui.createFileDialog()
         dialog.title = "Save the recording log"
         dialog.filter = "exCADmple session (*.session.json)"
@@ -174,6 +184,16 @@ class SessionRecorder:
         return "Saved %d tools, %d features, %d selections to %s" % (
             len(data["commands"]), len(data["features"]), len(data["selections"]), dialog.filename)
 
+    def finish(self):
+        """Stop logging and return the log (excadmple-session dict)."""
+        self.check_timeline()
+        data = self.log.to_dict()
+        self.log = None
+        self._design = None
+        self._detach()
+        return data
+
     def cancel(self):
         self.log = None
+        self._design = None
         self._detach()

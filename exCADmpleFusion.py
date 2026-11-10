@@ -41,13 +41,16 @@ from core.playback.him_reference import ReferenceSession
 from core.session_recorder import SessionRecorder
 from core.playback.tool_guide import ToolGuide
 from core.diagnostics import DiagnosticLog
+from core.authoring_fusion import Authoring, open_folder
 
 # Shown in the panel at start so it is clear which code Fusion is running.
-BUILD = "same-viewport 2026-11-10 · cleanup + step cache v16"
+BUILD = "authoring-tool 2026-11-10 · record, group, embed v1"
 PALETTE_ID = "excadmple_fusion_player"
 TOOL_PALETTE_ID = "excadmple_tool_window"   # version A: "tool in use" window at the left
 COMMAND_ID = "excadmple_fusion_open"
 RECORD_COMMAND_ID = "excadmple_fusion_record"
+AUTHOR_PALETTE_ID = "excadmple_author"
+AUTHOR_COMMAND_ID = "excadmple_fusion_author"
 
 
 def _read_layout():
@@ -80,12 +83,19 @@ _saving_document = False
 _handlers = []
 _buttons = []
 _recorder = None
+_authoring = None            # the authoring tool (prepare a tutorial while modeling)
+_author_palette = None
 
 
 # --- helpers ---------------------------------------------------------------------------
 def _post(action, payload):
     if _palette and _palette.isValid:
         _palette.sendInfoToHTML(action, json.dumps(payload))
+
+
+def _post_author(action, payload):
+    if _author_palette and _author_palette.isValid:
+        _author_palette.sendInfoToHTML(action, json.dumps(payload))
 
 
 def _post_tool(action, payload):
@@ -319,8 +329,8 @@ def _load(filename):
 
 def _open_dialog():
     dialog = _ui.createFileDialog()
-    dialog.title = "Load Example (JSON + matching Fusion .f3d, or .excadmple)"
-    dialog.filter = "exCADmple tutorials (*.excadmple;*.json)"
+    dialog.title = "Load Example (.f3d with a tutorial inside, JSON + matching .f3d, or .excadmple)"
+    dialog.filter = "exCADmple tutorials (*.f3d;*.excadmple;*.json)"
     if dialog.showOpen() == adsk.core.DialogResults.DialogOK:
         _load(dialog.filename)
 
@@ -523,6 +533,76 @@ class RecordExecute(adsk.core.CommandEventHandler):
             _log_error()
 
 
+class AuthorPaletteHandler(adsk.core.HTMLEventHandler):
+    """The authoring panel: record, group into reasoning steps, save into the .f3d."""
+
+    ACTIONS = {
+        "record_start": lambda a, b: a.start(),
+        "record_stop": lambda a, b: a.stop(),
+        "audio_start": lambda a, b: a.audio_start(b.get("rate")),
+        "audio_chunk": lambda a, b: a.audio_chunk(b.get("data")),
+        "audio_duration": lambda a, b: a.set_audio_duration(b.get("duration_ms")),
+        "audio_lead": lambda a, b: a.set_audio_lead(b.get("seconds", 0)),
+        "prepare": lambda a, b: a.prepare(),
+        "import_audio": lambda a, b: a.import_audio(),
+        "import_transcript": lambda a, b: a.import_transcript(),
+        "transcribe": lambda a, b: a.transcribe(),
+        "transcribe_poll": lambda a, b: a.poll_transcribe(),
+        "preview": lambda a, b: a.preview(),
+        "save": lambda a, b: a.save(),
+        "open_folder": lambda a, b: open_folder(a.work) if a.work else None,
+    }
+    EDITS = ("merge", "split", "move_sentence", "rename", "set_text", "regroup", "set_title")
+
+    def notify(self, args):
+        try:
+            command = args.action
+            if command == "response":
+                return
+            body = json.loads(args.data or "{}")
+            if command == "ready":
+                _authoring.open()
+            elif command == "client_log":
+                _note("author panel", str(body.get("message", ""))[:4000])
+            elif command in self.ACTIONS:
+                self.ACTIONS[command](_authoring, body)
+            elif command in self.EDITS:
+                _authoring.edit(command, body)
+            else:
+                raise ValueError("Unknown action: " + str(command))
+            args.returnData = json.dumps({"ok": True})
+        except Exception as error:
+            if _authoring:
+                _authoring.message = str(error)
+                _post_author("state", dict(_authoring.state(), message=str(error)))
+            args.returnData = json.dumps({"ok": False, "error": str(error)})
+            _log_error()
+
+
+def _create_author_palette():
+    global _author_palette
+    _author_palette = _ui.palettes.itemById(AUTHOR_PALETTE_ID)
+    if _author_palette:
+        _author_palette.isVisible = True
+        return
+    _author_palette = _ui.palettes.add2(AUTHOR_PALETTE_ID, "exCADmple · Author", _panel_url("author"),
+                                        True, True, True, 380, 720)
+    _author_palette.dockingState = adsk.core.PaletteDockingStates.PaletteDockStateFloating
+    handler = AuthorPaletteHandler()
+    _author_palette.incomingFromHTML.add(handler)
+    _handlers.append(handler)
+    _author_palette.isVisible = True
+
+
+class ShowAuthorExecute(adsk.core.CommandEventHandler):
+    def notify(self, args):
+        try:
+            _create_author_palette()
+        except Exception as error:
+            _ui.messageBox("Could not open the authoring panel:\n" + str(error), "exCADmple")
+            _log_error()
+
+
 class ShowPaletteExecute(adsk.core.CommandEventHandler):
     def notify(self, args):
         if _palette:
@@ -688,7 +768,7 @@ class BeforeDeactivate(adsk.core.DocumentEventHandler):
 
 # --- add-in lifecycle ---------------------------------------------------------------------------
 def run(_context):
-    global _app, _ui, _renderer, _spatial, _recorder, _diag
+    global _app, _ui, _renderer, _spatial, _recorder, _diag, _authoring
     try:
         _app = adsk.core.Application.get()
         _ui = _app.userInterface
@@ -720,6 +800,12 @@ def run(_context):
             _add_button(RECORD_COMMAND_ID, "exCADmple: Record tutorial",
                         "Log the tools, features and selections while you record a tutorial", RecordExecute)
 
+        # Authoring tool: prepare a tutorial while modeling (both layouts).
+        _authoring = Authoring(_app, _ui, ROOT, _post_author, _note, _load)
+        _add_button(AUTHOR_COMMAND_ID, "exCADmple: Author tutorial",
+                    "Record while you model and think aloud, group the steps by reason, "
+                    "and save the tutorial into the .f3d", ShowAuthorExecute)
+
         _create_palette()
         if ROLE == REFERENCE:
             try:
@@ -740,10 +826,12 @@ def run(_context):
 
 
 def stop(_context):
-    global _palette, _package, _session
+    global _palette, _package, _session, _author_palette
     try:
         if _recorder:
             _recorder.cancel()
+        if _authoring:
+            _authoring.cancel()
         if _session:
             _session.close()
             _session = None
@@ -777,6 +865,9 @@ def stop(_context):
         _palette = None
         if _tool_palette and _tool_palette.isValid:
             _tool_palette.deleteMe()
+        if _author_palette and _author_palette.isValid:
+            _author_palette.deleteMe()
+        _author_palette = None
         for item in reversed(_buttons):
             try:
                 if item and item.isValid:

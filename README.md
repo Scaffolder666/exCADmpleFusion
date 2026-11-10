@@ -127,9 +127,25 @@ Fusion 参考副本（不改动自己的 CAD 工作区）：
 - **模型和指针**：参考模型随步骤变化，鼠标轨迹显示为橙色的 Ghost Pointer（不会移动真实鼠标）。
 - **关联几何**（可选）：可以把某一步关联到自己模型里的 Body／Face，切换到这一步时高亮它，并把其他 Body 暂时调暗。
 
-## 教程文件和制作工具
+## 制作工具（在 Fusion 里，边设计边录）
 
-教程就是录下来的东西：步骤、每一步说了什么、用了哪些工具、模型怎么变、鼠标轨迹。规范见 [`docs/EXAMPLE_FORMAT.md`](docs/EXAMPLE_FORMAT.md)。制作一个教程：
+工具栏 **exCADmple: Author tutorial** 打开制作面板（"exCADmple · Author"）：
+
+1. **录制**：在自己的设计里点 **Record**，照常建模，边做边说为什么这样做。面板用麦克风录音（存成 `voice.wav`，可以跳到任意一步），插件记下每个时间轴特征出现的时间。点 **Stop** 结束。麦克风用不了时，建模照样记录，录音可以用别的软件录，之后 **Import…** 导入（录屏也可以），并填它比 Record 早开始几秒。
+2. **文字稿**：**Import…** 导入 `.srt` / `.vtt` / `.json`，或点 **Transcribe**（在本机运行 `tools/transcribe.py`，需要 `pip install faster-whisper`；Python 路径可在 `config.json` 的 `"python"` 里设定）。每句话按时间自动归到对应的步骤。
+3. **按推理分组**：开始时每个特征一步（草图和用它的特征在一起）。
+   - **⤓ merge into one step**：一个理由涵盖好几个操作时，把相邻两步合成一步；播放时这一步的几个操作连续播放。
+   - **✂**（两个特征之间）：从这里拆成两步。
+   - **↑ prev / ↓ next**：把一句话移到上一步 / 下一步（移动两步之间的分界）。
+   - 每步可以改标题、改"Why"文字（**Use what I said** 恢复成说的原话），▶ 听这一步的录音。
+4. **Preview**：在 exCADmple 播放器里按学习者看到的样子播放（同一个视口）。
+5. **Save into .f3d…**：把教程（同一个 pair JSON）写进设计本身（Fusion attributes，"exCADmple" 组），导出一个 `.f3d`，录音放在它旁边。分享这个 `.f3d`（和录音）即可；播放器 **+ Import** 直接选 `.f3d`。以后再打开这个设计，制作面板会接着上次的分组继续。
+
+几何和时间轴都不会被改动；只在 Save / Preview 时写 "exCADmple" 组的 attributes。Fusion 实测步骤见 [`docs/AUTHORING_TEST.md`](docs/AUTHORING_TEST.md)。
+
+## 教程文件和旧的制作流程
+
+教程就是录下来的东西：步骤、每一步说了什么、用了哪些工具、模型怎么变、鼠标轨迹。规范见 [`docs/EXAMPLE_FORMAT.md`](docs/EXAMPLE_FORMAT.md)。旧的命令行流程（版本 B）：
 
 1. **录制**：设计师打开自己的设计，点工具栏 **exCADmple: Record tutorial**，同时开始录屏（带麦克风），边建模边说。插件记录用到的工具、每个特征出现的时间、选中的位置（作为鼠标轨迹）。结束时点 **Stop recording**，保存 `*.session.json`。
 2. **提取**：在 Fusion 里打开完成的 `.f3d`，点教程面板底部的 **Extract tutorial draft…**，得到每个特征完成后的模型（`*.extract.json`）。
@@ -227,7 +243,10 @@ ui/overlay/index.html, player.js, style.css   版本 B 的面板
 ui/reference/index.html, player.js, style.css            版本 A 的控制面板
 core/session_log.py, session_recorder.py   制作：录制时记录工具、特征时间、选中位置
 core/ai_segment.py        制作：把录制切成步骤（Claude 提议 + 规则兜底 + 检查）
-ui/authoring/index.html            制作：在浏览器里对着视频检查、调整步骤
+ui/authoring/index.html            制作（旧）：在浏览器里对着视频检查、调整步骤
+core/tutorial/authoring_draft.py   制作工具：特征 + 说的话 → 推理步骤（合并、拆分、移句、改字），导出 pair JSON
+core/authoring_fusion.py           制作工具的 Fusion 部分：录制、录音、文字稿、写进 .f3d、预览
+ui/author/                         制作工具面板（在 Fusion 里）
 tools/fusion_demo/        Fusion 脚本：生成版本 A 的验收模型和教程包（tools/demo_tutorial.py）
 tools/                    author.py（切分步骤）、transcribe.py（本地转写）、build_package.py（合成）、build_examples.py（示例）
 ```

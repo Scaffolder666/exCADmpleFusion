@@ -221,9 +221,11 @@ class ExamplePackage:
                         raise PackageError("Media path escapes package directory")
                     if path.is_file():
                         media[kind] = path.as_uri()
-            if media and step.get("media", {}).get("offset_ms"):
+            if media and (step.get("media", {}).get("offset_ms") or step.get("media", {}).get("slice")):
                 # One long think-aloud recording: this step is a time slice of it.
-                media["offset_ms"] = step["media"]["offset_ms"]
+                media["offset_ms"] = step["media"].get("offset_ms", 0)
+                if step["media"].get("slice"):
+                    media["slice"] = True
             meta["media"] = media
             result["steps"].append(meta)
         return result
@@ -246,8 +248,12 @@ def open_package(filename):
             from .example_pair import LocalPairPackage
             return LocalPairPackage(data, source)
         return ExamplePackage(data, source.parent, source_path=source)
+    if source.suffix.lower() == ".f3d":
+        # A Fusion archive with the tutorial stored inside it.
+        from .example_pair import LocalPairPackage
+        return LocalPairPackage.from_f3d(source)
     if source.suffix.lower() != ".excadmple":
-        raise PackageError("Choose a .json or .excadmple file")
+        raise PackageError("Choose a .f3d, .json or .excadmple file")
     temp = None
     try:
         with zipfile.ZipFile(source, "r") as archive:

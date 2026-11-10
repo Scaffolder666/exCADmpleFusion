@@ -74,7 +74,7 @@ function narrationPending() {
   // An offset points into a shared recording; otherwise the entire
   // per-step audio file must finish, even if CAD animation is shorter.
   const audioEnd = Number.isFinite(audio.duration)
-    ? (offset > 0 ? Math.min(audio.duration, offset + duration() / 1000) : audio.duration)
+    ? (offset > 0 || media.slice ? Math.min(audio.duration, offset + duration() / 1000) : audio.duration)
     : Infinity;
   return !audio.ended && audio.currentTime < audioEnd - 0.03;
 }
@@ -96,7 +96,7 @@ function narrationMs(index) {
   if (media.audio) {
     if (index === S.index && audio.dataset.src === media.audio && Number.isFinite(audio.duration)) {
       const offset = (media.offset_ms || 0) / 1000;
-      const length = offset > 0 ? Math.min(audio.duration - offset, (item.duration_ms || 8000) / 1000)
+      const length = offset > 0 || media.slice ? Math.min(audio.duration - offset, (item.duration_ms || 8000) / 1000)
                                 : audio.duration;
       return Math.max(0, length * 1000);
     }
