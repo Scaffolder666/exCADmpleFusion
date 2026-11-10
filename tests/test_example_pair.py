@@ -10,8 +10,8 @@ import types
 import unittest
 from pathlib import Path
 
-from core.packages import open_package, PackageError
-from core.example_pair import hypothetical_transcript, feature_parameters_by_index
+from core.tutorial.packages import open_package, PackageError
+from core.tutorial.example_pair import hypothetical_transcript, feature_parameters_by_index
 
 class LocalExamplePairTests(unittest.TestCase):
     def setUp(self):

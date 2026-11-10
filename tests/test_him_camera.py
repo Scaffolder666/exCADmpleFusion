@@ -2,7 +2,7 @@
 import types
 import unittest
 from unittest.mock import patch
-from core.him_camera import focus_geometry
+from core.playback.him_camera import focus_geometry
 from tests.test_him_native import build, session_for
 
 

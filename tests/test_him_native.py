@@ -14,10 +14,10 @@ import unittest
 from tests import test_him_fusion_adapter as stub        # installs the adsk stub
 import adsk.core
 import adsk.fusion
-from core.him_fusion import FusionTimelineModel, _model_parameters
-from core.him_motion import interpolate
-from core.him_reference import ReferenceSession
-from core.reference_plan import map_steps
+from core.playback.him_fusion import FusionTimelineModel, _model_parameters
+from core.playback.him_motion import interpolate
+from core.playback.him_reference import ReferenceSession
+from core.tutorial.reference_plan import map_steps
 
 Obj, Coll, Timeline, TimelineObj = stub.Obj, stub.Coll, stub.Timeline, stub.TimelineObj
 
@@ -214,7 +214,7 @@ class WireframePlaybackTests(unittest.TestCase):
         session.stop()
 
     def test_ghost_capture_over_budget_does_not_hide_native_geometry(self):
-        from core.him_wireframe import capture_before_feature, WireframeOverflow
+        from core.playback.him_wireframe import capture_before_feature, WireframeOverflow
         design, entities, _ = build()
         for token in ("body0", "body1", "body2"):
             entities[token].edges = Coll([types.SimpleNamespace(geometry="edge-" + token)])
@@ -522,7 +522,7 @@ class TutorialDataTests(unittest.TestCase):
         import tempfile
         import zipfile
         from pathlib import Path
-        from core.packages import open_package
+        from core.tutorial.packages import open_package
         root = Path(__file__).resolve().parents[1]
         data = json.loads((root / "examples" / "phone_stand.json").read_text())
         step = data["steps"][0]

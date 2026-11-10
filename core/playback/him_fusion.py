@@ -1,30 +1,26 @@
 """Autodesk Fusion side of History in Motion.
 
 * ``FusionTimelineModel`` implements the adapter interface of
-  ``core.him_filter`` on a live parametric Design: it rolls the timeline marker
+  ``core.playback.him_filter`` on a live parametric Design: it rolls the timeline marker
   to the states the algorithm asks for and always restores the marker.
-* ``HiMController`` animates the filtered features *in the user's design* by
-  temporarily varying their ModelParameters from ~0 to the actual value
-  (paper Section 6.2), dims other bodies, highlights the input edge/profile,
-  and uses a scale/opacity effect for features without parameters. Every
-  changed parameter expression is journaled and restored.
-
-The paper renders on a copy in a second Fusion instance connected with web
-sockets. Fusion offers no in-process second 3D view, so this add-in animates
-in place and restores; see README "HiM implementation notes".
+* ``HiMController`` animates one feature at a time on the reference copy:
+  real growth by temporarily varying its ModelParameters from ~0 to the
+  actual value (paper Section 6.2), or fast motion of its real faces where
+  that is the same shape or there is nothing to grow; the model before the
+  feature is drawn as translucent faces with a dark outline, the input
+  profile/edges in blue, the changed faces in lit teal. Every changed
+  parameter expression and opacity is journaled and restored.
 """
 import math
-import time
 
 import adsk.core
 import adsk.fusion
 
-from core import him_filter
-from core.him_filter import FeatureInfo, InputRef
-from core.him_motion import (Playback, RestoreJournal, animation_mode, parameter_paths,
+from core.playback.him_filter import FeatureInfo, InputRef
+from core.playback.him_motion import (RestoreJournal, animation_mode, parameter_paths,
                          interpolate, short_kind, PARAMETRIC, FADE, NONE)
 from core.focus import OpacityFocus, FocusError
-from core.him_wireframe import capture_before_feature, can_isolate_feature, WireframeOverflow
+from core.playback.him_wireframe import capture_before_feature, can_isolate_feature, WireframeOverflow
 from core.playback.fast_motion import EXACT
 
 GEOMETRY_TYPES = (("face", adsk.fusion.BRepFace), ("edge", adsk.fusion.BRepEdge),
@@ -107,7 +103,7 @@ def _round_point(point, digits=5):
 
 
 class FusionTimelineModel:
-    """Adapter for core.him_filter on a live Fusion Design."""
+    """Adapter for core.playback.him_filter on a live Fusion Design."""
 
     def __init__(self, design):
         if not design:
@@ -373,7 +369,7 @@ class FusionTimelineModel:
 
 def _model_parameters(design, feature_entity, object_type):
     """ModelParameters to animate: only the registry paths of this feature
-    kind (core.him_motion.FEATURES). Paths that do not lead to a
+    kind (core.playback.him_motion.FEATURES). Paths that do not lead to a
     ModelParameter for this extent type are skipped, as are parameters whose
     value is zero (nothing to grow). There is deliberately no generic
     "every length parameter" fallback: it could animate a parameter that
@@ -504,10 +500,11 @@ def _center(bodies):
 
 
 class HiMController:
-    """Owns one filtering result and its animation."""
+    """Animates one feature at a time on the reference copy (HiM): native
+    parameter growth or fast motion, its highlights and the context."""
 
-    def __init__(self, app, ui, post, log=None, design_provider=None):
-        self.app, self.ui, self.post = app, ui, post
+    def __init__(self, app, ui, log=None, design_provider=None):
+        self.app, self.ui = app, ui
         # Version A passes the reference copy's design here, so animation
         # never touches whatever document happens to be active.
         self._design_provider = design_provider
@@ -516,9 +513,7 @@ class HiMController:
         self.graphics_design = None
         self.display_offset = (0.0, 0.0, 0.0)
         self.log = log or (lambda *_: None)
-        self.result = None
         self.clip = []
-        self.playback = Playback(0)
         self.journal = RestoreJournal()
         self.focus = OpacityFocus(self._resolve_body, self._document_key)
         self.group = None
@@ -534,19 +529,10 @@ class HiMController:
         self.pending_ghost = None     # captured at Timeline marker BEFORE feature
         self.wireframe_context = False  # opt in only on the disposable reference copy
         self.instant_nonparametric = False  # reference: no invented fades or scale
-        self.seconds = 4.0
-        self.selected_ref = None
-        self.selection_label = ""
         self.active_position = None
         self.active = {}            # prepared data of the feature being animated
-        self.last_frame_seconds = None
         self.auto_focus = False
         self.dim_others = False
-        # Inspect mode animates the *user's own* features in place (paper
-        # behaviour). Off by default: the user's model is the main line.
-        self.inspect = False
-        self.auto_play = True
-        self.busy = False
         self.model_highlights = {}
 
     # --- helpers --------------------------------------------------------------
@@ -611,79 +597,6 @@ class HiMController:
             return design.timeline.item(feature.index).entity
         except Exception:
             return None
-
-    # --- filtering ----------------------------------------------------------------
-    def explain(self, entity):
-        """Selection of a face/edge/vertex -> filtered features + animation."""
-        ref = FusionTimelineModel._ref(entity)
-        if not ref:
-            raise ValueError("Select a single face, edge or vertex")
-        if ref == self.selected_ref and self.result is not None:
-            return      # recompute during animation re-reports the selection
-        self.stop()
-        design = self.design()
-        model = FusionTimelineModel(design)
-        self.busy = True
-        started = time.time()
-        try:
-            result = him_filter.extract_relevant_features(model, ref)
-        finally:
-            try:
-                model.restore()
-            finally:
-                self.busy = False
-        self.model_highlights = model.highlights
-        self.selected_ref = ref
-        self.selection_label = ref[0].capitalize()
-        self.result = result
-        self._plan()
-        self.post("him_result", self.describe(time.time() - started))
-        if self.inspect and self.auto_play and self.clip:
-            self.command("play")
-
-    def show_more(self):
-        if not self.result:
-            raise ValueError("Select geometry first")
-        self.stop()
-        model = FusionTimelineModel(self.design())
-        self.busy = True
-        try:
-            him_filter.show_more(model, self.result)
-        finally:
-            try:
-                model.restore()
-            finally:
-                self.busy = False
-        self.model_highlights.update(model.highlights)
-        self._plan()
-        self.post("him_result", self.describe())
-
-    def _plan(self):
-        self.clip = list(self.result.features)
-        animatable = [animation_mode(f.kind) != NONE for f in self.clip]
-        self.playback = Playback(len(self.clip), self.seconds, animatable)
-
-    def describe(self, seconds=None):
-        data = self.result.as_dict() if self.result else {"features": [], "bases": []}
-        design = self.design()
-        for item, feature in zip(data["features"], self.clip):
-            item["mode"] = animation_mode(feature.kind)
-            entity = self._feature_entity(feature)
-            item["parameters"] = []
-            if entity is not None and design:
-                for param in all_feature_parameters(design, entity):
-                    item["parameters"].append({"name": param.name, "expression": param.expression,
-                                               "unit": param.unit, "value": param.value})
-            try:
-                item["suppressed"] = bool(entity.isSuppressed)
-            except Exception:
-                item["suppressed"] = False
-        data["selection"] = self.selection_label
-        data["playback"] = self.playback.as_dict()
-        data["inspect"] = self.inspect
-        if seconds is not None:
-            data["analysis_seconds"] = round(seconds, 2)
-        return data
 
     # --- animation ---------------------------------------------------------------
     def capture_ghost_context(self):
@@ -1412,7 +1325,7 @@ class HiMController:
         span = self._feature_span(prepared)
         color = adsk.fusion.CustomGraphicsSolidColorEffect.create(adsk.core.Color.create(*HANDLE_COLOR))
         for h in handle_list:
-            shape = arrow_lines(h["anchor"], h["direction"], arrow_length(handle_list, span))
+            shape = arrow_lines(h["anchor"], h["direction"], arrow_length(span))
             if shape is None:
                 continue
             points, indices = shape
@@ -1651,94 +1564,3 @@ class HiMController:
         self.active = {}
         if errors:
             raise RuntimeError("; ".join(errors))
-
-    def tick(self):
-        """One animation frame; called from the add-in's custom event."""
-        if not self.playback.playing or not self.clip:
-            return False
-        started = time.perf_counter()
-        frame = self.playback.tick(self.last_frame_seconds)
-        try:
-            self._render(frame)
-        finally:
-            self.last_frame_seconds = time.perf_counter() - started
-        if frame.finished and frame.progress >= 1.0:
-            # Forward clip done: the model is back at its real state.
-            self._finish_feature()
-        self.post("him_playback", self.playback.as_dict())
-        return self.playback.playing
-
-    ANIMATING = ("play", "replay", "forward", "backward", "select")
-
-    def command(self, name, value=None):
-        if name in self.ANIMATING and not self.inspect:
-            raise ValueError("Turn on Inspect mode to animate your own model's features")
-        if name == "inspect":
-            self.inspect = bool(value)
-            if not self.inspect:
-                self.stop()
-        elif name == "play":
-            self.playback.play()
-        elif name == "pause":
-            self.playback.pause()
-        elif name == "replay":
-            self._finish_feature()
-            self.playback.replay()
-        elif name == "forward":
-            self.playback.step_forward()
-        elif name == "backward":
-            self.playback.step_backward()
-        elif name == "select":
-            self.playback.select(int(value))
-        elif name == "speed":
-            self.seconds = float(value)
-            self.playback.set_speed(self.seconds)
-        elif name == "dim":
-            self.dim_others = bool(value)
-        elif name == "auto":
-            self.auto_play = bool(value)
-        else:
-            raise ValueError("Unknown HiM command " + str(name))
-        self.last_frame_seconds = None
-        self.post("him_playback", self.playback.as_dict())
-
-    def stop(self):
-        """Stop and restore the user's model completely."""
-        self.playback.pause()
-        self._finish_feature()
-
-    # --- edit shortcuts ---------------------------------------------------------------
-    EDIT_COMMANDS = ("FusionEditFeatureCommand", "FusionEditFeatureCmd", "EditFeatureCommand")
-
-    def edit_feature(self, position):
-        self.stop()
-        feature = self.clip[int(position)]
-        entity = self._feature_entity(feature)
-        if entity is None:
-            raise ValueError("Feature no longer exists")
-        self.busy = True
-        try:
-            self.ui.activeSelections.clear()
-            self.ui.activeSelections.add(entity)
-        finally:
-            self.busy = False
-        for command_id in self.EDIT_COMMANDS:
-            definition = self.ui.commandDefinitions.itemById(command_id)
-            if definition:
-                definition.execute()
-                return "Editing " + feature.name
-        return feature.name + " selected; right-click it and choose Edit Feature, or edit its parameters below."
-
-    def set_parameter(self, position, name, expression):
-        self.stop()
-        feature = self.clip[int(position)]
-        entity = self._feature_entity(feature)
-        for param in all_feature_parameters(self.design(), entity):
-            if param.name == name:
-                if not self.design().unitsManager.isValidExpression(expression, param.unit):
-                    raise ValueError("Invalid expression for " + name)
-                param.expression = expression
-                self.post("him_result", self.describe())
-                return name + " = " + expression
-        raise ValueError("Parameter not found: " + str(name))
-

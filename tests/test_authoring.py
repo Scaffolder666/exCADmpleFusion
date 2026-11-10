@@ -9,7 +9,7 @@ from pathlib import Path
 from core import transcript
 from core.authoring import build_manifest, write_package, AuthoringError
 from core.animation import animation_meshes
-from core.packages import open_package, _validate
+from core.tutorial.packages import open_package, _validate
 
 
 def tri(z):

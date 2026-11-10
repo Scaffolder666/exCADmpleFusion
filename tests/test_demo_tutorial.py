@@ -6,9 +6,9 @@ import unittest
 from pathlib import Path
 
 from core.authoring import build_manifest, write_package
-from core.him_filter import FeatureInfo
-from core.packages import open_package
-from core.reference_plan import map_steps, animated
+from core.playback.him_filter import FeatureInfo
+from core.tutorial.packages import open_package
+from core.tutorial.reference_plan import map_steps, animated
 from tools.demo_tutorial import annotation_and_transcript
 
 TIMELINE = [(0, "Sketch1", "Sketch"), (1, "Extrude1", "ExtrudeFeature"), (2, "Fillet1", "FilletFeature"),

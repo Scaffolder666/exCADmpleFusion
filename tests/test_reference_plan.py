@@ -1,7 +1,7 @@
 import unittest
 
-from core.him_filter import FeatureInfo
-from core.reference_plan import map_steps, frame_target, steps_for_features
+from core.playback.him_filter import FeatureInfo
+from core.tutorial.reference_plan import map_steps, frame_target, steps_for_features
 
 F = [FeatureInfo(0, "Sketch1", "Sketch"), FeatureInfo(1, "Extrude1", "ExtrudeFeature"),
      FeatureInfo(2, "Fillet1", "FilletFeature"), FeatureInfo(3, "Sketch2", "Sketch"),

@@ -6,7 +6,7 @@
 
 **Supporting Design Reasoning Through Shared CAD Models** · 分支 `fusion-him`
 
-> 本分支是**版本 A**：教程在第二个 Fusion 窗口里、在设计师 `.f3d` 的副本上播放（按 *History in Motion* 的做法）；用户在第一个 Fusion 窗口里做自己的设计。代码与 [`fusion`](https://github.com/Scaffolder666/exCADmpleFusion/tree/fusion)（版本 B）相同，只有 `config.json` 的 `"layout": "reference"` 和插件随 Fusion 启动不同。改动在 `fusion` 上进行，再合并到本分支。
+> 本分支是**版本 A**：设计师 `.f3d` 的副本作为一个独立的、从不保存的文档打开，保留它自己的 Timeline，按 *History in Motion* 的做法播放；参考模型画在**用户自己的视口**里、用户模型旁边，用户的 Design 一直是可编辑的活动文档，两套建模历史互不影响。`config.json` 的 `"layout": "reference"` 选择这个版本。
 
 在自己的 Fusion 里播放别的设计师录下来的设计教程：可以播放整个教程，也可以重播某一步、跳到下一步。每一步有模型怎么变化、用了哪些工具、鼠标轨迹，以及设计师当时说的话（think-aloud），可以听原声或用电子音朗读，同时显示文字。用户可以一边看，一边在同一个 Fusion 里做自己的设计。
 
@@ -95,7 +95,7 @@ Fusion 参考副本（不改动自己的 CAD 工作区）：
 
 | | 版本 A：独立参考视口（`fusion-him`，`"layout": "reference"`） | 版本 B：视口内 Overlay（`fusion`，`"layout": "overlay"`） |
 |---|---|---|
-| 教程在哪里播放 | 按 *History in Motion* 的做法，在**第二个 Fusion 窗口**里打开设计师 `.f3d` 的副本播放；用户在第一个 Fusion 窗口里建模 | 在用户自己的 **Fusion 画布**里，参考模型显示在用户模型旁边 |
+| 教程在哪里播放 | 按 *History in Motion* 的做法，在设计师 `.f3d` 的副本（独立文档、独立 Timeline）上播放，画在用户自己的视口里、用户模型旁边；用户随时可以暂停并在自己的 Design 里建模 | 在用户自己的 **Fusion 画布**里，参考模型显示在用户模型旁边 |
 | 看到的模型 | 设计师真实的参数化模型（副本），按 HiM 的方式展示：时间轴回滚到当前特征，参数从约 0 实时增长到实际值（Fusion 当场重算，不存帧），其他 Body 半透明；用户可以在那个窗口里随时旋转、查看 | 提取时记录的每个特征完成后的模型，显示在用户画布里，可以随画布一起旋转查看 |
 | 控制面板 | 参考窗口右侧：播放／暂停／重播／前进／后退，纵向步骤列表，当前步骤展开显示工具和设计师说的话 | 浮在画布上的紧凑面板（可收起为只剩步骤条），画布左上角显示步骤标题和当前这句话 |
 | 额外 | 在参考模型上选中面、边或顶点，只播放做出它的那些步骤（HiM 的过滤方法）；后退时倒放当前步骤 | — |
@@ -145,7 +145,7 @@ Fusion 参考副本（不改动自己的 CAD 工作区）：
 1. 下载本分支 ZIP 并解压，保持整个 `exCADmpleFusion` 文件夹完整。
 2. Fusion 中打开或新建一个 **Design**。
 3. **Utilities → Scripts and Add-Ins → Add-Ins**，点 **+**，选中文件夹并运行。
-4. 版本 B：教程面板浮在画布上，示例自动打开；**Import** 打开别的教程。版本 A：工具栏点 **exCADmple Reference window** 打开第二个 Fusion（需要在 Add-Ins 里勾选 **Run on Startup**，该分支默认已开启）；如果没有自动启动，手动再开一个 Fusion 运行插件即可，它会自动连接。
+4. 版本 B：教程面板浮在画布上，示例自动打开；**Import** 打开别的教程。版本 A：先打开或新建自己的 Design，再用 **+ Import** 打开 JSON + `.f3d` 教程；参考模型出现在你的模型旁边，左侧是 **exCADmple · Tool** 工具窗口，每次运行写 `logs/latest.log`。
 
 ## 不会改动用户的模型
 
@@ -165,7 +165,7 @@ Fusion 参考副本（不改动自己的 CAD 工作区）：
 | Chamfer | `distance`、`distanceOne`、`distanceTwo`（角度不动画） |
 | Hole | `extentDefinition.distance`、`holeDiameter` |
 | Circular／Rectangular Pattern | `totalAngle`；`distanceOne`／`distanceTwo` |
-| Shell、Sweep、Offset Faces、Thicken、Draft、Thread、Coil | 见 `core/him_motion.py` 的 `FEATURES` |
+| Shell、Sweep、Offset Faces、Thicken、Draft、Thread、Coil | 见 `core/playback/him_motion.py` 的 `FEATURES` |
 
 **视觉回退**（高亮的结果 Body 从小到大、从透明到不透明出现，其他 Body 和结果本身临时调暗）：Mirror、Combine、Split Body、Split Face、Loft、Move，以及 Base/Copy-Paste/Import 等；参数动画中 Fusion 拒绝某个值或特征报错时，这一步也改用视觉效果并在面板标明原因。Sketch 和构造平面只按时间轴状态显示。其他 Feature 只滚动时间轴显示结果。
 
@@ -183,7 +183,7 @@ Fusion 参考副本（不改动自己的 CAD 工作区）：
 | 只修改参考副本 | ✓ | ✓ | 未测 |
 | HiM 几何过滤 | ✓ | ✓ | 未测 |
 | Fusion 是否真的按参数重算、各 Feature 的 API 路径是否正确、帧率 | — | 无法用单元测试证明 | 未测 |
-| 两个 Fusion 同时运行并连接 | ✓ | 连接协议 ✓ | 未测 |
+| 同一视口：参考副本独立文档 + 用户 Design 保持活动 | ✓ | ✓ | 研究者已在 Fusion Desktop 中使用 |
 
 **最终验收待 Fusion Desktop 实测。** 验收模型和步骤：`tools/fusion_demo`（在 Fusion 里运行，生成 Sketch → Extrude → Fillet → Sketch → Extrude → 构造平面 → Mirror 的真实 `.f3d` 和教程包），按 [`docs/FUSION_DESKTOP_TEST.md`](docs/FUSION_DESKTOP_TEST.md) 逐项检查。该脚本本身也尚未在 Fusion 里运行过。
 
@@ -205,16 +205,20 @@ node --check ui/overlay/player.js && node --check ui/reference/player.js
 ## 代码结构
 
 ```text
-exCADmpleFusion.py        入口：教程面板、播放、保存安全；版本 A 的两个窗口
+exCADmpleFusion.py        入口：教程面板、工具窗口、播放、保存安全、诊断日志
 config.json               选择界面版本（overlay = B，reference = A）
-core/packages.py          教程包读取与校验
+core/tutorial/packages.py 教程包读取与校验（含 JSON + .f3d：core/tutorial/example_pair.py）
 core/animation.py         模型状态动画
 core/renderer.py          画布中的参考模型、Ghost Pointer、文字
 core/pointer.py           鼠标轨迹
-core/link.py              版本 A：两个 Fusion 之间的本机连接
+core/playback/same_viewport.py     版本 A：把参考模型画进用户自己的视口
+core/playback/fast_motion.py       版本 A：快速动画（移动真实的面，不必每帧重算）
+core/playback/manipulator.py       版本 A：移动的面、箭头和数值
+core/playback/tool_guide.py        版本 A：这一步用的 Fusion 工具（工具栏、工具窗口）
+core/diagnostics.py       logs/latest.log 诊断日志
 core/playback/him_reference.py     版本 A：在设计师模型副本上播放（HiM 参数动画、按几何过滤）
 core/tutorial/reference_plan.py    版本 A：步骤与时间轴特征的对应
-core/him_filter.py, him_motion.py, him_fusion.py   History in Motion 的过滤算法与参数动画
+core/playback/him_filter.py, him_motion.py, him_fusion.py   History in Motion 的过滤算法与参数动画
 core/tutorial/extract_fusion.py    从 .f3d 提取教程草稿
 core/authoring.py, transcript.py   合成教程包、读取文字稿
 core/spatial.py, focus.py, geometry_links.py      关联几何

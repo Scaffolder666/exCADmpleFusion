@@ -12,8 +12,8 @@ import adsk.core
 import adsk.fusion
 
 from .session_log import SessionLog
-from .him_fusion import _items
-from .him_motion import short_kind
+from .playback.him_fusion import _items
+from .playback.him_motion import short_kind
 
 
 def timeline_items(design):

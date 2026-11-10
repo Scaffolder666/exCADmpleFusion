@@ -131,15 +131,6 @@ def screw_partial(m, t):
     return out
 
 
-def flatten(m):
-    return [m[r][c] for r in range(4) for c in range(4)]
-
-
-def unflatten(values):
-    values = list(values)
-    return [values[r * 4:(r + 1) * 4] for r in range(4)]
-
-
 # --- reading Fusion objects (duck-typed) ---------------------------------------------------
 def _items(collection, limit=2000):
     if collection is None:

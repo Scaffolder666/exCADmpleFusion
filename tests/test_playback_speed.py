@@ -7,7 +7,7 @@ import unittest
 
 from tests import test_him_native as native             # installs the adsk stub
 import adsk.core
-from core.him_motion import interpolate
+from core.playback.him_motion import interpolate
 
 
 class BatchedParameterTests(unittest.TestCase):

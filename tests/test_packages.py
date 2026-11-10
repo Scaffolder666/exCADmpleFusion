@@ -5,7 +5,7 @@ import unittest
 import zipfile
 from pathlib import Path
 
-from core.packages import open_package, PackageError
+from core.tutorial.packages import open_package, PackageError
 
 
 class PackageTests(unittest.TestCase):

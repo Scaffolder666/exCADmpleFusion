@@ -8,14 +8,13 @@ time, with the recorded voice (or synthetic speech) and the transcript.
 Two layouts with the same features (config.json "layout"):
 * "overlay"   — version B: the reference model is drawn in the user's own
   canvas (Custom Graphics) and the tutorial floats over it;
-* "reference" — version A, as in History in Motion: a second Fusion
-  instance opens a copy of the designer's .f3d and plays the tutorial on
-  it by animating feature parameters; selecting geometry there plays the
-  steps that made it. The user keeps modeling in the first instance.
+* "reference" — version A, as in History in Motion: a copy of the
+  designer's .f3d is opened as a separate (never saved) document with its
+  own Timeline and played by animating feature parameters; it is drawn in
+  the user's own viewport, beside the user's model, which stays the
+  active, editable design.
 """
 import json
-import os
-import subprocess
 import sys
 import traceback
 from pathlib import Path
@@ -34,12 +33,11 @@ for _name in [n for n in sys.modules if n == "core" or n.startswith("core.")]:
 import adsk.core
 import adsk.fusion
 
-from core.packages import open_package, PackageError
+from core.tutorial.packages import open_package, PackageError
 from core.renderer import ReferenceRenderer, active_fusion_command
 from core.spatial import SpatialLinkController
-from core.extract_fusion import extract_with_dialog
-from core.link import InstanceLink, WORKSPACE, REFERENCE
-from core.him_reference import ReferenceSession
+from core.tutorial.extract_fusion import extract_with_dialog
+from core.playback.him_reference import ReferenceSession
 from core.session_recorder import SessionRecorder
 from core.playback.tool_guide import ToolGuide
 from core.diagnostics import DiagnosticLog
@@ -49,9 +47,7 @@ BUILD = "same-viewport 2026-11-10 · one context look v15"
 PALETTE_ID = "excadmple_fusion_player"
 TOOL_PALETTE_ID = "excadmple_tool_window"   # version A: "tool in use" window at the left
 COMMAND_ID = "excadmple_fusion_open"
-REFERENCE_COMMAND_ID = "excadmple_fusion_reference_open"
 RECORD_COMMAND_ID = "excadmple_fusion_record"
-LINK_EVENT = "excadmple_fusion_link"
 
 
 def _read_layout():
@@ -63,7 +59,8 @@ def _read_layout():
 
 
 LAYOUT = _read_layout()
-ROLE = "overlay"            # overlay | workspace | reference (decided in run)
+REFERENCE = "reference"
+ROLE = "overlay"            # overlay (version B) | reference (version A, decided in run)
 
 _app = None
 _ui = None
@@ -74,8 +71,6 @@ _renderer = None
 _spatial = None
 _package = None
 _step_index = 0
-_link = None
-_link_event = None
 _session = None
 _tools = None                # version A: the step's native Fusion tools in the toolbar
 _diag = None                 # logs/latest.log: what happened in this run, to send for diagnosis
@@ -512,45 +507,6 @@ class PaletteHandler(adsk.core.HTMLEventHandler):
             _log_error()
 
 
-# --- version A: the two Fusion instances --------------------------------------------------
-class LinkEventHandler(adsk.core.CustomEventHandler):
-    def notify(self, args):
-        try:
-            message = json.loads(args.additionalInfo or "{}")
-            if ROLE == REFERENCE and message.get("cmd") == "_disconnected":
-                _status("Your own Fusion window is no longer connected.")
-        except Exception:
-            _log_error()
-
-
-def _launch_reference_instance():
-    """Start the second Fusion instance (as HiM does). It runs this add-in,
-    finds the first instance listening and becomes the reference."""
-    try:
-        if sys.platform == "darwin":
-            subprocess.Popen(["open", "-n", "-a", "Autodesk Fusion"])
-            return True
-        if os.name == "nt":
-            base = Path(sys.executable).resolve().parent
-            for candidate in (base.parent / "Fusion360.exe", base / "Fusion360.exe",
-                              base.parent.parent / "Fusion360.exe"):
-                if candidate.is_file():
-                    subprocess.Popen([str(candidate)])
-                    return True
-    except Exception:
-        _log_error()
-    return False
-
-
-class ReferenceCommandExecute(adsk.core.CommandEventHandler):
-    def notify(self, args):
-        if _link and _link.connected:
-            _ui.messageBox("The reference window is already open.")
-        elif not _launch_reference_instance():
-            _ui.messageBox("Start a second Fusion and run the exCADmple add-in in it. "
-                           "It will connect to this window and play the tutorial.")
-
-
 class RecordExecute(adsk.core.CommandEventHandler):
     """Authoring: log tools, features and selections while the designer
     records a tutorial (start it together with the screen recording)."""
@@ -597,23 +553,6 @@ def _add_button(command_id, name, tooltip, execute_type):
         if panel:
             _buttons.append(panel.controls.itemById(command_id) or panel.controls.addCommand(definition))
             break
-
-
-def _start_link():
-    """The first Fusion instance becomes the workspace, the second the reference."""
-    global ROLE, _link, _link_event, _session
-    try:
-        _app.unregisterCustomEvent(LINK_EVENT)
-    except Exception:
-        pass
-    _link_event = _app.registerCustomEvent(LINK_EVENT)
-    handler = LinkEventHandler()
-    _link_event.add(handler)
-    _handlers.append(handler)
-    _link = InstanceLink(lambda message: _app.fireCustomEvent(LINK_EVENT, json.dumps(message)))
-    ROLE = _link.start()
-    if ROLE == REFERENCE:
-        _session = ReferenceSession(_app, _ui, _session_log)
 
 
 def _panel_url(folder):
@@ -781,14 +720,6 @@ def run(_context):
             _add_button(RECORD_COMMAND_ID, "exCADmple: Record tutorial",
                         "Log the tools, features and selections while you record a tutorial", RecordExecute)
 
-        if ROLE == WORKSPACE:
-            # The user's own design: nothing is drawn here; the tutorial plays
-            # in the reference window.
-            _add_button(REFERENCE_COMMAND_ID, "exCADmple Reference window",
-                        "Play the tutorial in a second Fusion window (History in Motion style)",
-                        ReferenceCommandExecute)
-            return
-
         _create_palette()
         if ROLE == REFERENCE:
             try:
@@ -809,7 +740,7 @@ def run(_context):
 
 
 def stop(_context):
-    global _palette, _package, _session, _link
+    global _palette, _package, _session
     try:
         if _recorder:
             _recorder.cancel()
@@ -818,9 +749,6 @@ def stop(_context):
             _session = None
         if _tools:
             _tools.close()
-        if _link:
-            _link.stop()
-            _link = None
         if _renderer:
             _renderer.clear()
         if _spatial:
@@ -841,10 +769,6 @@ def stop(_context):
                             getattr(_app, event_name).remove(handler)
                         except Exception:
                             pass
-            try:
-                _app.unregisterCustomEvent(LINK_EVENT)
-            except Exception:
-                pass
         if _package:
             _package.close()
             _package = None

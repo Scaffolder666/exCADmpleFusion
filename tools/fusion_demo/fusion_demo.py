@@ -96,7 +96,7 @@ def run(context):
     try:
         if ROOT not in sys.path:
             sys.path.insert(0, ROOT)
-        from core.extract_fusion import extract
+        from core.tutorial.extract_fusion import extract
         from core.authoring import build_manifest, write_package
         from tools.demo_tutorial import annotation_and_transcript
 

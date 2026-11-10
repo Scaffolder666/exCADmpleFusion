@@ -15,7 +15,7 @@ from tests import test_him_fusion_adapter as stub        # installs the adsk stu
 import adsk.core
 import adsk.fusion
 from core import step_changes
-from core.packages import ExamplePackage
+from core.tutorial.packages import ExamplePackage
 from core.step_changes import ChangeDetector, changed_geometry
 
 ROOT = Path(__file__).resolve().parents[1]

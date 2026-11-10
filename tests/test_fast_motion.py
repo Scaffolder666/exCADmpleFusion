@@ -12,7 +12,7 @@ import unittest
 
 from tests import test_him_native as native             # installs the adsk stub
 import adsk.fusion
-from core.him_motion import interpolate
+from core.playback.him_motion import interpolate
 from core.playback import fast_motion as fm
 
 Obj, Coll = native.Obj, native.Coll
@@ -452,9 +452,9 @@ class MovePlaybackTests(unittest.TestCase):
         adsk.fusion.TemporaryBRepManager = types.SimpleNamespace(
             get=lambda: types.SimpleNamespace(copy=lambda item: self.copies.append(item.entityToken)
                                               or ("copy", item.entityToken)))
-        from core.him_fusion import FusionTimelineModel
-        from core.him_reference import ReferenceSession
-        from core.reference_plan import map_steps
+        from core.playback.him_fusion import FusionTimelineModel
+        from core.playback.him_reference import ReferenceSession
+        from core.tutorial.reference_plan import map_steps
         self.session = ReferenceSession(native.FakeApp(self.design), None)
         self.session.him.dim_others = True
         self.session.him.wireframe_context = True
@@ -521,9 +521,9 @@ class RevolvePlaybackTests(unittest.TestCase):
         rev.faces = Coll([Obj("BRepFace", "rev-face")])
         adsk.fusion.TemporaryBRepManager = types.SimpleNamespace(
             get=lambda: types.SimpleNamespace(copy=lambda item: ("copy", getattr(item, "entityToken", "?"))))
-        from core.him_fusion import FusionTimelineModel
-        from core.him_reference import ReferenceSession
-        from core.reference_plan import map_steps
+        from core.playback.him_fusion import FusionTimelineModel
+        from core.playback.him_reference import ReferenceSession
+        from core.tutorial.reference_plan import map_steps
         self.session = ReferenceSession(native.FakeApp(self.design), None)
         him = self.session.him
         him.dim_others = him.wireframe_context = True

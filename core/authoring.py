@@ -12,7 +12,7 @@ import zipfile
 from pathlib import Path, PurePosixPath
 
 from . import transcript as transcript_mod
-from .packages import _validate as validate_package, PackageError
+from .tutorial.packages import _validate as validate_package, PackageError
 
 EXTRACT_FORMAT = "excadmple-extract"
 ANNOTATION_FORMAT = "excadmple-annotation"

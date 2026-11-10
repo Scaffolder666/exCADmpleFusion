@@ -1,7 +1,7 @@
 import unittest
 from pathlib import Path
 
-from core.packages import open_package
+from core.tutorial.packages import open_package
 from core.pointer import sample, validate_pointer, PointerError
 
 ROOT = Path(__file__).resolve().parents[1]

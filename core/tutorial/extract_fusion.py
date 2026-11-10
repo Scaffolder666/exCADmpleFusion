@@ -13,7 +13,7 @@ import time
 import adsk.core
 import adsk.fusion
 
-from core.him_fusion import FusionTimelineModel, all_feature_parameters, _items
+from core.playback.him_fusion import FusionTimelineModel, all_feature_parameters, _items
 
 DIGITS = 4
 

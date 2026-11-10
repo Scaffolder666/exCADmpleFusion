@@ -152,6 +152,6 @@ def arrow_lines(anchor, direction, length):
     return [anchor, tip, left, right], [0, 1, 1, 2, 1, 3]
 
 
-def arrow_length(handles_list, faces_span):
+def arrow_length(faces_span):
     """A readable arrow: a fraction of the feature size, within limits (cm)."""
     return max(0.6, min(3.0, 0.35 * faces_span)) if faces_span > 0 else 1.0

@@ -3,7 +3,7 @@ import math
 import unittest
 
 from core.animation import AnimationError, extrude_mesh, validate_animation
-from core.packages import PackageError, open_package
+from core.tutorial.packages import PackageError, open_package
 from pathlib import Path
 import json
 import tempfile

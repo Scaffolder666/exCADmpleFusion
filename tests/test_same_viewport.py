@@ -15,8 +15,8 @@ from pathlib import Path
 from tests import test_him_native as native             # installs the adsk stub
 import adsk.core
 import adsk.fusion
-from core.him_motion import interpolate
-from core.him_reference import ReferenceSession
+from core.playback.him_motion import interpolate
+from core.playback.him_reference import ReferenceSession
 
 Obj, Coll, Timeline, TimelineObj = native.Obj, native.Coll, native.Timeline, native.TimelineObj
 
@@ -285,7 +285,7 @@ class SketchDrawingTests(SameViewportBase):
         self.sketch.sketchCurves = Coll([types.SimpleNamespace(worldGeometry=g) for g in lines])
         self.sketch.isLightBulbOn = True
         self.sketch.isVisible = True
-        from core.reference_plan import map_steps
+        from core.tutorial.reference_plan import map_steps
         self.session.mapped, _ = map_steps(
             [{"id": "sketch", "source_features": [{"name": "Sketch1", "index": 0}]},
              {"id": "extrude", "source_features": [{"name": "Extrude1", "index": 1}]}],

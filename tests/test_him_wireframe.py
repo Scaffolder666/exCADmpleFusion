@@ -6,7 +6,7 @@ import types
 import unittest
 
 from tests import test_him_fusion_adapter as stub  # provides fake adsk
-from core.him_wireframe import (capture_before_feature, can_isolate_feature,
+from core.playback.him_wireframe import (capture_before_feature, can_isolate_feature,
                                 WireframeOverflow)
 
 

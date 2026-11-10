@@ -7,8 +7,8 @@ import unittest
 
 from tests import test_him_native as native             # installs the adsk stub
 import adsk.fusion
-from core.him_motion import interpolate
-from core.reference_plan import map_steps
+from core.playback.him_motion import interpolate
+from core.tutorial.reference_plan import map_steps
 
 Obj, Coll = native.Obj, native.Coll
 

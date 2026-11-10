@@ -1,8 +1,8 @@
-"""Version A — the reference instance (History in Motion, Veuskens et al.).
+"""Version A — reference playback (History in Motion, Veuskens et al.).
 
-Runs in the second Fusion instance. It opens a copy of the designer's .f3d
-from the example package and plays the tutorial on that real parametric
-model, the way HiM does:
+Opens a copy of the designer's .f3d as its own document (kept apart from
+the user's Timeline, shown in the user's viewport by same_viewport.py) and
+plays the tutorial on that real parametric model, the way HiM does:
 
 * rolling the timeline to the feature being shown and growing its
   genuine numeric parameters from ~0 to their value (distance, angle,
@@ -21,10 +21,10 @@ import time
 import adsk.core
 import adsk.fusion
 
-from core import him_filter
-from core.him_fusion import FusionTimelineModel, HiMController, _model_parameters
-from core.him_motion import Frame, animation_mode, PARAMETRIC, FADE
-from core.reference_plan import map_steps, animated, frame_target, steps_for_features
+from core.playback import him_filter
+from core.playback.him_fusion import FusionTimelineModel, HiMController, _model_parameters
+from core.playback.him_motion import Frame, animation_mode, PARAMETRIC, FADE
+from core.tutorial.reference_plan import map_steps, animated, frame_target, steps_for_features
 from .same_viewport import SameViewportPresenter, side_by_side_offset
 
 
@@ -32,7 +32,7 @@ class ReferenceSession:
     def __init__(self, app, ui, log=None):
         self.app, self.ui = app, ui
         self.log = log or (lambda *_: None)
-        self.him = HiMController(app, ui, lambda *_: None, self.log,
+        self.him = HiMController(app, ui, self.log,
                                  design_provider=lambda: self.model.design if self.model else None)
         # HiM (SCF 2023, Section 6.2) dims unrelated geometry to reveal the
         # feature's input and result. Apply only in the unsaved reference copy.

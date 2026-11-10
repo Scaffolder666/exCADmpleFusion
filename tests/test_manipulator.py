@@ -9,7 +9,7 @@ from tests import test_him_native as native             # installs the adsk stub
 from tests import test_fast_motion as fast
 import adsk.core
 import adsk.fusion
-from core.him_motion import interpolate
+from core.playback.him_motion import interpolate
 from core.playback import manipulator as mp
 
 Obj, Coll = native.Obj, native.Coll

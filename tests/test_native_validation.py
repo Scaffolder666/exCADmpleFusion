@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from core.packages import open_package
+from core.tutorial.packages import open_package
 from tests.test_authoring import EXTRACT
 from tools.build_native_validation import (native_only_manifest, make_annotation, make_package,
                                            hypothetical_reasoning, synthetic_reasoning_segments)

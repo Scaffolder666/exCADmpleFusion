@@ -27,7 +27,7 @@ def run(context):
     try:
         if str(ROOT) not in sys.path:
             sys.path.insert(0, str(ROOT))
-        from core.extract_fusion import extract
+        from core.tutorial.extract_fusion import extract
         from tools.build_native_validation import (
             make_annotation, make_package, synthetic_reasoning_segments)
 

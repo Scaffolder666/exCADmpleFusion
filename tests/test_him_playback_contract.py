@@ -4,7 +4,7 @@ Run: python -m unittest discover -s tests -v
 """
 import unittest
 from pathlib import Path
-from core.packages import open_package
+from core.tutorial.packages import open_package
 from core.animation import animation_meshes
 
 ROOT = Path(__file__).resolve().parents[1]

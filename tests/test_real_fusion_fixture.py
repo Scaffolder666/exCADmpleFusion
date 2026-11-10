@@ -11,7 +11,7 @@ import unittest
 import zipfile
 from pathlib import Path
 
-from core.packages import open_package
+from core.tutorial.packages import open_package
 
 FIXTURE = Path(__file__).resolve().parent / "fixtures" / "real_fusion"
 SHA256 = "696ce58b26afc66d68789daa860e8c5ab735522abe2eaa7620b955f1e51c944b"

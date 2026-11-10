@@ -5,7 +5,7 @@ import types
 import unittest
 
 from tests import test_him_fusion_adapter as stub          # installs the adsk stub
-from core import extract_fusion
+from core.tutorial import extract_fusion
 from core.authoring import build_manifest
 
 sys.modules["adsk.fusion"].TriangleMeshQualityOptions = types.SimpleNamespace(LowQualityTriangleMesh=0)

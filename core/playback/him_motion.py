@@ -2,19 +2,14 @@
 
 Pure Python: no Fusion import. Covers
 * which parameters animate which feature (20 supported features, Figure 7),
-* the clip plan: filtered features played newest first (reverse order),
-* adaptive frame stepping (15 frames for 2 s ... 75 frames for 10 s, then
-  tuned from the execution time of the previous frame),
-* the playback state machine (play, pause, replay, speed, step forward,
-  step backward which reverses playback),
+* the parameter value at a given progress (from ~0 to the real value),
 * a restore journal so every temporarily changed parameter is put back.
+
+Frame pacing (adaptive frames, as in the paper) lives in the reference
+panel: ui/reference/frame_clock.js.
 """
 from dataclasses import dataclass
 
-MIN_SECONDS = 2.0
-MAX_SECONDS = 10.0
-MIN_FRAMES = 15
-MAX_FRAMES = 75
 START_FRACTION = 0.02      # many Fusion parameters reject exactly zero
 
 PARAMETRIC = "parameter"
@@ -77,22 +72,6 @@ def parameter_paths(object_type):
     return FEATURES.get(short_kind(object_type), (NONE, ()))[1]
 
 
-def seconds_per_feature(value):
-    """Clamp the control-panel slider value to the paper's 2..10 s range."""
-    try:
-        value = float(value)
-    except (TypeError, ValueError):
-        value = 4.0
-    return max(MIN_SECONDS, min(MAX_SECONDS, value))
-
-
-def initial_frames(seconds):
-    """15 frames for 2 s, 75 frames for 10 s, linear in between."""
-    seconds = seconds_per_feature(seconds)
-    ratio = (seconds - MIN_SECONDS) / (MAX_SECONDS - MIN_SECONDS)
-    return int(round(MIN_FRAMES + ratio * (MAX_FRAMES - MIN_FRAMES)))
-
-
 def interpolate(target, progress, start_fraction=START_FRACTION):
     """Parameter value at progress in [0, 1]; keeps the sign of ``target``."""
     progress = max(0.0, min(1.0, float(progress)))
@@ -100,163 +79,11 @@ def interpolate(target, progress, start_fraction=START_FRACTION):
     return target * fraction
 
 
-class AdaptiveStepper:
-    """Chooses the next progress increment so a feature finishes on time.
-
-    The first increment comes from the frame estimate. After each rendered
-    frame the increment is re-derived from how long that frame took: slow
-    model recomputes give fewer, larger steps; fast ones more, smaller steps.
-    """
-
-    def __init__(self, seconds):
-        self.seconds = seconds_per_feature(seconds)
-        self.increment = 1.0 / initial_frames(self.seconds)
-        self.elapsed = 0.0
-
-    def next_increment(self, frame_seconds, progress_done):
-        frame_seconds = max(1e-3, float(frame_seconds))
-        self.elapsed += frame_seconds
-        remaining_time = self.seconds - self.elapsed
-        remaining_progress = max(0.0, 1.0 - progress_done)
-        if remaining_time <= frame_seconds:
-            self.increment = remaining_progress
-        else:
-            frames_left = max(1.0, remaining_time / frame_seconds)
-            self.increment = remaining_progress / frames_left
-        return self.increment
-
-
 @dataclass
 class Frame:
     position: int       # index into the clip (0 = newest feature)
     progress: float     # 0 = before the feature, 1 = after it
     finished: bool = False
-
-
-class Playback:
-    """Playback over a clip of N features, newest first.
-
-    ``tick(frame_seconds)`` advances by one adaptive frame and returns the
-    Frame to render. Forward playback goes 0 -> 1 per feature and then on to
-    the next (older) feature. Stepping backward reverses playback (1 -> 0).
-    """
-
-    def __init__(self, count, seconds=4.0, animatable=None):
-        self.count = int(count)
-        self.seconds = seconds_per_feature(seconds)
-        self.animatable = list(animatable) if animatable is not None else [True] * self.count
-        self.position = 0
-        self.progress = 0.0
-        self.direction = 1
-        self.playing = False
-        self.continuous = True        # False after a single step command
-        self._stepper = AdaptiveStepper(self.seconds)
-        self._skip_static()
-
-    # --- commands -----------------------------------------------------------
-    def play(self):
-        if self.count == 0:
-            return
-        if self.direction > 0 and self.position >= self.count - 1 and self.progress >= 1.0:
-            self.replay()
-            return
-        self.playing = True
-        self.continuous = True
-
-    def pause(self):
-        self.playing = False
-
-    def replay(self):
-        self.position, self.progress, self.direction = 0, 0.0, 1
-        self._skip_static()
-        self._stepper = AdaptiveStepper(self.seconds)
-        self.playing = self.count > 0
-        self.continuous = True
-
-    def set_speed(self, seconds):
-        self.seconds = seconds_per_feature(seconds)
-        done = self.progress if self.direction > 0 else 1.0 - self.progress
-        self._stepper = AdaptiveStepper(self.seconds)
-        self._stepper.elapsed = done * self.seconds
-
-    def select(self, position):
-        if not 0 <= position < self.count:
-            raise IndexError("Feature position out of range")
-        self.position, self.progress, self.direction = position, 0.0, 1
-        self._stepper = AdaptiveStepper(self.seconds)
-        self.playing, self.continuous = True, False
-
-    def step_forward(self):
-        """Animate the next (older) feature once."""
-        if self.count == 0:
-            return
-        if self.progress >= 1.0 or self.direction < 0:
-            if self.position < self.count - 1:
-                self.position += 1
-        self.progress, self.direction = 0.0, 1
-        self._stepper = AdaptiveStepper(self.seconds)
-        self.playing, self.continuous = True, False
-
-    def step_backward(self):
-        """Reverse playback: undo the current feature, or go to the previous
-        (newer) feature and play it in reverse."""
-        if self.count == 0:
-            return
-        if self.progress <= 0.0 and self.position > 0:
-            self.position -= 1
-            self.progress = 1.0
-        elif self.progress <= 0.0:
-            self.progress = 1.0
-        self.direction = -1
-        self._stepper = AdaptiveStepper(self.seconds)
-        self._stepper.elapsed = (1.0 - self.progress) * self.seconds
-        self.playing, self.continuous = True, False
-
-    # --- clock ----------------------------------------------------------------
-    def _skip_static(self):
-        """Non-animatable features are shown but pass instantly."""
-        while (0 <= self.position < self.count and not self.animatable[self.position]
-               and self.direction > 0 and self.position < self.count - 1):
-            self.position += 1
-
-    def current(self):
-        return Frame(self.position, self.progress, not self.playing)
-
-    def tick(self, frame_seconds=None):
-        if not self.playing or self.count == 0:
-            return Frame(self.position, self.progress, True)
-        if not self.animatable[self.position]:
-            self.progress = 1.0 if self.direction > 0 else 0.0
-        else:
-            if frame_seconds is None:
-                step = self._stepper.increment
-            else:
-                done = self.progress if self.direction > 0 else 1.0 - self.progress
-                step = self._stepper.next_increment(frame_seconds, done)
-            self.progress = max(0.0, min(1.0, self.progress + self.direction * step))
-        reached = self.progress >= 1.0 if self.direction > 0 else self.progress <= 0.0
-        if not reached:
-            return Frame(self.position, self.progress)
-        frame = Frame(self.position, self.progress)
-        if not self.continuous or self.direction < 0:
-            self.playing = False
-            frame.finished = True
-            return frame
-        if self.position >= self.count - 1:
-            self.playing = False
-            frame.finished = True
-            return frame
-        # continue with the next, older feature
-        self.position += 1
-        self.progress = 0.0
-        self._stepper = AdaptiveStepper(self.seconds)
-        self._skip_static()
-        return frame
-
-    def as_dict(self):
-        return {"position": self.position, "progress": round(self.progress, 4),
-                "direction": self.direction, "playing": self.playing,
-                "seconds": self.seconds, "count": self.count}
 
 
 class RestoreJournal:

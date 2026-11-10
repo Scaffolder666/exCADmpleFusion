@@ -1,7 +1,7 @@
 """HiM Algorithm 1/2 on a fake timeline modeled after the paper's Figure 5."""
 import unittest
 
-from core.him_filter import FeatureInfo, InputRef, extract_relevant_features, show_more
+from core.playback.him_filter import FeatureInfo, InputRef, extract_relevant_features, show_more
 
 
 class FakeModel:

@@ -19,7 +19,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from core.authoring import build_manifest, check_extract, write_package, LABELS  # noqa: E402
-from core.packages import _validate as validate_package, MAX_STEPS  # noqa: E402
+from core.tutorial.packages import _validate as validate_package, MAX_STEPS  # noqa: E402
 
 
 

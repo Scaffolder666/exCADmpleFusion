@@ -37,8 +37,8 @@ def _install_stub():
 
 
 _install_stub()
-from core import him_fusion  # noqa: E402
-from core.him_filter import extract_relevant_features  # noqa: E402
+from core.playback import him_fusion  # noqa: E402
+from core.playback.him_filter import extract_relevant_features  # noqa: E402
 
 
 class Obj:

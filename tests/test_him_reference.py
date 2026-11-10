@@ -4,9 +4,9 @@ import types
 import unittest
 
 from tests import test_him_fusion_adapter as stub        # installs the adsk stub
-from core.him_fusion import FusionTimelineModel
-from core.him_reference import ReferenceSession
-from core.reference_plan import map_steps
+from core.playback.him_fusion import FusionTimelineModel
+from core.playback.him_reference import ReferenceSession
+from core.tutorial.reference_plan import map_steps
 
 STEPS = [
     {"id": "base", "source_features": [{"name": "Sketch1", "index": 0}, {"name": "Extrude1", "index": 1}]},

@@ -8,7 +8,7 @@ import hashlib
 import json
 from pathlib import Path
 
-from core.packages import ExamplePackage, PackageError, MAX_STEPS, _validate
+from core.tutorial.packages import ExamplePackage, PackageError, MAX_STEPS, _validate
 
 KIND_LABELS = {
     "Sketch": "Sketch", "ExtrudeFeature": "Extrude", "RevolveFeature": "Revolve",
