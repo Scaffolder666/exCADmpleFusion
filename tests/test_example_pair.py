@@ -50,12 +50,13 @@ class LocalExamplePairTests(unittest.TestCase):
         self.assertEqual([s["source_features"][0]["index"] for s in pkg.data["steps"]],
                          [0, 1, 2, 3, 4])
         self.assertEqual(pkg.data["steps"][1]["tools"], ["Extrude"])
-        self.assertIn("SIMULATED DESIGN EXPLANATION", pkg.data["steps"][1]["cues"][0]["label"])
-        self.assertIn("not the original designer's words", pkg.data["steps"][1]["cues"][0]["label"])
+        self.assertEqual(pkg.data["steps"][1]["cues"][0]["label"],
+                         "Extrude1: This extrusion may control material thickness, reach, or clearance.")
         self.assertFalse(any(s["geometry"]["meshes"] for s in pkg.data["steps"]))
         self.assertIsNotNone(pkg.generated_path)
         saved = json.loads(pkg.generated_path.read_text(encoding="utf-8"))
         self.assertFalse(saved["auto_generate"])
+        self.assertEqual(saved["steps"][1]["reasoning_source"], "simulated")
         self.assertEqual(saved["steps"][2]["features"][0]["index"], 2)
         self.assertEqual(self.model.read_bytes(), self.original_bytes)
         meta = pkg.player_data()
