@@ -4,6 +4,7 @@
   --mirror:#b4236a; --cut:#b42318; --move:#4b5563; --other:#64748b; --combine:#9a5b18; --modify:#0f766e;
   --sketch:#4f74a5; --import:#64748b; }
 * { box-sizing:border-box; }
+[hidden] { display:none !important; }
 html, body { margin:0; background:var(--white); color:var(--ink);
   font:13px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }
 button, input, textarea { font:inherit; }
