@@ -17,6 +17,7 @@ If a package has no source model, the recorded step geometry is drawn
 instead (Custom Graphics), and the panel says so.
 """
 import time
+from collections import OrderedDict
 
 import adsk.core
 import adsk.fusion
@@ -56,6 +57,7 @@ class ReferenceSession:
         self.plan = []              # per step: how each feature is shown
         self.last_error = ""
         self.last_timing = None
+        self._context_cache = OrderedDict()   # feature -> context read before it
         # Same viewport: the user's Design stays active and editable; the
         # reference is drawn into it. The reference keeps its own document
         # and Timeline, never merged into the user's.
@@ -194,6 +196,7 @@ class ReferenceSession:
             except Exception:
                 pass
         self.document = self.model = None
+        self._context_cache.clear()
         self.user_document = None
         self.mapped, self.unmatched, self.filter_result = [], [], None
         self.plan = []
@@ -319,17 +322,18 @@ class ReferenceSession:
         try:
             if key != self.current:
                 self.stop(restore_timeline=False)
-                self._read_inputs([items[position]])
-                # Exact pre-feature context is more informative than a ghost
-                # copy of the finished model. Capture once, before rolling
-                # to the native feature and animating its real parameters.
-                if self.him.wireframe_context and self.him.dim_others:
-                    self.model.go(items[position].index)
-                    self.him.capture_ghost_context()
-                if self.him.fast_motion:
-                    self.model.go(items[position].index)
-                    self.him.capture_motion_inputs(items[position])
-                self._roll_after(items[position])
+                feature = items[position]
+                t0 = time.perf_counter()
+                self._read_inputs([feature])
+                t1 = time.perf_counter()
+                cached = self._prepare_context(feature)
+                t2 = time.perf_counter()
+                self._roll_after(feature)
+                t3 = time.perf_counter()
+                if t3 - t0 > self.SLOW_FRAME_SECONDS:
+                    self.log("Slow start {} ({}): inputs {} ms, context {} ms{}, roll {} ms".format(
+                        feature.name, feature.kind, round((t1 - t0) * 1000), round((t2 - t1) * 1000),
+                        " (cached)" if cached else "", round((t3 - t2) * 1000)))
                 self.him.clip = [items[position]]
                 self.him.active_position = None
                 self.current = key
@@ -403,6 +407,36 @@ class ReferenceSession:
             self.log("Slow frame {} ({}): recompute {} ms, reference display {} ms".format(
                 feature.name, feature.kind, self.last_timing["compute_ms"],
                 self.last_timing["display_ms"]))
+
+    CONTEXT_CACHE_SIZE = 12
+
+    def _prepare_context(self, feature):
+        """Read what the step needs with the marker BEFORE the feature: the
+        model as it was (translucent context) and the motion inputs (profile
+        plane, axis, move transform, bodies before). Cached per feature, so
+        replaying or going back to a step neither rolls the Timeline back
+        nor copies the bodies again. Returns True when it came from the cache."""
+        him = self.him
+        wanted_ghost = him.wireframe_context and him.dim_others
+        key = (feature.index, bool(wanted_ghost), bool(him.fast_motion))
+        cached = self._context_cache.get(key)
+        if cached is not None:
+            self._context_cache.move_to_end(key)
+            him.pending_ghost = cached["ghost"]
+            if him.fast_motion:
+                him.pending_inputs = dict(cached["inputs"])
+                him.inputs_by_index[feature.index] = him.pending_inputs
+            return True
+        if wanted_ghost:
+            self.model.go(feature.index)
+            him.capture_ghost_context()
+        if him.fast_motion:
+            self.model.go(feature.index)
+            him.capture_motion_inputs(feature)
+        self._context_cache[key] = {"ghost": him.pending_ghost, "inputs": dict(him.pending_inputs)}
+        while len(self._context_cache) > self.CONTEXT_CACHE_SIZE:
+            self._context_cache.popitem(last=False)
+        return False
 
     def _changing_tokens(self):
         """Bodies recomputed by the active parameter frame."""

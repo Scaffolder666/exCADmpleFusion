@@ -118,3 +118,19 @@ It records:
 - errors shown in the panels, panel script errors and full Python tracebacks.
 
 A log stops growing at 5 MB.
+
+## Where the time goes
+
+**Starting a step.** Each step starts with:
+1. reading its inputs with the Timeline marker before the feature;
+2. copying the bodies of the model as it was (the translucent context);
+3. one roll of the Timeline to after the feature, which is a real Fusion recompute.
+
+All three are cached per step (the last 12 steps), so replaying a step or going back to it skips the roll back and the copies. Starts slower than 250 ms are logged as `Slow start <feature>: inputs … ms, context … ms (cached), roll … ms`.
+
+**Each frame.**
+- A feature that grows for real costs one Fusion recompute per frame.
+- Fast motion only moves copies that were made once at the start of the step.
+- Frames slower than 250 ms are logged as `Slow frame …`.
+
+**Ending a step.** A parameter that ends exactly at its real value is not written back, which saves one recompute per step.

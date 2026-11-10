@@ -99,18 +99,36 @@ class RestoreJournal:
 
     def capture(self, key, param):
         if key not in self._originals:
-            self._originals[key] = (param, param.expression)
+            try:
+                value = float(param.value)
+            except Exception:
+                value = None
+            self._originals[key] = (param, param.expression, value)
+
+    @staticmethod
+    def _unchanged(param, expression, value):
+        """Same expression text AND same value: writing it back would only
+        make Fusion recompute for nothing (e.g. a step that ended exactly at
+        its real value)."""
+        try:
+            if value is None or param.expression != expression:
+                return False
+            current = float(param.value)
+            return abs(current - value) <= 1e-9 * max(1.0, abs(value))
+        except Exception:
+            return False
 
     def restore(self, keys=None):
         failures = []
         for key in list(self._originals if keys is None else keys):
             if key not in self._originals:
                 continue
-            param, expression = self._originals[key]
+            param, expression, value = self._originals[key]
             try:
-                # Always write the original expression back: it also resets
-                # the value even if only the value was changed.
-                param.expression = expression
+                if not self._unchanged(param, expression, value):
+                    # Write the original expression back: it also resets the
+                    # value when only the value was changed.
+                    param.expression = expression
                 del self._originals[key]
             except Exception:
                 failures.append(key)
