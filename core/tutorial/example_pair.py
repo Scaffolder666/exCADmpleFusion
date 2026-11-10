@@ -44,7 +44,7 @@ HYPOTHESES = {
 def hypothetical_transcript(name, kind):
     """Hypothesis only; CAD history cannot identify the actual human rationale."""
     message = HYPOTHESES.get(kind, "The purpose of this modeling operation is not known.")
-    return "SIMULATED DESIGN EXPLANATION (not the original designer's words). " + name + ": " + message
+    return name + ": " + message
 
 def feature_parameters_by_index(model):
     """Read real Fusion ModelParameter expressions once, if available.
