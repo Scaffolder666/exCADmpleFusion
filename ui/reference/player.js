@@ -671,6 +671,11 @@ $("back").addEventListener("click", backward);
 $("showMore").addEventListener("click", () => bridge("show_more"));
 $("showAll").addEventListener("click", showAll);
 $("autoFocus").addEventListener("change", () => bridge("ref_auto_focus", { enabled: $("autoFocus").checked }));
+$("askWhy").addEventListener("change", () => {
+  // Clicking needs the complete model: playback stops while asking.
+  if (S.playing) pause();
+  bridge("ask_why", { enabled: $("askWhy").checked });
+});
 $("speed").addEventListener("input", () => { S.speed = Number($("speed").value); $("speedValue").textContent = S.speed + "×"; syncAudio(true); });
 $("import").addEventListener("click", () => { pause(); bridge("open_package"); });
 $("demo").addEventListener("click", () => { pause(); bridge("load_demo"); });

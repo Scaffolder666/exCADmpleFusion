@@ -64,6 +64,7 @@ class ReferenceSession:
         self.same_viewport = True
         self.user_document = None
         self.presenter = SameViewportPresenter(self.log)
+        self.ask_why = False
 
     @property
     def live(self):
@@ -466,6 +467,43 @@ class ReferenceSession:
 
     def set_dim(self, enabled):
         self.him.dim_others = bool(enabled)
+
+    # --- "Ask why": click the reference in the user's viewport --------------------------------
+    WHY_TOLERANCE_CM = 0.05
+
+    def set_ask_why(self, enabled):
+        """On: the complete reference model is shown and can be clicked.
+        Off (default): it cannot be selected, so it never gets in the way."""
+        self.ask_why = bool(enabled)
+        self.presenter.set_selectable(self.ask_why)
+        if self.live and self.presenter.attached:
+            self.show_overview()
+
+    def why_at(self, point):
+        """A click at ``point`` (world, cm) on the reference drawn beside the
+        user's model -> the steps that made that geometry (HiM filter)."""
+        if not (self.live and self.ask_why and self.presenter.attached) or point is None:
+            return None
+        ox, oy, oz = self.presenter.offset
+        local = adsk.core.Point3D.create(point.x - ox, point.y - oy, point.z - oz)
+        self.stop()
+        self.model.go(self.model.end_state())
+        entity = None
+        root = self.model.design.rootComponent
+        kinds = adsk.fusion.BRepEntityTypes
+        for kind in (kinds.BRepFaceEntityType, kinds.BRepEdgeEntityType):
+            try:
+                hits = root.findBRepUsingPoint(local, kind, self.WHY_TOLERANCE_CM, True)
+            except Exception as error:
+                self.log("Ask why: " + str(error))
+                hits = None
+            if hits is not None and hits.count:
+                entity = hits.item(0)
+                break
+        if entity is None:
+            self.present()
+            return None
+        return self.filter(entity)
 
     # --- HiM filtering ------------------------------------------------------------------------
     def filter(self, entity):

@@ -55,9 +55,25 @@ changing its parameter values.
 
 ## Known limits
 
-- **Selecting reference geometry:** to filter steps by selecting reference geometry (HiM filtering), switch to the reference tab and select there. Reference graphics in your viewport are not selectable, by design, so that they never interfere with your modeling.
+- **Selecting reference geometry:** by default the reference graphics in your viewport are not selectable, so they never interfere with your modeling. Turn on **Ask why (click the model)** to click them (see below), or switch to the reference tab and select there.
 - **Sketches:** only sketches in the reference root component are drawn in your viewport.
 - **Speed:** every animation frame copies the bodies that are being recomputed. Very large reference models may play more slowly.
+
+## Ask why (click the model)
+
+A checkbox in the panel footer, **off by default**.
+
+- **Off:** the reference cannot be clicked; you watch it and model in your own design.
+- **On:** playback pauses and the complete reference model is shown. Its bodies can be clicked. A click finds the real face of the reference copy at that point (the click point, moved back by the display offset, `findBRepUsingPoint`). HiM's filter then lists the steps that made or changed it, the same as selecting in the reference tab. **Show more** and **Show all steps** work as before.
+- Sketch curves are never clickable. Your own geometry never filters.
+
+Check in Fusion:
+1. With the box off, clicking the reference selects nothing.
+2. With it on, clicking a face of the reference lists the steps that made it. Clicking another face of the same body works too.
+3. Clicking beside the model, or on an edge, shows a message or the edge's steps; nothing breaks.
+4. Turning it off makes the reference unclickable again.
+
+Fusion must report where a Custom Graphics body was clicked (`Selection.point`); the stubbed tests (`tests/test_ask_why.py`) cannot check that.
 
 ## Fast motion (moving real faces instead of recomputing)
 

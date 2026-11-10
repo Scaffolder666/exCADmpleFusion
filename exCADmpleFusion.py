@@ -43,7 +43,7 @@ from core.playback.tool_guide import ToolGuide
 from core.diagnostics import DiagnosticLog
 
 # Shown in the panel at start so it is clear which code Fusion is running.
-BUILD = "same-viewport 2026-11-10 · cleanup + step cache v16"
+BUILD = "geometry-why 2026-11-10 · ask why (click the model) v1"
 PALETTE_ID = "excadmple_fusion_player"
 TOOL_PALETTE_ID = "excadmple_tool_window"   # version A: "tool in use" window at the left
 COMMAND_ID = "excadmple_fusion_open"
@@ -335,6 +335,16 @@ def _selected_native_entity():
     return None
 
 
+def _clicked_reference_point():
+    """"Ask why": where the user clicked the reference drawn in their viewport."""
+    selections = _ui.activeSelections
+    for i in range(selections.count - 1, -1, -1):
+        selection = selections.item(i)
+        if adsk.fusion.CustomGraphicsBRepBody.cast(selection.entity):
+            return selection.point
+    return None
+
+
 class ActiveGeometrySelection(adsk.core.ActiveSelectionEventHandler):
     """Version A: selecting the reference model plays the steps that made it (HiM)."""
 
@@ -343,6 +353,23 @@ class ActiveGeometrySelection(adsk.core.ActiveSelectionEventHandler):
         if ROLE != REFERENCE or _filtering or not (_session and _session.live):
             return
         try:
+            if _session.ask_why:
+                point = _clicked_reference_point()
+                if point is not None:
+                    _post("pause", {})
+                    _filtering = True
+                    try:
+                        result = _session.why_at(point)
+                        # A reference body is one clickable entity: clear it so the
+                        # next click on the same body (another face) counts again.
+                        _ui.activeSelections.clear()
+                    finally:
+                        _filtering = False
+                    if result:
+                        _post("filter", result)
+                    else:
+                        _status("No face of the reference model at that point; click a face.")
+                    return
             entity = _selected_native_entity()
             if entity is None:
                 return
@@ -472,6 +499,15 @@ class PaletteHandler(adsk.core.HTMLEventHandler):
                     raise ValueError("Tool guidance is not available in this layout")
                 path = _tools.use(body.get("label"))
                 _status("Started " + path + " in your design")
+            elif command == "ask_why":
+                enabled = body.get("enabled")
+                if not isinstance(enabled, bool):
+                    raise ValueError("Ask why setting must be boolean")
+                if _session:
+                    _session.set_ask_why(enabled)
+                _renderer.clear_command()
+                _status("Click a face of the reference model to see the steps that made it."
+                        if enabled else "The reference model can no longer be clicked.")
             elif command == "him_dim":
                 if _session:
                     _session.set_dim(bool(body.get("enabled", True)))

@@ -4,7 +4,8 @@ The designer's .f3d stays in its own, never-saved reference document with
 its real Feature Timeline; HiM rolls that Timeline and animates its
 parameters exactly as before. The user's Design stays the active, editable
 document. This presenter draws the reference's *current* visible state into
-the user's Design as non-selectable Custom Graphics:
+the user's Design as Custom Graphics, not selectable unless the user turns
+on "Ask why" (then a click on a body asks which steps made it):
 
 * a transient BRep copy (TemporaryBRepManager) of every visible reference
   body, with the body's current opacity, so HiM's dimming and ghost hiding
@@ -115,6 +116,12 @@ class SameViewportPresenter:
         self.dynamic_group = None      # bodies being recomputed every frame
         self.sketch_group = None
         self._static_key = None
+        self.selectable = False        # "Ask why": the user may click the reference bodies
+
+    def set_selectable(self, enabled):
+        """Bodies become clickable (sketch curves never); redrawn on the next refresh."""
+        self.selectable = bool(enabled)
+        self._static_key = None
 
     @property
     def attached(self):
@@ -128,11 +135,11 @@ class SameViewportPresenter:
         self.clear()
         self.reference = self.target = None
 
-    def _group(self):
+    def _group(self, selectable=False):
         group = self.target.rootComponent.customGraphicsGroups.add()
-        group.isSelectable = False
+        group.isSelectable = selectable
         try:
-            group.isChildrenSelectable = False
+            group.isChildrenSelectable = selectable
         except Exception:
             pass
         return group
@@ -175,7 +182,7 @@ class SameViewportPresenter:
                 pass
             if opacity < 1.0:
                 entity.setOpacity(opacity, True)
-            entity.isSelectable = False
+            entity.isSelectable = self.selectable
             drawn += 1
         place(group, self.offset)
         return drawn
@@ -215,13 +222,13 @@ class SameViewportPresenter:
         drawn = 0
         if state_key is None or state_key != self._static_key:
             self._delete(self.static_group)
-            self.static_group = self._group()
+            self.static_group = self._group(self.selectable)
             drawn += self._draw_bodies(self.static_group, static)
             self._static_key = state_key
             self._draw_sketches()
         self._delete(self.dynamic_group)
         self.dynamic_group = None
         if dynamic:
-            self.dynamic_group = self._group()
+            self.dynamic_group = self._group(self.selectable)
             drawn += self._draw_bodies(self.dynamic_group, dynamic)
         return drawn
