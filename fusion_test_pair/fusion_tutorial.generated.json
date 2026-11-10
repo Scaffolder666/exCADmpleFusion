@@ -17,7 +17,7 @@
         }
       ],
       "duration_ms": 8000,
-      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Sketch1: This sketch may establish editable profiles or geometric constraints for a later operation.",
+      "transcript": "Sketch1: This sketch may establish editable profiles or geometric constraints for a later operation.",
       "parameters": [
         {
           "feature_index": 0,
@@ -68,7 +68,7 @@
         }
       ],
       "duration_ms": 8000,
-      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Sketch2: This sketch may establish editable profiles or geometric constraints for a later operation.",
+      "transcript": "Sketch2: This sketch may establish editable profiles or geometric constraints for a later operation.",
       "parameters": [
         {
           "feature_index": 1,
@@ -124,7 +124,7 @@
         }
       ],
       "duration_ms": 8000,
-      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Extrude2: This extrusion may control material thickness, reach, or clearance.",
+      "transcript": "Extrude2: This extrusion may control material thickness, reach, or clearance.",
       "parameters": [
         {
           "feature_index": 2,
@@ -150,7 +150,7 @@
         }
       ],
       "duration_ms": 8000,
-      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Sketch3: This sketch may establish editable profiles or geometric constraints for a later operation.",
+      "transcript": "Sketch3: This sketch may establish editable profiles or geometric constraints for a later operation.",
       "parameters": [
         {
           "feature_index": 3,
@@ -171,7 +171,7 @@
         }
       ],
       "duration_ms": 8000,
-      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Extrude3: This extrusion may control material thickness, reach, or clearance.",
+      "transcript": "Extrude3: This extrusion may control material thickness, reach, or clearance.",
       "parameters": [
         {
           "feature_index": 4,
@@ -197,7 +197,7 @@
         }
       ],
       "duration_ms": 8000,
-      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Sketch4: This sketch may establish editable profiles or geometric constraints for a later operation.",
+      "transcript": "Sketch4: This sketch may establish editable profiles or geometric constraints for a later operation.",
       "parameters": [
         {
           "feature_index": 5,
@@ -228,7 +228,7 @@
         }
       ],
       "duration_ms": 8000,
-      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Sketch5: This sketch may establish editable profiles or geometric constraints for a later operation.",
+      "transcript": "Sketch5: This sketch may establish editable profiles or geometric constraints for a later operation.",
       "parameters": [
         {
           "feature_index": 6,
@@ -254,7 +254,7 @@
         }
       ],
       "duration_ms": 8000,
-      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Move1: This move may adjust alignment or placement relative to other parts.",
+      "transcript": "Move1: This move may adjust alignment or placement relative to other parts.",
       "parameters": [],
       "reasoning_source": "simulated"
     },
@@ -269,7 +269,7 @@
         }
       ],
       "duration_ms": 8000,
-      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Revolve2: This revolve may help form a rotationally symmetric part around an axis.",
+      "transcript": "Revolve2: This revolve may help form a rotationally symmetric part around an axis.",
       "parameters": [
         {
           "feature_index": 8,
@@ -290,7 +290,7 @@
         }
       ],
       "duration_ms": 8000,
-      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Sketch6: This sketch may establish editable profiles or geometric constraints for a later operation.",
+      "transcript": "Sketch6: This sketch may establish editable profiles or geometric constraints for a later operation.",
       "parameters": [
         {
           "feature_index": 9,
@@ -341,7 +341,7 @@
         }
       ],
       "duration_ms": 8000,
-      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Sketch7: This sketch may establish editable profiles or geometric constraints for a later operation.",
+      "transcript": "Sketch7: This sketch may establish editable profiles or geometric constraints for a later operation.",
       "parameters": [],
       "reasoning_source": "simulated"
     },
@@ -356,7 +356,7 @@
         }
       ],
       "duration_ms": 8000,
-      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Extrude4: This extrusion may control material thickness, reach, or clearance.",
+      "transcript": "Extrude4: This extrusion may control material thickness, reach, or clearance.",
       "parameters": [
         {
           "feature_index": 11,
@@ -382,7 +382,7 @@
         }
       ],
       "duration_ms": 8000,
-      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Move2: This move may adjust alignment or placement relative to other parts.",
+      "transcript": "Move2: This move may adjust alignment or placement relative to other parts.",
       "parameters": [],
       "reasoning_source": "simulated"
     },
@@ -397,7 +397,7 @@
         }
       ],
       "duration_ms": 8000,
-      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Move3: This move may adjust alignment or placement relative to other parts.",
+      "transcript": "Move3: This move may adjust alignment or placement relative to other parts.",
       "parameters": [],
       "reasoning_source": "simulated"
     },
@@ -412,7 +412,7 @@
         }
       ],
       "duration_ms": 8000,
-      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Combine1: This combine may consolidate or remove overlapping volumes.",
+      "transcript": "Combine1: This combine may consolidate or remove overlapping volumes.",
       "parameters": [],
       "reasoning_source": "simulated"
     },
@@ -427,7 +427,7 @@
         }
       ],
       "duration_ms": 8000,
-      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Combine2: This combine may consolidate or remove overlapping volumes.",
+      "transcript": "Combine2: This combine may consolidate or remove overlapping volumes.",
       "parameters": [],
       "reasoning_source": "simulated"
     },
@@ -442,7 +442,7 @@
         }
       ],
       "duration_ms": 8000,
-      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Sketch8: This sketch may establish editable profiles or geometric constraints for a later operation.",
+      "transcript": "Sketch8: This sketch may establish editable profiles or geometric constraints for a later operation.",
       "parameters": [
         {
           "feature_index": 16,
@@ -468,7 +468,7 @@
         }
       ],
       "duration_ms": 8000,
-      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Revolve3: This revolve may help form a rotationally symmetric part around an axis.",
+      "transcript": "Revolve3: This revolve may help form a rotationally symmetric part around an axis.",
       "parameters": [
         {
           "feature_index": 17,
@@ -489,7 +489,7 @@
         }
       ],
       "duration_ms": 8000,
-      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Move4: This move may adjust alignment or placement relative to other parts.",
+      "transcript": "Move4: This move may adjust alignment or placement relative to other parts.",
       "parameters": [],
       "reasoning_source": "simulated"
     },
@@ -504,7 +504,7 @@
         }
       ],
       "duration_ms": 8000,
-      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). OffsetFaces1: The offset may adjust local fit, thickness, or clearance.",
+      "transcript": "OffsetFaces1: The offset may adjust local fit, thickness, or clearance.",
       "parameters": [
         {
           "feature_index": 19,
@@ -525,7 +525,7 @@
         }
       ],
       "duration_ms": 8000,
-      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). OffsetFaces2: The offset may adjust local fit, thickness, or clearance.",
+      "transcript": "OffsetFaces2: The offset may adjust local fit, thickness, or clearance.",
       "parameters": [
         {
           "feature_index": 20,
@@ -546,7 +546,7 @@
         }
       ],
       "duration_ms": 8000,
-      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Combine3: This combine may consolidate or remove overlapping volumes.",
+      "transcript": "Combine3: This combine may consolidate or remove overlapping volumes.",
       "parameters": [],
       "reasoning_source": "simulated"
     },
@@ -561,7 +561,7 @@
         }
       ],
       "duration_ms": 8000,
-      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Move5: This move may adjust alignment or placement relative to other parts.",
+      "transcript": "Move5: This move may adjust alignment or placement relative to other parts.",
       "parameters": [],
       "reasoning_source": "simulated"
     },
@@ -576,7 +576,7 @@
         }
       ],
       "duration_ms": 8000,
-      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Sketch9: This sketch may establish editable profiles or geometric constraints for a later operation.",
+      "transcript": "Sketch9: This sketch may establish editable profiles or geometric constraints for a later operation.",
       "parameters": [
         {
           "feature_index": 23,
@@ -622,7 +622,7 @@
         }
       ],
       "duration_ms": 8000,
-      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Extrude5: This extrusion may control material thickness, reach, or clearance.",
+      "transcript": "Extrude5: This extrusion may control material thickness, reach, or clearance.",
       "parameters": [
         {
           "feature_index": 24,
@@ -648,7 +648,7 @@
         }
       ],
       "duration_ms": 8000,
-      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Move6: This move may adjust alignment or placement relative to other parts.",
+      "transcript": "Move6: This move may adjust alignment or placement relative to other parts.",
       "parameters": [],
       "reasoning_source": "simulated"
     },
@@ -663,7 +663,7 @@
         }
       ],
       "duration_ms": 8000,
-      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Move7: This move may adjust alignment or placement relative to other parts.",
+      "transcript": "Move7: This move may adjust alignment or placement relative to other parts.",
       "parameters": [],
       "reasoning_source": "simulated"
     },
@@ -678,7 +678,7 @@
         }
       ],
       "duration_ms": 8000,
-      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Move8: This move may adjust alignment or placement relative to other parts.",
+      "transcript": "Move8: This move may adjust alignment or placement relative to other parts.",
       "parameters": [],
       "reasoning_source": "simulated"
     },
@@ -693,7 +693,7 @@
         }
       ],
       "duration_ms": 8000,
-      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). CopyPasteBodies1: The purpose of this modeling operation is not known.",
+      "transcript": "CopyPasteBodies1: The purpose of this modeling operation is not known.",
       "parameters": [],
       "reasoning_source": "simulated"
     },
@@ -708,7 +708,7 @@
         }
       ],
       "duration_ms": 8000,
-      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Move9: This move may adjust alignment or placement relative to other parts.",
+      "transcript": "Move9: This move may adjust alignment or placement relative to other parts.",
       "parameters": [],
       "reasoning_source": "simulated"
     },
@@ -723,7 +723,7 @@
         }
       ],
       "duration_ms": 8000,
-      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). CopyPasteBodies2: The purpose of this modeling operation is not known.",
+      "transcript": "CopyPasteBodies2: The purpose of this modeling operation is not known.",
       "parameters": [],
       "reasoning_source": "simulated"
     },
@@ -738,7 +738,7 @@
         }
       ],
       "duration_ms": 8000,
-      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Move10: This move may adjust alignment or placement relative to other parts.",
+      "transcript": "Move10: This move may adjust alignment or placement relative to other parts.",
       "parameters": [],
       "reasoning_source": "simulated"
     },
@@ -753,7 +753,7 @@
         }
       ],
       "duration_ms": 8000,
-      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). CopyPasteBodies3: The purpose of this modeling operation is not known.",
+      "transcript": "CopyPasteBodies3: The purpose of this modeling operation is not known.",
       "parameters": [],
       "reasoning_source": "simulated"
     },
@@ -768,7 +768,7 @@
         }
       ],
       "duration_ms": 8000,
-      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Move11: This move may adjust alignment or placement relative to other parts.",
+      "transcript": "Move11: This move may adjust alignment or placement relative to other parts.",
       "parameters": [],
       "reasoning_source": "simulated"
     },
@@ -783,7 +783,7 @@
         }
       ],
       "duration_ms": 8000,
-      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Sketch10: This sketch may establish editable profiles or geometric constraints for a later operation.",
+      "transcript": "Sketch10: This sketch may establish editable profiles or geometric constraints for a later operation.",
       "parameters": [
         {
           "feature_index": 34,
@@ -804,7 +804,7 @@
         }
       ],
       "duration_ms": 8000,
-      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Sketch11: This sketch may establish editable profiles or geometric constraints for a later operation.",
+      "transcript": "Sketch11: This sketch may establish editable profiles or geometric constraints for a later operation.",
       "parameters": [
         {
           "feature_index": 35,
@@ -860,7 +860,7 @@
         }
       ],
       "duration_ms": 8000,
-      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Extrude6: This extrusion may control material thickness, reach, or clearance.",
+      "transcript": "Extrude6: This extrusion may control material thickness, reach, or clearance.",
       "parameters": [
         {
           "feature_index": 36,
@@ -886,7 +886,7 @@
         }
       ],
       "duration_ms": 8000,
-      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Extrude7: This extrusion may control material thickness, reach, or clearance.",
+      "transcript": "Extrude7: This extrusion may control material thickness, reach, or clearance.",
       "parameters": [
         {
           "feature_index": 37,
@@ -912,7 +912,7 @@
         }
       ],
       "duration_ms": 8000,
-      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Sketch12: This sketch may establish editable profiles or geometric constraints for a later operation.",
+      "transcript": "Sketch12: This sketch may establish editable profiles or geometric constraints for a later operation.",
       "parameters": [
         {
           "feature_index": 38,
@@ -933,7 +933,7 @@
         }
       ],
       "duration_ms": 8000,
-      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Extrude8: This extrusion may control material thickness, reach, or clearance.",
+      "transcript": "Extrude8: This extrusion may control material thickness, reach, or clearance.",
       "parameters": [
         {
           "feature_index": 39,
@@ -959,7 +959,7 @@
         }
       ],
       "duration_ms": 8000,
-      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Sketch13: This sketch may establish editable profiles or geometric constraints for a later operation.",
+      "transcript": "Sketch13: This sketch may establish editable profiles or geometric constraints for a later operation.",
       "parameters": [
         {
           "feature_index": 40,
@@ -985,7 +985,7 @@
         }
       ],
       "duration_ms": 8000,
-      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Extrude9: This extrusion may control material thickness, reach, or clearance.",
+      "transcript": "Extrude9: This extrusion may control material thickness, reach, or clearance.",
       "parameters": [
         {
           "feature_index": 41,
@@ -1011,7 +1011,7 @@
         }
       ],
       "duration_ms": 8000,
-      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Move12: This move may adjust alignment or placement relative to other parts.",
+      "transcript": "Move12: This move may adjust alignment or placement relative to other parts.",
       "parameters": [],
       "reasoning_source": "simulated"
     },
@@ -1026,7 +1026,7 @@
         }
       ],
       "duration_ms": 8000,
-      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Sketch14: This sketch may establish editable profiles or geometric constraints for a later operation.",
+      "transcript": "Sketch14: This sketch may establish editable profiles or geometric constraints for a later operation.",
       "parameters": [
         {
           "feature_index": 43,
@@ -1047,7 +1047,7 @@
         }
       ],
       "duration_ms": 8000,
-      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Extrude10: This extrusion may control material thickness, reach, or clearance.",
+      "transcript": "Extrude10: This extrusion may control material thickness, reach, or clearance.",
       "parameters": [
         {
           "feature_index": 44,
@@ -1073,7 +1073,7 @@
         }
       ],
       "duration_ms": 8000,
-      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Sketch15: This sketch may establish editable profiles or geometric constraints for a later operation.",
+      "transcript": "Sketch15: This sketch may establish editable profiles or geometric constraints for a later operation.",
       "parameters": [
         {
           "feature_index": 45,
@@ -1099,7 +1099,7 @@
         }
       ],
       "duration_ms": 8000,
-      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Extrude11: This extrusion may control material thickness, reach, or clearance.",
+      "transcript": "Extrude11: This extrusion may control material thickness, reach, or clearance.",
       "parameters": [
         {
           "feature_index": 46,
@@ -1125,7 +1125,7 @@
         }
       ],
       "duration_ms": 8000,
-      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Move13: This move may adjust alignment or placement relative to other parts.",
+      "transcript": "Move13: This move may adjust alignment or placement relative to other parts.",
       "parameters": [],
       "reasoning_source": "simulated"
     },
@@ -1140,7 +1140,7 @@
         }
       ],
       "duration_ms": 8000,
-      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Move14: This move may adjust alignment or placement relative to other parts.",
+      "transcript": "Move14: This move may adjust alignment or placement relative to other parts.",
       "parameters": [],
       "reasoning_source": "simulated"
     },
@@ -1155,7 +1155,7 @@
         }
       ],
       "duration_ms": 8000,
-      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Move15: This move may adjust alignment or placement relative to other parts.",
+      "transcript": "Move15: This move may adjust alignment or placement relative to other parts.",
       "parameters": [],
       "reasoning_source": "simulated"
     },
@@ -1170,7 +1170,7 @@
         }
       ],
       "duration_ms": 8000,
-      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Mirror1: A mirrored feature may help maintain symmetry.",
+      "transcript": "Mirror1: A mirrored feature may help maintain symmetry.",
       "parameters": [],
       "reasoning_source": "simulated"
     },
@@ -1185,7 +1185,7 @@
         }
       ],
       "duration_ms": 8000,
-      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Sketch16: This sketch may establish editable profiles or geometric constraints for a later operation.",
+      "transcript": "Sketch16: This sketch may establish editable profiles or geometric constraints for a later operation.",
       "parameters": [
         {
           "feature_index": 51,
@@ -1211,7 +1211,7 @@
         }
       ],
       "duration_ms": 8000,
-      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Extrude12: This extrusion may control material thickness, reach, or clearance.",
+      "transcript": "Extrude12: This extrusion may control material thickness, reach, or clearance.",
       "parameters": [
         {
           "feature_index": 52,
@@ -1237,7 +1237,7 @@
         }
       ],
       "duration_ms": 8000,
-      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Extrude13: This extrusion may control material thickness, reach, or clearance.",
+      "transcript": "Extrude13: This extrusion may control material thickness, reach, or clearance.",
       "parameters": [
         {
           "feature_index": 53,
@@ -1263,7 +1263,7 @@
         }
       ],
       "duration_ms": 8000,
-      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Combine4: This combine may consolidate or remove overlapping volumes.",
+      "transcript": "Combine4: This combine may consolidate or remove overlapping volumes.",
       "parameters": [],
       "reasoning_source": "simulated"
     },
@@ -1278,7 +1278,7 @@
         }
       ],
       "duration_ms": 8000,
-      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Move16: This move may adjust alignment or placement relative to other parts.",
+      "transcript": "Move16: This move may adjust alignment or placement relative to other parts.",
       "parameters": [],
       "reasoning_source": "simulated"
     },
@@ -1293,7 +1293,7 @@
         }
       ],
       "duration_ms": 8000,
-      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Move17: This move may adjust alignment or placement relative to other parts.",
+      "transcript": "Move17: This move may adjust alignment or placement relative to other parts.",
       "parameters": [],
       "reasoning_source": "simulated"
     },
@@ -1308,7 +1308,7 @@
         }
       ],
       "duration_ms": 8000,
-      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Sketch17: This sketch may establish editable profiles or geometric constraints for a later operation.",
+      "transcript": "Sketch17: This sketch may establish editable profiles or geometric constraints for a later operation.",
       "parameters": [],
       "reasoning_source": "simulated"
     },
@@ -1323,7 +1323,7 @@
         }
       ],
       "duration_ms": 8000,
-      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Extrude14: This extrusion may control material thickness, reach, or clearance.",
+      "transcript": "Extrude14: This extrusion may control material thickness, reach, or clearance.",
       "parameters": [
         {
           "feature_index": 58,
@@ -1349,7 +1349,7 @@
         }
       ],
       "duration_ms": 8000,
-      "transcript": "SIMULATED DESIGN EXPLANATION (not the original designer's words). Revolve1: This revolve may help form a rotationally symmetric part around an axis.",
+      "transcript": "Revolve1: This revolve may help form a rotationally symmetric part around an axis.",
       "parameters": [
         {
           "feature_index": 59,
