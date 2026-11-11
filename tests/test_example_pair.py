@@ -188,11 +188,10 @@ class LocalExamplePairTests(unittest.TestCase):
         with self.assertRaisesRegex(PackageError, "maximum"):
             pkg.populate_from_features(huge)
 
-    def test_hypothetical_text_is_not_mislabeled_as_real_speech(self):
+    def test_stand_in_text_reads_like_a_reason(self):
+        # During development the stand-in reason is plain text, no disclaimer.
         text = hypothetical_transcript("Revolve2", "RevolveFeature")
-        self.assertIn("SIMULATED", text)
-        self.assertIn("not the original designer", text)
-        self.assertIn("rotationally symmetric", text)
+        self.assertEqual(text, "Revolve2: This revolve may help form a rotationally symmetric part around an axis.")
 
 
 if __name__ == "__main__":
