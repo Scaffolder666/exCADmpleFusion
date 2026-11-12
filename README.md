@@ -1,235 +1,65 @@
-# exCADmple — Autodesk Fusion 插件 · 版本 A（History in Motion 式独立参考视口）
+# exCADmple — Autodesk Fusion add-in · version A (History in Motion style)
 
+**Supporting Design Reasoning Through Shared CAD Models** · project overview on [`main`](https://github.com/Scaffolder666/exCADmpleFusion)
 
-> **真实模型测试基准（2026-11-08）：** 后续原生 HiM 验收优先使用研究者提供的 `fusion.f3d`（324,089 bytes，SHA-256 以 [REAL_FUSION_MODEL_TEST.md](docs/REAL_FUSION_MODEL_TEST.md) 为准），而不是 Phone Stand 手工示例。测试模型不公开提交到仓库。通过 `tools/build_native_validation.py` 将真实 Fusion Timeline 提取结果与原始 `.f3d` 组成技术验证包。详见 [真实模型测试步骤](docs/REAL_FUSION_MODEL_TEST.md)。本段说明只改变测试基准，不改变现有播放器行为。
+Play another designer's recorded design process inside your own Fusion design: the whole tutorial or one step at a time, with the designer's spoken reasons as audio and text. You keep modeling in your own design at any time.
+## How version A works
 
+- **Two separate histories, one viewport.** The designer's `.f3d` is opened as its own document (a copy that is never saved), with its real Feature Timeline. It is drawn into *your* viewport beside your model as Custom Graphics. Your Design stays the active, editable document, and nothing is added to your Timeline.
+- **History in Motion playback.** The reference Timeline is rolled to each feature, and features with a parameter (extrude, revolve, fillet, chamfer, shell, hole, pattern, …) grow for real: Fusion recomputes the parameter from about 0 to its value. A few operations without a usable parameter (mirror, move, combine, …) use a short illustrative motion, which the panel labels as illustrative.
+- **What you see per step.** The model before the step is translucent white with a dark outline. The new or changed faces are teal; the inputs (profile, edges) are blue.
+- **Player panel (right).** Play, pause, step back and forward, replay, overall progress, speed and auto-focus. A vertical list of steps shows each step's transcript, audio and tools.
+- **Tools.** The tools of each step are pinned to an "exCADmple" panel in the toolbar. A small "exCADmple · Tool" window on the left shows the current tool; **Use** starts it in your design.
+- **Filter by geometry.** Select a face, edge or vertex in the reference document's tab to play only the steps that made it.
 
-**Supporting Design Reasoning Through Shared CAD Models** · 分支 `fusion-him`
+## Install
 
-> 本分支是**版本 A**：设计师 `.f3d` 的副本作为一个独立的、从不保存的文档打开，保留它自己的 Timeline，按 *History in Motion* 的做法播放；参考模型画在**用户自己的视口**里、用户模型旁边，用户的 Design 一直是可编辑的活动文档，两套建模历史互不影响。`config.json` 的 `"layout": "reference"` 选择这个版本。
+1. Download this branch as ZIP and unzip it; keep the `exCADmpleFusion` folder whole.
+2. `config.json` must say `"layout": "reference"` (the default on this branch).
+3. In Fusion: open or create a **Design**, then **Utilities → Scripts and Add-Ins → Add-Ins → +**, choose the folder and **Run**.
 
-在自己的 Fusion 里播放别的设计师录下来的设计教程：可以播放整个教程，也可以重播某一步、跳到下一步。每一步有模型怎么变化、用了哪些工具、鼠标轨迹，以及设计师当时说的话（think-aloud），可以听原声或用电子音朗读，同时显示文字。用户可以一边看，一边在同一个 Fusion 里做自己的设计。
+## Load a tutorial
 
-项目概况见 [`main`](https://github.com/Scaffolder666/exCADmpleFusion)；Blender 版本见 [`blender`](https://github.com/Scaffolder666/exCADmpleFusion/tree/blender)。
+- **+ Import** a JSON file that sits next to its `.f3d` (`"format": "excadmple-pair"`). With `"auto_generate": true`, one step per Timeline feature is generated, with a stand-in reason per step, and saved as an editable `*.generated.json`. See [`docs/JSON_F3D_PAIR.md`](docs/JSON_F3D_PAIR.md).
+- `.excadmple` packages are still supported.
+- `tools/fusion_demo` is a Fusion script that builds a small test model (Sketch → Extrude → Fillet → Sketch → Extrude → Mirror) and its tutorial.
 
-## 新的播放交互：完整模型 → 当前 Feature → 完整模型
+## Diagnostics and tests
 
-这里的重点不是让模型一直保持线框，而是让用户看清 **为什么改，
-又是怎么改的**：
-
-- **刚加载 Example 或单纯选中步骤（未播放）**：整个真实 `.f3d`
-  显示成正常、完整、实心的模型；尚不执行任何参数动画。
-- **按 Play / 拖动 Feature Progress 到中间**：聚焦当前 Feature，
-  其他几何尽量变成灰色线框；选定 Feature 有可动画的数值参数时，
-  根据进度实时修改 Fusion 原生参数并重算几何。
-- **没有可动画数值参数**：例如 Mirror、Combine，以及某些
-  “To Object” Extrude，直接显示实际几何，没有假造的缩放或淡入动画。
-  该步骤可以停留供右侧 Transcript / Reasoning 解释、朗读。
-- **Feature Progress 拖到 0% 或 100%**：都显示完整实心模型。
-  100% 是交互终点的展示状态，而不是一个永久保留的灰色线框。
-- **整个教程或过滤后的 Clip 播完**：恢复完整的模型，原来临时调节的
-  参数、透明度和线框会恢复/清理。连续播放的步骤之间不会闪回完整
-  模型；只有开始、完成、或用户主动预览时才显示 Overview。
-- **右侧面板**：同步显示解释文字、语音/Transcript 和当前步骤。
-  自动生成的设计解释仍明确标注为模拟推测，不冒充原作者意图。
-
-交互状态回归测试：`node tests/test_reference_scrubbing.js`。
-真实 Fusion Desktop 几何重建与显示仍需实测。
-
-## HiM 式逐 Feature 重建：背景灰线框 + 当前几何实体
-
-`fusion-him` 现在增加了 **Ghost Wireframe** 显示模式，仅用于独立的
-Fusion 参考副本（不改动自己的 CAD 工作区）：
-
-- 每次进入一个 Feature 之前，临时回滚真实 Fusion Timeline，读取已建模
-  Body 的 **BRep Edge 几何曲线**，画成静态、淡灰色线框。
-- 当前 Feature 仍由 **真实 Fusion ModelParameter** 驱动，随进度条逐帧
-  递增；Fusion 重新计算的 **Feature-owned Faces** 以清晰青绿色实体高亮，
-  而不是简单放大整个 Body 或切换到预存 Mesh 帧。
-- 为避免当前实体被已有模型表面遮挡，参考副本中原生的带阴影 Body 表面
-  临时设为几乎不可见；切换、结束或中断时恢复原透明度和参数。
-- 对无法分离真实修改面的 Fillet / Combine / Cut 等操作，明确回退到
-  原有半透明视觉效果，不错误地把整个 Body 解释为当前 Feature。
-- 复杂模型中如果线框超过 2,000 条边或 200 个 Body，会完整回退而不是
-  显示缺失的几何。单个 Feature 的线框仅捕获一次，不每帧重新生成。
-- 面板会标记 **native reconstruction · ghost wireframe** 或
-  **translucent context (exact isolation unavailable)**，方便实机验收。
-
-**验证状态**：新增 Python 单元测试和 GitHub Actions 配置。真实
-`tests/fixtures/real_fusion/fusion.f3d` 在 Autodesk Fusion Desktop
-中的图形重算、临时透明度恢复和高亮尚待实测，不应视为已获 HiM
-像素级或功能级完全一致性认证。详见
-[HiM 机制与显示验收标准](docs/HIM_NATIVE_PARITY.md)。
-
-## 默认 Example 加载：一个 JSON + 一个 Fusion .f3d
-
-**新流程：** 把 `fusion_example.json` 和 `fusion.f3d` 放到同一个文件夹。启动本分支的 exCADmple 后，直接点击 **+ Import** 并选择 JSON。插件会自动打开与 JSON 配对的 `.f3d` 副本、读取真实的 Feature Timeline、按 Feature 类型显示彩色历史卡片、播放原生 HiM 动画。**不需要先制作 `.excadmple` ZIP**。
-
-首次导入 `"auto_generate": true` 的 JSON，会根据真实 Feature index、名称和类型生成多个步骤，并创建可编辑的 `fusion_example.generated.json`。JSON 中的 `transcript` 将用于文字与合成语音；当前自动生成的推理**只是明确标注的假设性教学说明**，不是设计师真实的 think-aloud。Fusion 能读取到的原生参数表达式也会一并保存在生成文件中。以后直接修改、导入 `.generated.json` 即可，不再需要打包或运行额外 Python 命令。
-
-可选的原始音频可作为同目录的第三个文件；提供后优先播放录音而非合成语音。旧的 `.excadmple` 包仍然支持。详见 [JSON + F3D 使用说明](docs/JSON_F3D_PAIR.md)。
-
-## 用真实 `fusion.f3d` 自动生成复杂测试教程
-
-打开研究者提供的 **`fusion.f3d`**，在 Fusion 360 的
-**Utilities → Scripts and Add-Ins → Scripts → +** 选择
-`tools/fusion_native_demo` 并运行。
-
-脚本会从 **真实 Fusion Feature Timeline** 自动提取每一步的名称、
-类型、参数和上游依赖，按 Feature 类型给历史卡片区分颜色，并生成
-`~/exCADmple-validation/real-fusion/fusion-native-reasoning.excadmple`。
-在 exCADmple 的 **+ Import** 载入即可测试逐步浏览、原生参数动画、
-几何高亮、跳转及性能。
-
-- **一项 Timeline Feature = 一个步骤**；不伪造 Feature 顺序，不截断前 150 项。
-- 测试用说明由规则自动构造，是**可能的设计考虑，不是原设计师的真实 reasoning**；面板文字会标明模拟解释，不能当作用户研究证据。
-- 只导出私有 `.f3d` 副本，**不生成每一步的 Mesh 快照**，原生动画由 Fusion 内核处理。
-- 不更改普通播放器、语音和鼠标录制；Phone Stand 仅用于轻量 UI 测试。
-- 如果模型没有可用 Timeline、超过 150 个 Feature，或 Fusion API 不支持某个操作，给出错误而不是编造数据。
-
-详细操作与局限见 [真实模型测试流程](docs/REAL_FUSION_MODEL_TEST.md)。
-
-## 两个界面版本（用于比较）
-
-两个版本播放同样的教程，功能相同，只是教程放的位置不同。两个分支共用同一份代码，由 `config.json` 的 `layout` 选择。
-
-| | 版本 A：独立参考视口（`fusion-him`，`"layout": "reference"`） | 版本 B：视口内 Overlay（`fusion`，`"layout": "overlay"`） |
-|---|---|---|
-| 教程在哪里播放 | 按 *History in Motion* 的做法，在设计师 `.f3d` 的副本（独立文档、独立 Timeline）上播放，画在用户自己的视口里、用户模型旁边；用户随时可以暂停并在自己的 Design 里建模 | 在用户自己的 **Fusion 画布**里，参考模型显示在用户模型旁边 |
-| 看到的模型 | 设计师真实的参数化模型（副本），按 HiM 的方式展示：时间轴回滚到当前特征，参数从约 0 实时增长到实际值（Fusion 当场重算，不存帧），其他 Body 半透明；用户可以在那个窗口里随时旋转、查看 | 提取时记录的每个特征完成后的模型，显示在用户画布里，可以随画布一起旋转查看 |
-| 控制面板 | 参考窗口右侧：播放／暂停／重播／前进／后退，纵向步骤列表，当前步骤展开显示工具和设计师说的话 | 浮在画布上的紧凑面板（可收起为只剩步骤条），画布左上角显示步骤标题和当前这句话 |
-| 额外 | 在参考模型上选中面、边或顶点，只播放做出它的那些步骤（HiM 的过滤方法）；后退时倒放当前步骤 | — |
-
-说明：版本 A 需要教程包里带设计师的 `.f3d`；附带的两个手工示例没有，所以在版本 A 里只显示记录的模型，也不能按几何选择。Fusion 原生画布不允许叠加可交互的 HTML，所以版本 B 的"Overlay"是浮动面板加画布内的 Custom Graphics（模型、指针、文字）。
-
-## 目标交互与 HiM 验证标准
-
-**设计原则：** exCADmple 向设计师呈现原作者的建模过程、操作与其本人表达的设计理由；系统**不需要理解用户当前的设计目标，也不替用户推理或推荐正确答案**。用户自行判断借鉴哪些步骤，并能随时继续编辑自己的 CAD 模型。
-
-**版本 A（`fusion-him`）的目标流程：**
-
-1. 用户在第一个 Fusion 窗口正常打开自己的设计文件。
-2. 点击 **Load Example**，选择包含原设计师参数化 `.f3d` 的 `.excadmple` 案例包。
-3. 打开独立的 Fusion 参考窗口，在**原设计师 CAD 模型的副本**上查看和旋转模型；第一个窗口仍用于用户自己的建模。
-4. 按原始 Fusion Feature Timeline 顺序播放，或跳转、重播单个步骤。支持的 Feature 使用 **HiM 式真实参数驱动动画**：临时改变参数，由 Fusion 重新计算几何，而不是只播放预渲染视频或几何快照。无适用参数的 Feature 可以使用明确标注的淡入效果；Sketch 可以通过时间轴状态呈现。
-5. 每步同步显示使用的工具、与几何的关键交互（例如选中 Profile、拖动 Manipulator 的方向或位置）、原设计师的语音和文字。**不要求记录与建模无关的鼠标运动。**
-6. 用户随时回到第一个窗口继续建模，参考窗口不得修改或保存用户的模型。
-
-**版本 B（`fusion`）** 以同一 Fusion Canvas 内的参考几何和教程 Overlay 呈现相同的设计过程信息；两个版本先分别实现，再决定论文采用哪个。两者底层动画机制目前不同，不应声称已经完全等价。
-
-**完成判定（尚待 Fusion Desktop 实测）：** 使用一个真实录制的参数化 `.f3d` 案例，验证导入、步骤与 Feature 精确对应、Extrude/Fillet 等参数动画、跳转/暂停/恢复、语音文字同步、独立窗口连接、用户持续建模以及关闭后原模型不被修改。若 Feature 映射不明确，应报告未匹配，不能猜测或播放其他操作。当前录制器仅捕获工具启动和离散几何选择位置，**还不能还原真实 Manipulator 拖拽路径**；这一能力需单独验证或补充录屏标注。
-
-## 播放
-
-- **整个教程**连续播放，或**只播这一步**；每一步可以重播；上一步／下一步；0.5×–2× 速度。
-- **声音**：播放这一步对应的那段原声（录音或录屏的声音）；没有录音时可以用电子音朗读文字稿。
-- **文字**：这一步设计师说的每一句话，当前这句高亮；点某一句可以跳到那里。
-- **模型和指针**：参考模型随步骤变化，鼠标轨迹显示为橙色的 Ghost Pointer（不会移动真实鼠标）。
-- **关联几何**（可选）：可以把某一步关联到自己模型里的 Body／Face，切换到这一步时高亮它，并把其他 Body 暂时调暗。
-
-## 教程文件和制作工具
-
-教程就是录下来的东西：步骤、每一步说了什么、用了哪些工具、模型怎么变、鼠标轨迹。规范见 [`docs/EXAMPLE_FORMAT.md`](docs/EXAMPLE_FORMAT.md)。制作一个教程：
-
-1. **录制**：设计师打开自己的设计，点工具栏 **exCADmple: Record tutorial**，同时开始录屏（带麦克风），边建模边说。插件记录用到的工具、每个特征出现的时间、选中的位置（作为鼠标轨迹）。结束时点 **Stop recording**，保存 `*.session.json`。
-2. **提取**：在 Fusion 里打开完成的 `.f3d`，点教程面板底部的 **Extract tutorial draft…**，得到每个特征完成后的模型（`*.extract.json`）。
-3. **转写**：把录音转成带时间的文字稿。可以用任意工具导出 `.srt`，或在本地运行 `python tools/transcribe.py session.mp4 -o transcript.srt`（需要 `pip install faster-whisper`）。
-4. **切分步骤（AI）**：`python tools/author.py draft.extract.json transcript.srt --session tutorial.session.json --video session.mp4 --id phone-stand --title "Phone Stand" -o annotation.json`。Claude 根据特征出现的时间、用到的工具和设计师说的话，把录制切成步骤并起标题（尽量用设计师自己的话）；它不写任何推理。结果会自动检查，不合格时、加 `--no-ai`、或没有 API 凭据时，改用按特征的规则切分。需要 `pip install anthropic` 和 `ANTHROPIC_API_KEY`（或 `ant auth login`）。
-5. **人工检查**：在浏览器里打开 `ui/authoring/index.html`，载入 `annotation.json`、文字稿、录屏（可选：提取草稿）。对着视频调整每一步的标题、起止时间和包含的特征，可以拆分或合并步骤，然后导出。
-6. **合成**：`python tools/build_package.py draft.extract.json annotation.json transcript.srt --media session.mp4 --source Design.f3d -o phone-stand.excadmple`
-
-附带的 `examples/phone_stand.json`（九步）和 `examples/tablet_stand.json` 是手工编写的示例，不是真实录制。由 `python tools/build_examples.py` 生成。
-
-## 安装
-
-1. 下载本分支 ZIP 并解压，保持整个 `exCADmpleFusion` 文件夹完整。
-2. Fusion 中打开或新建一个 **Design**。
-3. **Utilities → Scripts and Add-Ins → Add-Ins**，点 **+**，选中文件夹并运行。
-4. 版本 B：教程面板浮在画布上，示例自动打开；**Import** 打开别的教程。版本 A：先打开或新建自己的 Design，再用 **+ Import** 打开 JSON + `.f3d` 教程；参考模型出现在你的模型旁边，左侧是 **exCADmple · Tool** 工具窗口，每次运行写 `logs/latest.log`。
-
-## 不会改动用户的模型
-
-- 版本 B 的参考模型、指针和文字都是临时 Custom Graphics，不进入用户的时间轴；保存前清除、保存后恢复。
-- 版本 A 在第二个窗口里打开的是 `.f3d` 的副本，从不保存；动画只作用于这个副本（不看当前活动文档是谁），副本不是活动文档时不做任何修改。临时改过的参数在步骤结束、切换步骤、停止、关闭、保存前以及某一帧出错时写回原表达式；暂停时保持在中间状态。
-- 关联几何时调暗的透明度会在切换步骤、保存前、切换文档和停止插件时恢复；保存前恢复失败会取消保存。
-
-## 版本 A：HiM 原生动画的状态
-
-**参数驱动**（临时改 ModelParameter，由 Fusion 重算；只用下表的参数路径，没有“任意长度参数”的兜底；参数不存在（例如 Extrude 的 To Object 范围）或为 0 时改用视觉效果）：
-
-| Feature | 动画的参数 |
-|---|---|
-| Extrude | `extentOne.distance`、`extentTwo.distance` |
-| Revolve | `extentDefinition.angle`／`angleOne`／`angleTwo` |
-| Fillet | 恒定半径 `radius`；变半径 `startRadius`／`endRadius`；弦长 `chordLength` |
-| Chamfer | `distance`、`distanceOne`、`distanceTwo`（角度不动画） |
-| Hole | `extentDefinition.distance`、`holeDiameter` |
-| Circular／Rectangular Pattern | `totalAngle`；`distanceOne`／`distanceTwo` |
-| Shell、Sweep、Offset Faces、Thicken、Draft、Thread、Coil | 见 `core/playback/him_motion.py` 的 `FEATURES` |
-
-**视觉回退**（高亮的结果 Body 从小到大、从透明到不透明出现，其他 Body 和结果本身临时调暗）：Mirror、Combine、Split Body、Split Face、Loft、Move，以及 Base/Copy-Paste/Import 等；参数动画中 Fusion 拒绝某个值或特征报错时，这一步也改用视觉效果并在面板标明原因。Sketch 和构造平面只按时间轴状态显示。其他 Feature 只滚动时间轴显示结果。
-
-**步骤与时间轴的对应**：按记录的时间轴 index + 名称（+ 类型）匹配；index 变了时只接受唯一的同名同类型特征；重名、类型不符、一个特征被两步占用都报告为 “not found in the model”，不会动画别的操作。
-
-**指针**：录制器只记录工具启动和离散的选择位置，没有 Manipulator 拖拽路径；面板在每一步写明“只有记录的选择”或“没有记录指针”，不会补造鼠标轨迹。
-
-| | 已实现 | 单元测试（模拟 `adsk`） | Fusion Desktop 实测 |
-|---|---|---|---|
-| 步骤 ↔ 时间轴映射（重名、类型、占用、index 偏移） | ✓ | ✓ | 未测 |
-| 参数从约 0 增长到原值、最后一帧等于原值 | ✓ | ✓ | 未测 |
-| 结束／切换步骤／停止／关闭／出错时恢复参数、透明度、叠加图形 | ✓ | ✓ | 未测 |
-| 时间轴回滚与恢复 | ✓ | ✓ | 未测 |
-| 视觉回退及清理；参数被拒绝时回退 | ✓ | ✓ | 未测 |
-| 只修改参考副本 | ✓ | ✓ | 未测 |
-| HiM 几何过滤 | ✓ | ✓ | 未测 |
-| Fusion 是否真的按参数重算、各 Feature 的 API 路径是否正确、帧率 | — | 无法用单元测试证明 | 未测 |
-| 同一视口：参考副本独立文档 + 用户 Design 保持活动 | ✓ | ✓ | 研究者已在 Fusion Desktop 中使用 |
-
-**最终验收待 Fusion Desktop 实测。** 验收模型和步骤：`tools/fusion_demo`（在 Fusion 里运行，生成 Sketch → Extrude → Fillet → Sketch → Extrude → 构造平面 → Mirror 的真实 `.f3d` 和教程包），按 [`docs/FUSION_DESKTOP_TEST.md`](docs/FUSION_DESKTOP_TEST.md) 逐项检查。该脚本本身也尚未在 Fusion 里运行过。
-
-## 空间引导（这一步改了哪里）
-
-- **记录的模型**（没有 `.f3d`，例如附带的 Phone Stand）：把这一步的模型与上一步的模型按几何比较：与上一步完全相同的网格（顶点、三角形顺序不同也算相同，带容差）不变；其余网格里，落在上一步模型表面上的三角形不变（重新三角化不算改动），其余三角形就是这一步新增或修改的，用青色画出，其余部分照常灰色。第一步整个模型都是新的。只删除了几何的步骤不标记任何东西。播放中每一帧同样比较（超过 6000 个三角形时不逐帧比较）；暂停时保持；切换步骤、换教程、关闭时清除。
-- **设计师的 `.f3d`**：青色画特征自己报告的面（`Feature.faces`，用临时 BRep 复制后绘制）；没有面时才画整个结果 Body；蓝色画从 API 读到的输入草图轮廓和边。步骤结束或选中某一步时保持，下一帧、切换步骤、停止和关闭时清除。
-- 教程包没有记录实体引用，所以不使用；找不到对应关系时不标记。颜色没有设置项。高亮都是不可选的 Custom Graphics，不改动模型。
-
-## 测试
+- Every start of the add-in writes `logs/latest.log` (Fusion version, the loaded tutorial, how each feature was played, slow frames, errors). Send it after a test run.
+- Fusion Desktop checklist: [`docs/SAME_VIEWPORT_TEST.md`](docs/SAME_VIEWPORT_TEST.md).
+- Automated tests run on a stubbed Fusion API (they check the add-in's logic, not Fusion's geometry):
 
 ```bash
 python -m unittest discover -s tests -v
-node --check ui/overlay/player.js && node --check ui/reference/player.js
+node tests/test_him_frame_clock.js && node tests/test_reference_scrubbing.js
 ```
 
-尚未在 Fusion 桌面端实测。单元测试通过不等于 Fusion API 已验证；版本 A 的验收步骤见 [`docs/FUSION_DESKTOP_TEST.md`](docs/FUSION_DESKTOP_TEST.md)。
-
-## 代码结构
+## Code map
 
 ```text
-exCADmpleFusion.py        入口：教程面板、工具窗口、播放、保存安全、诊断日志
-config.json               选择界面版本（overlay = B，reference = A）
-core/tutorial/packages.py 教程包读取与校验（含 JSON + .f3d：core/tutorial/example_pair.py）
-core/animation.py         模型状态动画
-core/renderer.py          画布中的参考模型、Ghost Pointer、文字
-core/pointer.py           鼠标轨迹
-core/playback/same_viewport.py     版本 A：把参考模型画进用户自己的视口
-core/playback/fast_motion.py       版本 A：快速动画（移动真实的面，不必每帧重算）
-core/playback/manipulator.py       版本 A：移动的面、箭头和数值
-core/playback/tool_guide.py        版本 A：这一步用的 Fusion 工具（工具栏、工具窗口）
-core/diagnostics.py       logs/latest.log 诊断日志
-core/playback/him_reference.py     版本 A：在设计师模型副本上播放（HiM 参数动画、按几何过滤）
-core/tutorial/reference_plan.py    版本 A：步骤与时间轴特征的对应
-core/playback/him_filter.py, him_motion.py, him_fusion.py   History in Motion 的过滤算法与参数动画
-core/tutorial/extract_fusion.py    从 .f3d 提取教程草稿
-core/authoring.py, transcript.py   合成教程包、读取文字稿
-core/spatial.py, focus.py, geometry_links.py      关联几何
-core/step_changes.py      空间引导：比较相邻两步的记录模型，找出这一步新增或修改的三角形（青色）
-ui/overlay/index.html, player.js, style.css   版本 B 的面板
-ui/reference/index.html, player.js, style.css            版本 A 的控制面板
-core/session_log.py, session_recorder.py   制作：录制时记录工具、特征时间、选中位置
-core/ai_segment.py        制作：把录制切成步骤（Claude 提议 + 规则兜底 + 检查）
-ui/authoring/index.html            制作：在浏览器里对着视频检查、调整步骤
-tools/fusion_demo/        Fusion 脚本：生成版本 A 的验收模型和教程包（tools/demo_tutorial.py）
-tools/                    author.py（切分步骤）、transcribe.py（本地转写）、build_package.py（合成）、build_examples.py（示例）
+exCADmpleFusion.py                 entry point: panels, playback commands, save safety, diagnostics
+config.json                        layout: reference (version A) or overlay (version B)
+core/playback/him_reference.py     the reference session: opens the .f3d copy, plays and filters it
+core/playback/same_viewport.py     draws the reference into your viewport
+core/playback/him_fusion.py, him_motion.py, him_filter.py   HiM parameter animation and filtering
+core/playback/fast_motion.py, manipulator.py                illustrative motion, arrows and values
+core/playback/tool_guide.py        the step's Fusion tools (toolbar panel, tool window)
+core/tutorial/                     tutorial files: packages.py, example_pair.py (JSON + .f3d)
+core/diagnostics.py                logs/latest.log
+ui/reference/                      player panel;  ui/tool/  tool window
+tools/                             helper scripts (test model, packaging, transcription)
 ```
 
-*History in Motion*：Veuskens et al., SCF 2023（[DOI](https://doi.org/10.1145/3623263.3623358)）。
+## Branches
+
+| Branch | What it holds |
+|---|---|
+| [`main`](https://github.com/Scaffolder666/exCADmpleFusion) | Project overview (this research goal, no code) |
+| [`fusion-him`](https://github.com/Scaffolder666/exCADmpleFusion/tree/fusion-him) | **Fusion add-in, version A** (History in Motion style, same viewport). Stable version used for demos. |
+| [`authoring-tool`](https://github.com/Scaffolder666/exCADmpleFusion/tree/authoring-tool) | `fusion-him` + the authoring tool: record while modeling, group features into reasoning steps, save the tutorial inside the `.f3d` |
+| [`geometry-why`](https://github.com/Scaffolder666/exCADmpleFusion/tree/geometry-why) | `fusion-him` + "Ask why": click the reference model to see the steps behind it |
+| [`fusion`](https://github.com/Scaffolder666/exCADmpleFusion/tree/fusion) | Fusion add-in, version B (tutorial overlaid on the Fusion canvas), with the earlier command-line authoring workflow |
+| [`authoring-plan`](https://github.com/Scaffolder666/exCADmpleFusion/tree/authoring-plan) | Earlier design notes for authoring (superseded by `authoring-tool`) |
+
+*History in Motion*: Veuskens et al., SCF 2023 ([DOI](https://doi.org/10.1145/3623263.3623358)).
