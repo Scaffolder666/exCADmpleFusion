@@ -329,6 +329,7 @@ class LocalPairPackage(ExamplePackage):
                 "source_features": [{"index": f.index, "name": f.name, "kind": f.kind} for f in matched],
                 "tools": [KIND_LABELS.get(f.kind, f.kind.replace("Feature", "")) for f in matched],
                 "parameters": recorded_parameters,
+                "reasoning_source": item.get("reasoning_source", "recorded"),
                 "geometry": {"meshes": []}, "cues": clean_cues, "media": media,
             })
             persisted.append({
