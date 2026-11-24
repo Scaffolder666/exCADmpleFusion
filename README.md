@@ -1,3 +1,32 @@
+# exCADmple — Blender Interactive Extrude Walkthrough (MVP)
+
+**This branch is the new Blender-first interactive-tutorial experiment.**
+The existing Fusion implementation remains in its own branches.
+
+- **[Blender add-on source](blender_expert/viewport_tutorial/)**
+- **[Install, Play, and model-along instructions](blender_expert/viewport_tutorial/README.md)**
+- **[Pure geometry and playback tests](blender_expert/viewport_tutorial/tests/test_core.py)**
+
+A read-only, virtual expert draws a subdivided phone-stand base and animates
+a REAL 3D extrusion **inside the same Blender viewport** as the learner.
+The five authored moments teach Tool → Select Face → Extrude upward →
+Set distance **2.4** → Why. The expert consists only of GPU draw calls;
+nothing from the lesson enters the user's Blender Scene, selections or
+Undo history. The N sidebar is **playback controls only**. Learner can create
+a genuinely selectable/editable practice mesh explicitly through F3 search.
+
+No .blend Feature History reader or operation recorder is used or needed.
+No claim is made that these authored instructions reconstruct the original
+designer's click stream. An authentic screen-recording clip system and
+native toolbar-button spotlight are future extensions, not part of this
+first-operation MVP.
+
+**Status:** code and tests committed. Blender Desktop runtime verification
+is pending; a GitHub Actions workflow runs independent unit tests and builds
+an installable add-on ZIP.
+
+---
+
 ## NEW — One-Viewport Blender Virtual Expert prototype
 
 **This branch contains a native Blender add-on** for watching a virtual expert
