@@ -1,0 +1,17 @@
+name: Fusion virtual expert — static and pure-Python tests
+on:
+  push:
+    branches: [prototype-fusion-native-replay]
+  workflow_dispatch:
+jobs:
+  python-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile repository Python sources
+        run: python -m compileall -q core exCADmpleFusion.py native_ui_replay
+      - name: Test virtual expert stream and UI plan
+        run: python -m unittest discover -s native_ui_replay/tests -v
