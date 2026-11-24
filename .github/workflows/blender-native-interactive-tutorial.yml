@@ -1,0 +1,32 @@
+name: Blender Native Interactive Tutorial
+on:
+  push:
+    branches: [blender-native-interactive-tutorial]
+  workflow_dispatch:
+jobs:
+  tests-and-addon:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Pure tutorial and Blender API contract checks
+        run: |
+          python -m compileall -q blender_native_tutorial/src/native_tutorial
+          python -m unittest discover -s blender_native_tutorial/tests -p 'test_native_tutorial.py' -v
+      - name: Create installable Blender add-on ZIP
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile, ZIP_DEFLATED
+          root=Path('blender_native_tutorial/src/native_tutorial')
+          with ZipFile('exCADmple_Blender_Native_Tutorial.zip','w',ZIP_DEFLATED) as z:
+              for p in root.glob('*'):
+                  if p.is_file() and p.suffix in ('.py','.json'):
+                      z.write(p,'native_tutorial/'+p.name)
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: exCADmple-Blender-Native-Interactive-Tutorial
+          path: exCADmple_Blender_Native_Tutorial.zip
