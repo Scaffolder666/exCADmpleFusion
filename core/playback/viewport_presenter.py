@@ -31,17 +31,29 @@ class ViewportPresentation:
         self.last_index = -1
         self.visible = False
         self.last_position = None
+        self.last_size = None
+        self.manually_positioned = False
 
     def open(self):
         prior = self.ui.palettes.itemById(self.PALETTE_ID)
         if prior and prior.isValid:
             prior.deleteMe()
-        self.palette = self.ui.palettes.add2(
-            self.PALETTE_ID, "exCADmple · In-viewport demonstration",
-            self.url, True, True, True, 390, 355)
+        # Autodesk added transparent API palettes in March 2024. This
+        # presents tutorial video/callouts directly over the existing
+        # graphics viewport, instead of a conventional opaque side window.
+        try:
+            self.palette = self.ui.palettes.addTransparent(
+                self.PALETTE_ID, "exCADmple · In-viewport demonstration",
+                self.url, False, False, False, False, 400, 330)
+        except Exception as error:
+            self.log("Transparent viewport palette unavailable; using floating fallback: " + str(error))
+            self.palette = self.ui.palettes.add2(
+                self.PALETTE_ID, "exCADmple · In-viewport demonstration",
+                self.url, False, False, True, 400, 330)
         self.palette.dockingState = adsk.core.PaletteDockingStates.PaletteDockStateFloating
         try:
             self.palette.setPosition(520, 190)
+            self.last_position = (520, 190)
         except Exception as error:
             self.log("Viewport walkthrough initial position: " + str(error))
         self.palette.isVisible = False
@@ -66,8 +78,9 @@ class ViewportPresentation:
         # the right playback panel. Avoid camera movements entirely.
         if anchor is not None:
             x, y = anchor
+            width = self.last_size[0] if self.last_size else 400
             if x > 1070:
-                x -= 440
+                x -= (width + 50)
             else:
                 x += 75
             y = y - 105
@@ -79,8 +92,9 @@ class ViewportPresentation:
             x, y = (500, 175)
         target = (x, y)
         # Let the learner orbit/zoom without a teaching card chasing their camera.
-        should_move = (self.last_position is None or
-                       index != self.last_index or phase != self.last_phase)
+        should_move = not self.manually_positioned and (
+            self.last_position is None or
+            index != self.last_index or phase != self.last_phase)
         if should_move and self.palette and self.palette.isValid:
             try:
                 self.palette.setPosition(*target)
@@ -89,6 +103,36 @@ class ViewportPresentation:
                 self.log("Viewport walkthrough position: " + str(error))
         self.last_index = index
         self.last_phase = phase
+
+    def shift(self, dx, dy):
+        """Drag teaching callout from its in-canvas handle, not the OS mouse."""
+        if not self.palette or not self.palette.isValid:
+            return
+        dx = max(-120, min(120, int(dx)))
+        dy = max(-120, min(120, int(dy)))
+        x, y = self.last_position or (520, 190)
+        target = (max(20, x + dx), max(70, y + dy))
+        try:
+            self.palette.setPosition(*target)
+            self.last_position = target
+            self.manually_positioned = True
+        except Exception as error:
+            self.log("Viewport callout drag: " + str(error))
+
+    def follow(self):
+        """Return to automatic reference-Feature anchoring after manual drag."""
+        self.manually_positioned = False
+        self.last_position = None
+
+    def _resize(self, payload):
+        # Avoid obscuring the modeling canvas when no actual video is shown.
+        size = (400, 405) if payload.get("show_video") else (400, 284)
+        if size != self.last_size and self.palette and self.palette.isValid:
+            try:
+                self.palette.setSize(*size)
+                self.last_size = size
+            except Exception as error:
+                self.log("Viewport callout resize: " + str(error))
 
     def present(self, payload, session=None):
         self.last_payload = payload
@@ -102,6 +146,7 @@ class ViewportPresentation:
         if not self.palette.isVisible:
             self.palette.isVisible = True
         index, phase = payload["index"], payload["phase"]
+        self._resize(payload)
         self._position(session, index, phase)
         self._send("frame", payload)
 
