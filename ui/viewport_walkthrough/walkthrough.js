@@ -33,7 +33,9 @@
     }
     $("content").hidden=false; $("empty").hidden=true;
     const phase=String(frame.phase || "tool");
-    const isVideo=phase==="how" && !!frame.video;
+    // Authored cuts can show REAL toolbar clicks during Tool, drawing
+    // during How, and numeric confirmation during Geometry as needed.
+    const isVideo=!!frame.show_video && !!frame.video;
     const key=[frame.step_id,frame.moment,phase,frame.tool,frame.video].join(":");
     if(key!==s.key) {
       s.key=key;
