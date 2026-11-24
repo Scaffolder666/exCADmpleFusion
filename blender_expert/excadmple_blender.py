@@ -23,6 +23,7 @@ import gpu
 from mathutils import Vector
 from bpy_extras.view3d_utils import location_3d_to_region_2d
 from gpu_extras.batch import batch_for_shader
+from bpy.app.handlers import persistent
 
 COLLECTION = "exCADmple | Reference (read only)"
 LESSON_KEY = "excadmple.lesson.v1"
@@ -129,6 +130,10 @@ def _rebuild(step_index, phase):
     for obj in RUNTIME["models"].values():
         if obj and obj.name in bpy.data.objects:
             obj.hide_set(True)
+            # Seeking/restarting must not leave future expert modifiers applied.
+            old_bevel = obj.modifiers.get("expert_bevel")
+            if old_bevel is not None:
+                obj.modifiers.remove(old_bevel)
     if not lesson:
         return
     for i, step in enumerate(lesson):
@@ -237,8 +242,9 @@ def _box(x,y,w,h,color):
     global SHADER
     if SHADER is None:
         SHADER = gpu.shader.from_builtin("UNIFORM_COLOR")
-    vertices = [(x,y),(x+w,y),(x+w,y+h),(x,y+h)]
-    batch = batch_for_shader(SHADER,"TRI_FAN",{"pos":vertices})
+    vertices = [(x,y),(x+w,y),(x+w,y+h),(x,y),
+                (x+w,y+h),(x,y+h)]
+    batch = batch_for_shader(SHADER,"TRIS",{"pos":vertices})
     SHADER.bind()
     SHADER.uniform_float("color",color)
     batch.draw(SHADER)
@@ -422,6 +428,18 @@ class EXCAD_PT_panel(bpy.types.Panel):
 CLASSES=(EXCAD_OT_generate,EXCAD_OT_from_selected,EXCAD_OT_player,EXCAD_PT_panel)
 
 
+@persistent
+def _load_after_file_open(_dummy):
+    RUNTIME["playing"] = False
+    RUNTIME["lesson"] = []
+    RUNTIME["models"] = {}
+    try:
+        if bpy.context.scene and bpy.context.scene.get(LESSON_KEY):
+            _load(bpy.context.scene)
+    except Exception:
+        pass
+
+
 def register():
     for cls in CLASSES:
         bpy.utils.register_class(cls)
@@ -430,6 +448,8 @@ def register():
             _draw,(),"WINDOW","POST_PIXEL")
     if not bpy.app.timers.is_registered(_tick):
         bpy.app.timers.register(_tick,first_interval=.15,persistent=True)
+    if _load_after_file_open not in bpy.app.handlers.load_post:
+        bpy.app.handlers.load_post.append(_load_after_file_open)
     try:
         if bpy.context.scene and bpy.context.scene.get(LESSON_KEY):
             _load(bpy.context.scene)
@@ -444,6 +464,8 @@ def unregister():
         RUNTIME["handler"]=None
     if bpy.app.timers.is_registered(_tick):
         bpy.app.timers.unregister(_tick)
+    if _load_after_file_open in bpy.app.handlers.load_post:
+        bpy.app.handlers.load_post.remove(_load_after_file_open)
     for cls in reversed(CLASSES):
         bpy.utils.unregister_class(cls)
 
