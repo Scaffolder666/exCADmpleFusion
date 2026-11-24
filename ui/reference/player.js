@@ -275,6 +275,7 @@ function play(continuous = true) {
 }
 function pause() {
   S.playing = false;
+  bridge("expert_pause"); // read-only virtual cursor; never touch learner's active command
   S.epoch++;
   // If pause interrupted an in-flight native frame, restore the requested
   // progress after its reply so the canvas does not run ahead of the rail.
