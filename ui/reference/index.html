@@ -9,8 +9,8 @@
   <script>document.write('<link rel="stylesheet" href="style.css' + location.search + '">');</script>
 </head>
 <body>
-  <!-- Version A control panel. It runs in the second (reference) Fusion
-       instance; that instance's canvas is the interactive reference viewport. -->
+  <!-- One visible Fusion viewport: the user's editable design and an independent,
+       read-only Reference Model. The right-hand panel controls the walkthrough. -->
   <header class="bar">
     <div class="brand"><strong>exCADmple</strong><span>Design tutorial</span></div>
     <button id="import" class="quiet" type="button" title="Open a .excadmple or .json tutorial">+ Import</button>
@@ -35,6 +35,36 @@
     <button id="showMore" class="link" type="button" hidden>Show more</button>
     <button id="showAll" class="link" type="button" hidden>Show all steps</button>
   </div>
+  <section id="walkthrough" class="walkthrough" aria-label="Current CAD operation walkthrough" hidden>
+    <div class="walk-head">
+      <span class="walk-eyebrow">OPERATION WALKTHROUGH</span>
+      <span id="walkKind" class="walk-kind">Tool</span>
+    </div>
+    <h2 id="walkTitle">—</h2>
+    <p id="walkDescription" class="walk-description"></p>
+    <p id="walkOrigin" class="walk-origin"></p>
+    <div class="walk-tool-row" aria-label="Fusion tool used in this step">
+      <div class="walk-tool-copy">
+        <strong id="walkTool">CAD tool</strong>
+        <span id="walkToolPath">Find this tool in Fusion</span>
+      </div>
+      <button id="walkTry" type="button" title="Pause playback and start the actual native command in your design">Try in my design</button>
+    </div>
+    <div class="walk-geometry" id="walkFocus">Reference geometry in the same viewport</div>
+    <div id="walkVideoWrap" class="walk-video-wrap" hidden>
+      <div class="walk-video-window">
+        <video id="walkVideo" playsinline muted preload="metadata" aria-label="Real CAD operation recording"></video>
+      </div>
+    </div>
+    <p id="walkVideoNote" class="walk-video-note"></p>
+    <p id="walkNoVideo" class="walk-video-placeholder">No original operation recording included.</p>
+    <div id="walkMoments" class="walk-moments" aria-label="Operation moments"></div>
+    <div class="walk-transport">
+      <button id="walkPrevious" type="button">‹ Previous action</button>
+      <button id="walkReplay" type="button">↺ Repeat</button>
+      <button id="walkNext" type="button">Next action ›</button>
+    </div>
+  </section>
   <ol id="rail" class="rail" aria-label="Design steps"></ol>
 
   <footer class="foot">
@@ -50,6 +80,7 @@
   <audio id="audio" preload="metadata"></audio>
   <script>
     document.write('<script src="frame_clock.js' + location.search + '"><\/script>' +
+                   '<script src="walkthrough.js' + location.search + '"><\/script>' +
                    '<script src="player.js' + location.search + '"><\/script>');
   </script>
 </body>
