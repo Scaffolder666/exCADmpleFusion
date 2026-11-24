@@ -1,3 +1,33 @@
+# exCADmple — Native Blender Interactive Tutorial
+
+**Current canonical Blender implementation:** [Blender native tutorial source and installation](blender_native_tutorial/README.md).
+
+This branch replaces hand-coded fake Extrude geometry with a native Blender
+operator-based tutorial. The authored operation sequence uses existing
+`bpy.ops.mesh.extrude_region_move`, `bpy.ops.mesh.bevel` and
+`bpy.ops.mesh.inset`. A separate background Blender process executes and
+samples the original operators; the learner's one real Blender viewport
+plays their results through GPU draw calls, alongside the learner's editable
+model. The native student modeling context, Scene and Undo remain separate
+from the expert demonstration.
+
+The N sidebar contains playback controls **only**. All tool, selection,
+operation, parameter and reasoning guidance is anchored in the actual 3D
+viewport. An original-operation recorder and .blend feature-history
+reconstructor are not required.
+
+- [Install/run and technical documentation](blender_native_tutorial/README.md)
+- [Native Blender Add-on source](blender_native_tutorial/src/native_tutorial/)
+- [Authored phone stand tutorial](blender_native_tutorial/src/native_tutorial/lesson.json)
+- [Source tests](blender_native_tutorial/tests/test_native_tutorial.py)
+- [Isolated bpy.ops compiler](blender_native_tutorial/src/native_tutorial/native_compiler.py)
+
+**Verification:** pure-Python regression tests pass; live Blender Desktop
+and native bpy.ops execution remain unverified in this environment because
+Blender Desktop is unavailable.
+
+---
+
 # exCADmple — Blender Interactive Extrude Walkthrough (MVP)
 
 **This branch is the new Blender-first interactive-tutorial experiment.**
