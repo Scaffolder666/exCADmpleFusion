@@ -31,6 +31,12 @@ def main():
     if scene is None:
         raise RuntimeError("Blender has no active scene")
     steps = expert.build_example(scene)
+    for screen in bpy.data.screens:
+        for area in screen.areas:
+            if area.type == "VIEW_3D":
+                view = area.spaces.active.region_3d
+                view.view_location = (3.7, 0, 1.5)
+                view.view_distance = 17.0
     scene["excadmple.origin"] = "Reconstructed training example, NOT original human mouse event data"
     # Keep user's own geometry separate. Never edit learner objects during playback.
     scene["excadmple.learner_space"] = "Existing scene objects are freely editable"
