@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>exCADmple · Viewport Walkthrough</title>
+  <script>document.write('<link rel="stylesheet" href="style.css' + location.search + '">');</script>
+</head>
+<body>
+  <!-- This is a FLOATING IN-VIEWPORT Fusion Palette, NOT the playback panel.
+       Video, tool spotlight, procedure and reasoning appear next to actual
+       reference geometry. The learner's single CAD viewport stays editable. -->
+  <main id="content" class="content" hidden>
+    <div class="top">
+      <div class="eyebrow"><span class="live-dot"></span> EXCADMPLE · IN-VIEWPORT</div>
+      <span id="stepCount" class="count">01</span>
+    </div>
+    <div class="op">
+      <span id="phase" class="phase">TOOL</span>
+      <strong id="title">—</strong>
+    </div>
+    <div class="focus" id="toolFocus">
+      <div id="toolGlyph" class="glyph">⌘</div>
+      <div class="tool-copy">
+        <strong id="toolName">CAD Tool</strong>
+        <span id="toolPath">Fusion toolbar</span>
+      </div>
+      <span class="focus-ring" aria-hidden="true"></span>
+    </div>
+    <section id="videoShell" class="video-shell" hidden>
+      <div class="film-frame">
+        <video id="video" playsinline preload="metadata" muted></video>
+        <div class="video-caption">RECORDED CAD OPERATION</div>
+      </div>
+    </section>
+    <div id="geometryMark" class="geometry-mark" hidden>
+      <span class="geom-dot">◉</span> Highlighted reference geometry
+    </div>
+    <p id="hint" class="hint"></p>
+    <div id="parameters" class="parameters" hidden></div>
+    <div id="reason" class="reason" hidden>
+      <span class="reason-label">WHY</span>
+      <span id="reasonText"></span>
+    </div>
+    <div class="foot">
+      <span id="origin" class="origin">—</span>
+      <span id="progress" class="progress"><i></i></span>
+    </div>
+  </main>
+  <div id="empty" class="empty">Play a step to see the CAD operation here.</div>
+  <script>document.write('<script src="walkthrough.js' + location.search + '"><\/script>');</script>
+</body>
+</html>
