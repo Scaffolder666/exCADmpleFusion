@@ -13,7 +13,7 @@ window.OperationWalkthrough = (() => {
   const $ = id => document.getElementById(id);
   const phaseLabels = {tool:"Tool", how:"How", geometry:"Geometry", why:"Why"};
   let handlers = null, currentVideo = "", currentStep = -1, selectedMoment = -1;
-  let lastVisualKey = "", lastSeek = -Infinity;
+  let lastVisualKey = "", lastSeek = -Infinity, movieAudioEnabled = true;
   const video = () => $("walkVideo");
 
   function text(value) { return String(value === undefined || value === null ? "" : value); }
@@ -122,6 +122,11 @@ window.OperationWalkthrough = (() => {
   function syncVideo(item,moment,next,elapsed,playing,rate) {
     if(!(item.media && item.media.video) || !moment) return;
     const v=video();
+    // A separate author narration track has priority; otherwise the actual
+    // recording may carry the author speaking during the operation.
+    v.muted=!!(item.media && item.media.audio) || !movieAudioEnabled;
+    $("walkSound").textContent=v.muted?"Sound off":"Sound on";
+    $("walkSound").disabled=!!(item.media && item.media.audio);
     videoWindow(moment,item);
     const offset=Number(item.media.video_offset_ms)||0;
     const start=moment.video_start_ms===null ? Math.max(0,moment.at_ms) : moment.video_start_ms;
@@ -215,6 +220,7 @@ window.OperationWalkthrough = (() => {
       const list=moments(item,handlers.getTools());
       handlers.seek(list[momentAt(list,handlers.getElapsed())].at_ms);
     });
+    $("walkSound").addEventListener("click",()=>{movieAudioEnabled=!movieAudioEnabled; video().muted=!movieAudioEnabled; $("walkSound").textContent=movieAudioEnabled?"Sound on":"Sound off";});
     video().addEventListener("click",()=>handlers.togglePause());
   }
   return {init,sync,reset,moments,momentAt};
