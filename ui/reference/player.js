@@ -15,6 +15,11 @@
 "use strict";
 const $ = (id) => document.getElementById(id);
 const audio = $("audio");
+const Walkthrough = window.OperationWalkthrough || {
+  // The original HiM player still works if the new optional presentation
+  // module is unavailable in an older Fusion embedded browser.
+  init(){},sync(){},reset(){}
+};
 const S = { tools: null, plan: [], shown: null,
   example: null, geometry: [], index: 0, clip: [], pos: 0, elapsed: 0, playing: false,
   direction: 1, continuous: true, speed: 1, filtered: false, changed: [], more: [], picked: null,
@@ -499,7 +504,7 @@ function render(light = false) {
   // An independent walkthrough overlays WHAT tool, HOW it was used (clip),
   // WHERE the referenced feature lives, and WHY if sourced. It only reads
   // player state: never activates a command or changes learner geometry.
-  window.OperationWalkthrough.sync({
+  Walkthrough.sync({
     item:step(), index:S.index, elapsed:S.elapsed,
     playing:S.playing, tools:S.tools, rate:S.speed,
   });
@@ -606,7 +611,7 @@ function render(light = false) {
 /* ---------- messages from Fusion ---------- */
 function loadExample(data) {
   pause();
-  window.OperationWalkthrough.reset();
+  Walkthrough.reset();
   S.example = data;
   S.filtered = false; S.changed = []; S.more = []; S.picked = null;
   S.epoch++;
@@ -670,7 +675,7 @@ window.fusionJavaScriptHandler = {
 /* ---------- controls ---------- */
 // Within a CAD step the user can jump to a specific HOW moment, replay it,
  // or start the actual Fusion tool on THEIR OWN model. Reference stays read-only.
-window.OperationWalkthrough.init({
+Walkthrough.init({
   getItem:()=>step(),
   getTools:()=>S.tools,
   getElapsed:()=>S.elapsed,
