@@ -1,3 +1,27 @@
+# NEW: Interactive Blender Extrude Walkthrough (GPU-only reference)
+
+**[Open the new Blender add-on and install instructions](viewport_tutorial/README.md)**
+
+This branch includes a separate `viewport_tutorial/` Blender 4.2+ add-on
+with a complete **in-3D-Viewport Extrude demo**, designed after aligning on
+expert demonstrations rather than history recording:
+
+- N sidebar has playback controls only (Play/Pause/Previous/Next/Restart/Seek).
+- Reference mesh is drawn directly into the real Blender 3D viewport via GPU,
+  without any reference mesh in the learner's Scene or Undo history.
+- Teaches **Tool → correct Face selection → actually animated Extrude →
+  numeric parameter 2.4 → authored Why**, all anchored to 3D reference.
+- Your own native Blender modeling and independent Undo continue unaffected.
+- Optional explicit practice-base operator creates genuinely extrudable
+  topology beside the GPU teacher.
+- Includes pure-Python geometry and regression tests, plus CI packaging.
+
+**Do not mix the two add-ons**: the older `excadmple_blender.py` remains as
+a reference experiment and is not imported by the new module. Disable the
+older add-on when trying the new one.
+
+---
+
 # exCADmple for Blender — ONE viewport, virtual expert + learner
 
 This branch inherits the existing exCADmple Fusion research prototype
