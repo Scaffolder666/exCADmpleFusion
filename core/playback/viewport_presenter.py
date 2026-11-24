@@ -126,7 +126,9 @@ class ViewportPresentation:
 
     def _resize(self, payload):
         # Avoid obscuring the modeling canvas when no actual video is shown.
-        size = (400, 405) if payload.get("show_video") else (400, 284)
+        size = ((400, 415) if payload.get("show_video") else
+                (400, 324) if payload.get("phase") == "why" else
+                (400, 292))
         if size != self.last_size and self.palette and self.palette.isValid:
             try:
                 self.palette.setSize(*size)
