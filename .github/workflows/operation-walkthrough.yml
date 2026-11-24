@@ -1,0 +1,24 @@
+name: Fusion HiM operation walkthrough checks
+on:
+  push:
+    branches: [fusion-him-operation-walkthrough]
+  workflow_dispatch:
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check tutorial walkthrough JavaScript syntax
+        run: |
+          node --check ui/reference/walkthrough.js
+          node --check ui/reference/player.js
+      - name: Check Fusion Python parser and attachment tool
+        run: python -m compileall -q core tools/walkthrough exCADmpleFusion.py
+      - name: Run package and clip segmentation tests
+        run: python -m unittest tests.test_packages tests.test_operation_walkthrough -v
