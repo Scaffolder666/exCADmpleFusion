@@ -98,6 +98,10 @@
     if(!label) return;
     try {window.adsk.fusionSendData("try_tool",JSON.stringify({label}));}catch(_){}
   });
+  v.addEventListener("error",()=>{
+    if(s.src) $("hint").textContent =
+      "The source operation video cannot play here. Check codec and local file access in Fusion.";
+  });
   document.addEventListener("visibilitychange",()=>{if(document.hidden) v.pause();});
   window.addEventListener("pagehide",()=>v.pause());
   window.fusionJavaScriptHandler = {
