@@ -556,6 +556,17 @@ class ViewportWalkthroughHandler(adsk.core.HTMLEventHandler):
                 _walkthrough.acknowledge_ready()
             elif args.action == "walk_error":
                 _note("viewport walkthrough", str(json.loads(args.data or "{}").get("message", ""))[:2000])
+            elif args.action == "viewport_drag":
+                delta = json.loads(args.data or "{}")
+                dx, dy = delta.get("dx"), delta.get("dy")
+                if (not isinstance(dx, int) or isinstance(dx, bool) or
+                        not isinstance(dy, int) or isinstance(dy, bool)):
+                    raise ValueError("Invalid viewport drag")
+                if _walkthrough:
+                    _walkthrough.shift(dx, dy)
+            elif args.action == "viewport_follow":
+                if _walkthrough:
+                    _walkthrough.follow()
             elif args.action == "try_tool":
                 label = str(json.loads(args.data or "{}").get("label", "")).strip()
                 if not _tools or not label:
