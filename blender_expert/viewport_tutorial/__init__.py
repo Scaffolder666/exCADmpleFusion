@@ -177,7 +177,21 @@ def _draw_reference_2d():
         _text(x+14,y+box_h-32,"EXPERT DEMONSTRATION  ·  %s / %s" %
               (moment.index+1,len(core.PHASES)),11,(.99,.75,.36,1))
         _text(x+14,y+box_h-57,moment.title,16)
-        _text(x+14,y+box_h-83,moment.hint[:56],12,(.83,.90,.95,1))
+        if moment.name=="why":
+            # Keep the actual design explanation visible, not cropped
+            # mid-sentence into a one-line generic tutorial caption.
+            words=moment.hint.split()
+            lines=[""]
+            for word in words:
+                proposed=(lines[-1]+" "+word).strip()
+                if len(proposed)>48 and lines[-1]:
+                    lines.append(word)
+                else:
+                    lines[-1]=proposed
+            for line_num,line in enumerate(lines[:2]):
+                _text(x+14,y+box_h-83-15*line_num,line,12,(.83,.90,.95,1))
+        else:
+            _text(x+14,y+box_h-83,moment.hint[:56],12,(.83,.90,.95,1))
         if moment.name=="tool":
             _rect(x+14,y+23,50,34,(.94,.63,.21,.99))
             _text(x+26,y+33,"E",21,(.08,.11,.13,1))
