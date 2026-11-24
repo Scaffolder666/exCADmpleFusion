@@ -225,10 +225,22 @@ def _tick():
         RUNTIME["last_tick"]=now
         # Changes only a Python float. There is no bpy.data scene mutation,
         # history entry, synthetic input or native operator replay.
+        try:
+            wm=bpy.context.window_manager
+            speed=float(wm.excad_viewport_speed)
+        except Exception:
+            wm=None
+            speed=1.0
         RUNTIME["elapsed"]=min(core.TOTAL_SECONDS,
-                              RUNTIME["elapsed"]+delta*RUNTIME.get("speed",1.0))
+                              RUNTIME["elapsed"]+delta*speed)
         if RUNTIME["elapsed"]>=core.TOTAL_SECONDS:
             RUNTIME["playing"]=False
+        if wm is not None and abs(wm.excad_viewport_time-RUNTIME["elapsed"])>.075:
+            RUNTIME["internal_seek"]=True
+            try:
+                wm.excad_viewport_time=RUNTIME["elapsed"]
+            finally:
+                RUNTIME["internal_seek"]=False
         _redraw()
     return 1.0/30.0
 
@@ -237,6 +249,14 @@ def _set_time(value):
     RUNTIME["elapsed"]=max(0.0,min(core.TOTAL_SECONDS,float(value)))
     RUNTIME["last_tick"]=time.monotonic()
     RUNTIME["visible"]=True
+    try:
+        wm=bpy.context.window_manager
+        RUNTIME["internal_seek"]=True
+        wm.excad_viewport_time=RUNTIME["elapsed"]
+    except Exception:
+        pass
+    finally:
+        RUNTIME["internal_seek"]=False
     _redraw()
 
 
