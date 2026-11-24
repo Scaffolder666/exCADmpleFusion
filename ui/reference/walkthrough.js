@@ -51,7 +51,9 @@ window.OperationWalkthrough = (() => {
     return "Inspect the feature's inputs and parameters, then apply the same command to your own design.";
   }
   function plainReason(step) {
-    // These are authored/recorded tutorial cues, not inferred from geometry.
+    // Synthetic hypotheses generated from a Timeline are NEVER original
+    // designer reasoning. Do not show them as a "Why" walkthrough moment.
+    if (["simulated", "hypothetical"].includes(step.reasoning_source)) return "";
     const cues = step.cues || [];
     return cues.length ? text(cues[0].label) : "";
   }
@@ -73,7 +75,7 @@ window.OperationWalkthrough = (() => {
           "The reference geometry is highlighted by HiM; your own model remains editable."}
     ];
     const reason = plainReason(step);
-    if (reason) out.push({at_ms:duration * .83,kind:"why",title:"Design reasoning",description:reason});
+    if (reason) out.push({at_ms:duration * .83,kind:"why",title:"Author's explanation",description:reason});
     return out.map(escapeMoment);
   }
   function moments(step, tools) {
@@ -159,6 +161,8 @@ window.OperationWalkthrough = (() => {
       $("walkDescription").textContent=chosen.description;
       $("walkOrigin").textContent=Array.isArray(item.walkthrough) && item.walkthrough.length
         ? "Authored walkthrough" : "Reconstructed guidance · not original mouse history";
+      if (chosen.kind==="why") $("walkOrigin").textContent +=
+        item.reasoning_source==="simulated" ? " · unverified rationale" : " · supplied narration";
       const track=$("walkMoments");
       track.replaceChildren();
       list.forEach((m,i)=>{
