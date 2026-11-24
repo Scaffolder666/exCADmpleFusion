@@ -115,6 +115,15 @@ class TeacherView(NSView):
                 _draw_text("OK",px+pw-106,py-55,12)
         stages = ["tool","reference","parameter","confirm"]
         point=[anchors[stage] for stage in stages]
+        # Prefer the REAL reference feature's projected 3D center when Fusion
+        # can resolve it. Coordinates from Viewport.viewToScreen use a
+        # top-left screen origin, unlike Cocoa's bottom-left origin.
+        focus=state.get("screen_anchor")
+        if (isinstance(focus,list) and len(focus)==2
+                and all(isinstance(v,(int,float)) for v in focus)):
+            fx,fy=float(focus[0]),float(focus[1])
+            if 0 <= fx <= w and 0 <= fy <= h:
+                point[1]=[fx/w, 1-fy/h]
         # Actual OS cursor is untouched. This virtual pointer travels between
         # real Fusion UI regions while the user may work simultaneously.
         destination=point[min(3,phase)]
