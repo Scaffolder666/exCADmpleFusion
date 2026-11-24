@@ -104,6 +104,27 @@ class PlaybackTests(unittest.TestCase):
         self.assertIn("excad_viewport_playback",panel)
         self.assertNotIn("moment.title",panel)
         self.assertNotIn("moment.hint",panel)
+        # Strict contract: the N-panel is an actual playback controller,
+        # never a second tutorial. Every operator must be a transport
+        # control; every property must be speed or seek.
+        import re
+        operator_ids=re.findall(r'\\.operator\\("([^"]+)"',panel)
+        self.assertTrue(operator_ids)
+        self.assertEqual(set(operator_ids),{"view3d.excad_viewport_playback"})
+        prop_ids=re.findall(r'\\.prop\\(context\\.window_manager,"([^"]+)"',panel)
+        self.assertEqual(set(prop_ids),{"excad_viewport_time","excad_viewport_speed"})
+        self.assertNotIn("l.label(",panel)
+        self.assertNotIn("row.label(",panel)
+        self.assertNotIn("blf.",panel)
+        self.assertNotIn("bpy.data",panel)
+        # All instruction must instead live inside POST_PIXEL drawings
+        # anchored to the 3D source geometry.
+        viewport=code[code.index("def _draw_reference_2d("):code.index("def _redraw(")]
+        for source in ("moment.title","moment.hint",
+                       'moment.name=="tool"','moment.name=="face"',
+                       'moment.name=="extrude"','moment.name=="parameter"',
+                       'moment.name=="why"'):
+            self.assertIn(source,viewport)
         self.assertIn("POST_VIEW",code)
         self.assertIn("POST_PIXEL",code)
         self.assertIn("bpy.data.objects.new",code)  # explicit learner action only
