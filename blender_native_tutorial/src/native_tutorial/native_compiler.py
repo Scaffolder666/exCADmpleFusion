@@ -25,7 +25,8 @@ SAMPLES=15
 def _enter_edit(obj):
     if obj.mode!='OBJECT':
         bpy.ops.object.mode_set(mode='OBJECT')
-    bpy.ops.object.select_all(action='DESELECT')
+    for selected in tuple(bpy.context.selected_objects):
+        selected.select_set(False)
     obj.select_set(True)
     bpy.context.view_layer.objects.active=obj
     bpy.ops.object.mode_set(mode='EDIT')
@@ -39,11 +40,11 @@ def _exit_edit(obj):
 def _select(obj, selector):
     """Choose source CAD geometry for a Blender native Edit Mode operation."""
     _enter_edit(obj)
-    bpy.ops.mesh.select_all(action='DESELECT')
     tool=bpy.context.tool_settings
     edge_mode=selector=='highest_edges'
     tool.mesh_select_mode=(False, True, False) if edge_mode else (False,False,True)
     bm=bmesh.from_edit_mesh(obj.data)
+    bm.select_mode={'EDGE'} if edge_mode else {'FACE'}
     bm.verts.ensure_lookup_table()
     bm.edges.ensure_lookup_table()
     bm.faces.ensure_lookup_table()
@@ -81,6 +82,7 @@ def _select(obj, selector):
         points=[tuple(v.co) for f in selected for v in f.verts]
     elif selector=='all_verts':
         tool.mesh_select_mode=(True,False,False)
+        bm.select_mode={'VERT'}
         for v in bm.verts:v.select_set(True)
         points=[tuple(v.co) for v in bm.verts]
     else:
