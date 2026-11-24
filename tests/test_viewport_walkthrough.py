@@ -62,6 +62,9 @@ class StoryboardTests(unittest.TestCase):
         self.assertEqual(at_how["video_start_ms"],2000)
         self.assertEqual(at_how["video_end_ms"],5400)
         self.assertEqual(at_how["video_focus"]["scale"],2)
+        self.assertTrue(at_how["show_video"])
+        at_tool=frame(step,0,500,True)
+        self.assertFalse(at_tool["show_video"])
         at_why=frame(step,0,7000,False)
         self.assertEqual(at_why["phase"],"why")
         self.assertEqual(at_why["reason"],"Maintain clearance")
@@ -75,6 +78,12 @@ class StoryboardTests(unittest.TestCase):
         self.assertIn('id="video"',viewport)
         self.assertIn('id="reason"',viewport)
         self.assertIn('id="toolFocus"',viewport)
+        self.assertIn('id="dragHandle"',viewport)
+        presenter=(ROOT/"core/playback/viewport_presenter.py").read_text(encoding="utf-8")
+        self.assertIn("palettes.addTransparent",presenter)
+        main=(ROOT/"exCADmpleFusion.py").read_text(encoding="utf-8")
+        self.assertNotIn("                _create_tool_palette()",main)
+        self.assertIn("_create_viewport_walkthrough()",main)
 
     def test_existing_phone_stand_still_loads(self):
         package=open_package(ROOT/"examples/phone_stand.json")
