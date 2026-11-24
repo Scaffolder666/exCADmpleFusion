@@ -200,9 +200,11 @@ def run(config, state):
     monitor=EventReader.alloc().initWithWindow_view_path_config_(
         window,view,state,config)
     # Retain monitor and NSTimer; otherwise Python GC can tear down callback.
-    app.excadmple_reader=monitor
-    app.excadmple_timer=NSTimer.scheduledTimerWithTimeInterval_target_selector_userInfo_repeats_(
+    global _KEEPALIVE
+    _KEEPALIVE = (window, view, monitor)
+    timer = NSTimer.scheduledTimerWithTimeInterval_target_selector_userInfo_repeats_(
         .05,monitor,"tick:",None,True)
+    _KEEPALIVE = (window, view, monitor, timer)
     print("exCADmple teacher overlay ready. Switch to Fusion; the overlay never takes your mouse.")
     app.run()
 
