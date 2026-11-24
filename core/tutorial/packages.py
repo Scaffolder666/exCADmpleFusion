@@ -148,6 +148,39 @@ def _validate(data):
         offset = step.get("media", {}).get("offset_ms", 0)
         if isinstance(offset, bool) or not isinstance(offset, (int, float)) or offset < 0:
             raise PackageError("media.offset_ms must be a non-negative number")
+        for field in ("video_offset_ms", "video_duration_ms"):
+            value = step.get("media", {}).get(field, 0)
+            if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or value < 0:
+                raise PackageError("media." + field + " must be a finite nonnegative number")
+        focus = step.get("media", {}).get("video_focus")
+        if focus is not None:
+            _check_video_focus(focus)
+        moments = step.get("walkthrough", [])
+        if not isinstance(moments, list) or len(moments) > 32:
+            raise PackageError("walkthrough must be a list of at most 32 moments")
+        prev = -1
+        for moment in moments:
+            if not isinstance(moment, dict) or moment.get("kind") not in ("tool", "how", "geometry", "why"):
+                raise PackageError("Each walkthrough moment needs kind tool/how/geometry/why")
+            when = moment.get("at_ms")
+            if (isinstance(when, bool) or not isinstance(when, (int, float))
+                    or not math.isfinite(when) or not 0 <= when <= duration or when < prev):
+                raise PackageError("walkthrough moments must have ascending at_ms within step duration")
+            prev = when
+            for text_field in ("title", "description", "tool"):
+                label = moment.get(text_field, "")
+                if not isinstance(label, str) or len(label) > 1200:
+                    raise PackageError("walkthrough." + text_field + " must be short text")
+            start, end = moment.get("video_start_ms"), moment.get("video_end_ms")
+            for timestamp in (start, end):
+                if timestamp is not None and (isinstance(timestamp, bool)
+                        or not isinstance(timestamp, (int, float))
+                        or not math.isfinite(timestamp) or timestamp < 0):
+                    raise PackageError("Video cut timestamps must be finite nonnegative numbers")
+            if start is not None and end is not None and end <= start:
+                raise PackageError("Video clip end must follow clip start")
+            if moment.get("video_focus") is not None:
+                _check_video_focus(moment["video_focus"])
         _validate_step_sources(step)
         if step.get("pointer") is not None:
             try:
@@ -163,6 +196,18 @@ def _validate(data):
             if not 0 <= cue["at_ms"] <= duration:
                 raise PackageError("Cue exceeds step duration")
     return data
+
+
+def _check_video_focus(focus):
+    if not isinstance(focus, dict):
+        raise PackageError("video_focus must be an object")
+    for key in ("x", "y"):
+        n = focus.get(key, .5)
+        if isinstance(n, bool) or not isinstance(n, (int, float)) or not math.isfinite(n) or not 0 <= n <= 1:
+            raise PackageError("video_focus." + key + " must be 0 to 1")
+    z = focus.get("scale", 1)
+    if isinstance(z, bool) or not isinstance(z, (int, float)) or not math.isfinite(z) or not 1 <= z <= 4:
+        raise PackageError("video_focus.scale must be 1 to 4")
 
 
 class ExamplePackage:
@@ -224,6 +269,10 @@ class ExamplePackage:
             if media and step.get("media", {}).get("offset_ms"):
                 # One long think-aloud recording: this step is a time slice of it.
                 media["offset_ms"] = step["media"]["offset_ms"]
+            if media.get("video"):
+                for key in ("video_offset_ms", "video_duration_ms", "video_focus"):
+                    if key in step.get("media", {}):
+                        media[key] = step["media"][key]
             meta["media"] = media
             result["steps"].append(meta)
         return result
