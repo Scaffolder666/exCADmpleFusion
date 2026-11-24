@@ -1,0 +1,60 @@
+{
+  "format": "excadmple.native-ops.v1",
+  "title": "Phone Stand — Native Blender Modeling Walkthrough",
+  "description": "Demonstrate original Blender Edit Mode tools using independently executed native bpy.ops, then follow along in one real viewport.",
+  "unit": "Blender units",
+  "steps": [
+    {
+      "id": "back-extrude",
+      "title": "Raise the back support",
+      "operator": "mesh.extrude_region_move",
+      "tool": "Extrude Region",
+      "shortcut": "E",
+      "mode": "EDIT_MESH",
+      "select": "rear_top_face",
+      "args": {"distance": 2.4},
+      "duration": 12,
+      "why": "A taller rear support carries the phone while a wider base resists tipping.",
+      "why_source": "authored-example"
+    },
+    {
+      "id": "back-bevel",
+      "title": "Round the back support",
+      "operator": "mesh.bevel",
+      "tool": "Bevel Edges",
+      "shortcut": "Ctrl+B",
+      "mode": "EDIT_MESH",
+      "select": "highest_edges",
+      "args": {"offset": 0.08, "segments": 4},
+      "duration": 10,
+      "why": "A softened upper edge is easier to handle and reduces sharp corners.",
+      "why_source": "authored-example"
+    },
+    {
+      "id": "lip-inset",
+      "title": "Outline the retaining lip",
+      "operator": "mesh.inset",
+      "tool": "Inset Faces",
+      "shortcut": "I",
+      "mode": "EDIT_MESH",
+      "select": "front_top_face",
+      "args": {"thickness": 0.18},
+      "duration": 10,
+      "why": "The inset defines a smaller lip footprint, leaving room to place and remove the phone.",
+      "why_source": "authored-example"
+    },
+    {
+      "id": "lip-extrude",
+      "title": "Extrude the front lip",
+      "operator": "mesh.extrude_region_move",
+      "tool": "Extrude Region",
+      "shortcut": "E",
+      "mode": "EDIT_MESH",
+      "select": "front_top_face",
+      "args": {"distance": 0.38},
+      "duration": 11,
+      "why": "The front lip helps prevent sliding without covering much of the screen.",
+      "why_source": "authored-example"
+    }
+  ]
+}
