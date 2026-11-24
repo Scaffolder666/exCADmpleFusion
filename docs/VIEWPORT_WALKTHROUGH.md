@@ -13,10 +13,12 @@ branch was overwritten.
   Custom Graphics, while its `.f3d` parametric history stays in an
   independent, unsaved reference document;
 - native HiM sketch-line revelation and feature input/result highlights;
-- a **floating Fusion Palette ON TOP OF THE CAD VIEWPORT**, anchored near the
-  current reference feature. This contains an accurate Fusion tool icon
-  and spotlight, an optional *real recorded operation video* zoom/cut,
-  parameter chips and a sourced Why callout.
+- a **transparent Fusion Palette ON TOP OF THE CAD VIEWPORT**, anchored near
+  the current reference feature. This contains an authentic Fusion tool icon
+  and spotlight, optional *real recorded operation video* zoom/cut,
+  parameter chips and a sourced Why callout. Autodesk's
+  `Palettes.addTransparent` is used where supported; a normal floating
+  Palette is the fallback.
 
 The **right playback controller** only contains Play/Pause, Back/Forward,
 Replay, scrub, speed, and optional 3D Auto-frame. No tutorial text, video,
@@ -25,9 +27,11 @@ tool tutorial, or reasoning is visibly rendered there. The old docked
 
 **The floating teaching card is still an HTML Fusion Palette, not a
 second 3D viewport or a video replacing the entire Fusion workspace.**
-It can be dragged so it doesn't cover where you are modeling. Its own
-small rectangular area receives mouse clicks; the CAD viewport is fully
-interactive outside that rectangle.
+It is a small, draggable overlay: drag the card's top header to move it,
+and click **◎ Follow** to restore automatic feature anchoring. It receives
+mouse clicks only inside its own small rectangle; the rest of the CAD viewport
+remains fully interactive. When an original video cut is shown, the card
+grows; for an operation without footage, it shrinks to reduce occlusion.
 
 ## What clicking Play does
 
@@ -125,9 +129,11 @@ The script never overwrites the original .f3d or original tutorial JSON.
   current source model feature, tool icon, parameters, clip and source cue.
 - `core/tutorial/viewport_storyboard.py`: pure-python source-aware
   operation-stage scheduler. Handles several source features per step.
-- `core/playback/viewport_presenter.py`: creates one movable floating
-  Fusion Palette over the user's viewport and projects source Feature
-  bounding-box centers to screen coordinates for visual anchoring.
+- `core/playback/viewport_presenter.py`: creates one transparent
+  floating Palette over the user's viewport, changes its size when video is
+  visible and projects source Feature bounding-box centers to screen
+  coordinates for visual anchoring; manual dragging can temporarily override
+  automatic positioning.
 - `ui/viewport_walkthrough/`: the contextual visual spotlight, real
   video-cut playback and 3D reasoning callout, never rendered in the right
   player.
