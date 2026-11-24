@@ -41,6 +41,7 @@ from core.playback.him_reference import ReferenceSession
 from core.session_recorder import SessionRecorder
 from core.playback.tool_guide import ToolGuide
 from core.playback.virtual_expert import VirtualExpert
+from core.playback.expert_focus import screen_anchor as expert_screen_anchor
 from core.diagnostics import DiagnosticLog
 from core.authoring_fusion import Authoring, open_folder
 
@@ -451,7 +452,11 @@ class PaletteHandler(adsk.core.HTMLEventHandler):
                     elif step.get("animation"):
                         _renderer.render_animation(step, [0, 0, 0], value, _previous_geometry(index))
                     if _expert:
-                        _expert.frame(index, step, value)
+                        try:
+                            focus = expert_screen_anchor(_app, _session, index)
+                            _expert.frame(index, step, value, focus)
+                        except Exception as error:
+                            _note("virtual expert", "failed to publish frame: " + str(error))
                     # Show exactly the operation being animated; tutorial tool
                     # lists have no individual activation timestamps.
                     if value < 1.0 and ((shown and shown.get("mode") in ("parameter", "visual", "instant", "timeline"))
