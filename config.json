@@ -1,4 +1,4 @@
 {
   "layout": "reference",
-  "_comment": "reference = version A (History in Motion: a second Fusion instance plays the designer's model); overlay = version B (tutorial over the Fusion canvas)"
+  "_comment": "reference = one visible viewport: imported .f3d in an independent reference document rendered into the editable user's Fusion canvas; overlay = legacy layout"
 }
