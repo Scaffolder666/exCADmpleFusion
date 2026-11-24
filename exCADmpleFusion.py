@@ -551,6 +551,13 @@ class ViewportWalkthroughHandler(adsk.core.HTMLEventHandler):
                 _walkthrough.acknowledge_ready()
             elif args.action == "walk_error":
                 _note("viewport walkthrough", str(json.loads(args.data or "{}").get("message", ""))[:2000])
+            elif args.action == "try_tool":
+                label = str(json.loads(args.data or "{}").get("label", "")).strip()
+                if not _tools or not label:
+                    raise ValueError("The requested Fusion tool is unavailable")
+                _post("pause", {})
+                path = _tools.use(label)
+                _status("Started " + path + " in your design")
             args.returnData = json.dumps({"ok": True})
         except Exception:
             _log_error()
