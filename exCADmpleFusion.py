@@ -421,6 +421,11 @@ class PaletteHandler(adsk.core.HTMLEventHandler):
                     if not visible:
                         _walkthrough.hide()
                     else:
+                        if (_session and _session.user_document and
+                                _app.activeDocument != _session.user_document):
+                            _walkthrough.hide()
+                            args.returnData = json.dumps({"ok": True})
+                            return
                         index = body.get("index")
                         elapsed = body.get("elapsed")
                         playing = body.get("playing")
@@ -797,7 +802,8 @@ def run(_context):
             try:
                 _create_viewport_walkthrough()
             except Exception:
-                _log_error()          # original HiM playback must still work
+                _log_error()
+                _status("In-viewport walkthrough unavailable; check logs/latest.log", True)
         _add_button(COMMAND_ID, "exCADmple Tutorial", "Show the tutorial player", ShowPaletteExecute)
         if ROLE == REFERENCE:
             selection = ActiveGeometrySelection()
