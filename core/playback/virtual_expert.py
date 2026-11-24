@@ -86,7 +86,7 @@ class VirtualExpert:
         self.publish(0, False, force=True)
 
     def frame(self, index, step, progress):
-        if self.step is not step or self.index != index:
+        if self.index != index or self.step is None:
             self.set_step(index, step)
         self.publish(progress, playing=True)
 
