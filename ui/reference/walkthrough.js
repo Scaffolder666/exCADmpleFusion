@@ -29,8 +29,10 @@ window.OperationWalkthrough = (() => {
     };
   }
   function operationName(step) {
-    const f = (step.source_features || []).at(-1) || {};
-    return text(f.kind || (step.tools || []).at(-1) || "").toLowerCase();
+    const refs = step.source_features || [];
+    const f = refs.length ? refs[refs.length - 1] : {};
+    const tools = step.tools || [];
+    return text(f.kind || (tools.length ? tools[tools.length - 1] : "")).toLowerCase();
   }
   function howFor(step) {
     const kind = operationName(step);
@@ -98,14 +100,15 @@ window.OperationWalkthrough = (() => {
   function setVideoSource(item) {
     const resource = item && item.media && item.media.video;
     const src = resource || "";
-    if (src===currentVideo) return;
-    const v=video();
-    v.pause();
-    v.removeAttribute("src");
-    v.load();
-    currentVideo=src;
-    lastSeek=-Infinity;
-    if(src) { v.src=src; v.load(); }
+    if(src!==currentVideo) {
+      const v=video();
+      v.pause();
+      v.removeAttribute("src");
+      v.load();
+      currentVideo=src;
+      lastSeek=-Infinity;
+      if(src) { v.src=src; v.load(); }
+    }
     $("walkVideoWrap").hidden=!src;
     $("walkSound").hidden=!src;
     $("walkNoVideo").hidden=!!src;
@@ -146,6 +149,9 @@ window.OperationWalkthrough = (() => {
     currentStep=-1;selectedMoment=-1;lastVisualKey="";
     const v=video();
     if(v) {v.pause();currentVideo="";v.removeAttribute("src");v.load();}
+    $("walkVideoWrap").hidden=true;
+    $("walkSound").hidden=true;
+    $("walkNoVideo").hidden=false;
     $("walkthrough").hidden=true;
   }
   function sync({item,index,elapsed,playing,tools,rate}) {
