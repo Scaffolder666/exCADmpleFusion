@@ -40,11 +40,12 @@ from core.tutorial.extract_fusion import extract_with_dialog
 from core.playback.him_reference import ReferenceSession
 from core.session_recorder import SessionRecorder
 from core.playback.tool_guide import ToolGuide
+from core.playback.virtual_expert import VirtualExpert
 from core.diagnostics import DiagnosticLog
 from core.authoring_fusion import Authoring, open_folder
 
 # Shown in the panel at start so it is clear which code Fusion is running.
-BUILD = "authoring-tool 2026-11-10 · record, group, embed v1"
+BUILD = "virtual-expert 2026-11-23 · one viewport, read-only demonstrator"
 PALETTE_ID = "excadmple_fusion_player"
 TOOL_PALETTE_ID = "excadmple_tool_window"   # version A: "tool in use" window at the left
 COMMAND_ID = "excadmple_fusion_open"
@@ -85,6 +86,7 @@ _buttons = []
 _recorder = None
 _authoring = None            # the authoring tool (prepare a tutorial while modeling)
 _author_palette = None
+_expert = None             # read-only event bridge for click-through virtual teacher
 
 
 # --- helpers ---------------------------------------------------------------------------
@@ -229,6 +231,8 @@ def _set_step(index, preview=True, fill_tools=True):
         _post_links()
     _update_tools(index, fill=fill_tools)
     _post("step", {"index": index})
+    if _expert and ROLE == REFERENCE:
+        _expert.set_step(index, step)
 
 
 def _update_tools(index, fill=True):
@@ -441,6 +445,8 @@ class PaletteHandler(adsk.core.HTMLEventHandler):
                             raise RuntimeError(shown.get("fallback") or "Native frame failed")
                     elif step.get("animation"):
                         _renderer.render_animation(step, [0, 0, 0], value, _previous_geometry(index))
+                    if _expert:
+                        _expert.frame(index, step, value)
                     # Show exactly the operation being animated; tutorial tool
                     # lists have no individual activation timestamps.
                     if value < 1.0 and ((shown and shown.get("mode") in ("parameter", "visual", "instant", "timeline"))
@@ -450,6 +456,9 @@ class PaletteHandler(adsk.core.HTMLEventHandler):
                         _renderer.clear_command()
                     # The precise target arrow replaces the unrecorded ghost
                     # mouse path in reference playback.
+            elif command == "expert_pause":
+                if _expert:
+                    _expert.pause()
             elif command == "ref_auto_focus":
                 enabled = body.get("enabled")
                 if not isinstance(enabled, bool):
@@ -464,6 +473,8 @@ class PaletteHandler(adsk.core.HTMLEventHandler):
                     _session.show_overview()
                 _renderer.clear_command()
                 _renderer.clear_pointer()
+                if _expert:
+                    _expert.pause()
             elif command == "show_more":
                 if _session:
                     _filtering = True
@@ -768,11 +779,12 @@ class BeforeDeactivate(adsk.core.DocumentEventHandler):
 
 # --- add-in lifecycle ---------------------------------------------------------------------------
 def run(_context):
-    global _app, _ui, _renderer, _spatial, _recorder, _diag, _authoring
+    global _app, _ui, _renderer, _spatial, _recorder, _diag, _authoring, _expert
     try:
         _app = adsk.core.Application.get()
         _ui = _app.userInterface
         _diag = DiagnosticLog(ROOT / "logs", BUILD)
+        _expert = VirtualExpert()
         try:
             fusion_version = _app.version
         except Exception:
@@ -826,7 +838,7 @@ def run(_context):
 
 
 def stop(_context):
-    global _palette, _package, _session, _author_palette
+    global _palette, _package, _session, _author_palette, _expert
     try:
         if _recorder:
             _recorder.cancel()
@@ -835,6 +847,9 @@ def stop(_context):
         if _session:
             _session.close()
             _session = None
+        if _expert:
+            _expert.close()
+            _expert = None
         if _tools:
             _tools.close()
         if _renderer:
