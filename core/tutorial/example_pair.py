@@ -256,6 +256,16 @@ class LocalPairPackage(ExamplePackage):
                     media["offset_ms"] = int(item.get("audio_offset_ms", 0))
                 else:
                     raise PackageError("Audio file not found: " + filename)
+            video = item.get("video", self.raw.get("video"))
+            if video:
+                filename = _local_filename(video, "video")
+                if (self.asset_root / filename).is_file():
+                    media["video"] = filename
+                    for key in ("video_offset_ms", "video_duration_ms", "video_focus"):
+                        if key in item:
+                            media[key] = item[key]
+                else:
+                    raise PackageError("Video file not found: " + filename)
             recorded_parameters = [
                 dict({"feature_index": f.index}, **param)
                 for f in matched for param in parameters.get(f.index, [])[:8]
@@ -265,6 +275,8 @@ class LocalPairPackage(ExamplePackage):
                 "source_features": [{"index": f.index, "name": f.name, "kind": f.kind} for f in matched],
                 "tools": [KIND_LABELS.get(f.kind, f.kind.replace("Feature", "")) for f in matched],
                 "parameters": recorded_parameters,
+                "reasoning_source": item.get("reasoning_source", "user"),
+                "walkthrough": item.get("walkthrough", []),
                 "geometry": {"meshes": []}, "cues": clean_cues, "media": media,
             })
             persisted.append({
@@ -274,7 +286,13 @@ class LocalPairPackage(ExamplePackage):
                 "transcript": narration if isinstance(narration, str) else "",
                 "parameters": recorded_parameters,
                 "reasoning_source": item.get("reasoning_source", "user"),
+                "walkthrough": item.get("walkthrough", []),
             })
+            if video:
+                persisted[-1]["video"] = filename
+                for key in ("video_offset_ms", "video_duration_ms", "video_focus"):
+                    if key in item:
+                        persisted[-1][key] = item[key]
             # A generated file should have ONE editable transcript field.
             # Preserve explicit timed cues only when authored by the user.
             if not auto and item.get("cues") is not None:
