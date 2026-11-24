@@ -332,6 +332,25 @@ def _draw_2d():
             for i,line in enumerate(_wrap(step.get('why','No authored reasoning for this operation'),49,3)):
                 _font(left+13,bottom+63-i*17,line,11)
             _font(left+13,bottom+10,'Reason comes from tutorial author, not inferred from the model',9,(.66,.78,.83,1))
+        # The learner sees the intended click target. This guidance cursor
+        # is drawn in the viewport and never injects a mouse event or
+        # pretends to be a recording of the original designer's clicks.
+        phase_fraction=p['fraction']
+        sx,sy=(left+47,bottom+44)
+        if stage=='TOOL':
+            px,py=(sx,sy)
+        elif stage=='SELECT':
+            t=max(0,min(1,(phase_fraction-.16)/.16))
+            px=sx+(x0-sx)*t
+            py=sy+(y0-sy)*t
+        else:
+            px,py=(x0,y0)
+        _line([(px,py),(px+11,py-15),(px+13,py-8),
+               (px+21,py-8),(px,py)],(.97,.86,.52,1))
+        _font(px+16,py-25,'GUIDE',9,(.98,.82,.38,1))
+        if stage in ('SELECT','OPERATE'):
+            _line([(x0-10,y0),(x0+10,y0),(x0,y0-10),(x0,y0+10)],
+                  (.99,.74,.27,.86))
         _rect(12,region.height-51,222,35,(.06,.15,.19,.81))
         _font(22,region.height-34,'VIRTUAL EXPERT · REFERENCE',11,(.4,.94,.95,1))
         _font(22,region.height-47,'Your real Blender model stays editable',9)
