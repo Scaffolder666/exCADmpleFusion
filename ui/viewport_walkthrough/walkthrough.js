@@ -94,6 +94,28 @@
     } else if(!v.paused) v.pause();
     s.playing=!!frame.playing;
   }
+  // Drag a TRANSPARENT, Fusion-native callout near the reference geometry.
+  // Mouse movement within the small presentation card is never mirrored to
+  // CAD operators or to the user's true cursor.
+  const drag=$("dragHandle"); let dragging=null;
+  drag.addEventListener("pointerdown",e=>{
+    if(e.target.closest("button"))return;
+    dragging={x:e.screenX,y:e.screenY};
+    try{drag.setPointerCapture(e.pointerId);}catch(_){}
+  });
+  drag.addEventListener("pointermove",e=>{
+    if(!dragging) return;
+    const dx=e.screenX-dragging.x,dy=e.screenY-dragging.y;
+    if(Math.abs(dx)+Math.abs(dy)<3)return;
+    dragging={x:e.screenX,y:e.screenY};
+    try{window.adsk.fusionSendData("viewport_drag",JSON.stringify({
+      dx:Math.round(dx),dy:Math.round(dy)}));}catch(_){}
+  });
+  drag.addEventListener("pointerup",()=>{dragging=null;});
+  drag.addEventListener("pointercancel",()=>{dragging=null;});
+  $("followButton").addEventListener("click",()=>{
+    try{window.adsk.fusionSendData("viewport_follow","{}");}catch(_){}
+  });
   // Only an explicit learner click may start a real CAD command.
   $("tryTool").addEventListener("click",()=>{
     const label=$("tryTool").dataset.tool;
