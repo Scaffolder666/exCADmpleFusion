@@ -107,6 +107,7 @@ window.OperationWalkthrough = (() => {
     lastSeek=-Infinity;
     if(src) { v.src=src; v.load(); }
     $("walkVideoWrap").hidden=!src;
+    $("walkSound").hidden=!src;
     $("walkNoVideo").hidden=!!src;
   }
   function videoWindow(moment,item) {
