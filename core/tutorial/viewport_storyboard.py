@@ -103,26 +103,42 @@ def storyboard(step):
         if result:
             return sorted(result, key=lambda e: e["at_ms"])
     tools = [str(t) for t in step.get("tools", []) if t]
-    title = tools[-1] if tools else (_kind(step).replace("feature", "").title() or "CAD Tool")
-    stages = [
-        {"phase":"tool","at_ms":0,
-         "title":"Use " + title,
-         "hint":"Find the native Fusion tool used in this modeling step."},
-        {"phase":"how","at_ms":int(duration*.20),
-         "title":"Watch the operation",
-         "hint":_verb(step)},
-        {"phase":"geometry","at_ms":int(duration*.73),
-         "title":"Look at the affected geometry",
-         "hint":"Follow the blue input highlights and the evolving reference geometry in this viewport."},
-    ]
-    if step.get("cues") and step.get("reasoning_source") not in ("simulated","hypothetical"):
-        stages.append({"phase":"why","at_ms":int(duration*.87),
+    if not tools:
+        tools = [_kind(step).replace("feature", "").title() or "CAD Tool"]
+    # A single authored tutorial step can contain Sketch AND Extrude.
+    # Give EACH actual source feature its own tool/how/geometry substeps.
+    has_reason = (step.get("cues") and
+                  step.get("reasoning_source") not in ("simulated", "hypothetical"))
+    span = duration * (.87 if has_reason else 1.0)
+    phases = []
+    for i, tool in enumerate(tools):
+        start = span * i / len(tools)
+        width = span / len(tools)
+        tool_lower = tool.lower()
+        how = next((description for token, description in HOW.items()
+                    if token in tool_lower), _verb(step))
+        phases.extend([
+            {"phase":"tool", "at_ms":int(start), "title":"Use " + tool,
+             "hint":"Find the real Fusion " + tool + " command.",
+             "operation":tool},
+            {"phase":"how", "at_ms":int(start+width*.20),
+             "title":"Watch how to " + tool.lower(),
+             "hint":how, "operation":tool},
+            {"phase":"geometry", "at_ms":int(start+width*.78),
+             "title":"Follow the reference geometry",
+             "hint":"The source's inputs and current result are highlighted by native HiM graphics.",
+             "operation":tool},
+        ])
+    if has_reason:
+        phases.append({"phase":"why","at_ms":int(duration*.87),
                        "title":"Design reasoning",
-                       "hint":"Listen to the author's explanation at this decision."})
-    for stage in stages:
-        stage.update(source="reconstructed",video_start_ms=None,
-                     video_end_ms=None,video_focus=None,operation=title)
-    return stages
+                       "hint":"Listen to the source explanation at this design decision.",
+                       "operation":tools[-1]})
+    for stage in phases:
+        stage.update(source="reconstructed",
+                     video_start_ms=stage["at_ms"] if stage["phase"]=="how" else None,
+                     video_end_ms=None,video_focus=None)
+    return phases
 
 
 def frame(step, index, elapsed, playing, tool_descriptions=None):
@@ -136,7 +152,11 @@ def frame(step, index, elapsed, playing, tool_descriptions=None):
             chosen=i
     moment=scenes[chosen]
     tool_descriptions=tool_descriptions or []
-    actual=next((t for t in tool_descriptions if t.get("found")),None)
+    actual=next((t for t in tool_descriptions
+                 if str(t.get("label","")).casefold()==str(moment.get("operation","")).casefold()
+                 and t.get("found")),None)
+    if actual is None:
+        actual=next((t for t in tool_descriptions if t.get("found")),None)
     if actual is None and tool_descriptions:
         actual=tool_descriptions[0]
     actual=actual or {}
