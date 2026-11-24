@@ -1,0 +1,34 @@
+name: Blender viewport Extrude tutorial
+on:
+  push:
+    branches: [blender-viewport-extrude-walkthrough]
+  workflow_dispatch:
+jobs:
+  code-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile Blender add-on and pure core
+        run: python -m compileall -q blender_expert/viewport_tutorial
+      - name: Verify geometry manifold, continuous operation, history isolation
+        run: python -m unittest discover -s blender_expert/viewport_tutorial/tests -v
+      - name: Package a directly installable ZIP add-on
+        run: |
+          python - <<'PY'
+          from zipfile import ZipFile, ZIP_DEFLATED
+          from pathlib import Path
+          root=Path('blender_expert/viewport_tutorial')
+          with ZipFile('excadmple_blender_viewport_tutorial.zip','w',compression=ZIP_DEFLATED) as z:
+              for item in sorted(root.glob('*.py')):
+                  if item.name != 'blender_selftest.py':
+                      z.write(item,'viewport_tutorial/'+item.name)
+          print('Packaged',root)
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: excadmple-blender-viewport-tutorial
+          path: excadmple_blender_viewport_tutorial.zip
+          if-no-files-found: error
