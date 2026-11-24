@@ -11,9 +11,12 @@
        Video, tool spotlight, procedure and reasoning appear next to actual
        reference geometry. The learner's single CAD viewport stays editable. -->
   <main id="content" class="content" hidden>
-    <div class="top">
+    <div class="top" id="dragHandle" title="Drag to move the teaching callout over the CAD viewport">
       <div class="eyebrow"><span class="live-dot"></span> EXCADMPLE · IN-VIEWPORT</div>
-      <span id="stepCount" class="count">01</span>
+      <div class="top-controls">
+        <button id="followButton" type="button" title="Automatically place the walkthrough beside the current feature">◎ Follow</button>
+        <span id="stepCount" class="count">01</span>
+      </div>
     </div>
     <div class="op">
       <span id="phase" class="phase">TOOL</span>
