@@ -237,6 +237,9 @@ function speakCue(item, index) {
   stopSpeech();
   const cue = (item.cues || [])[index];
   if (!cue || !cue.label) return;
+  // If the real operation film carries its own speech, do not generate
+  // overlapping synthetic speech. A separate narration track still wins.
+  if (item.media && item.media.video && !item.media.audio) return;
   const utterance = new SpeechSynthesisUtterance(cue.label);
   utterance.rate = Math.max(0.5, Math.min(2, S.speed));
   const token = ++S.speechToken;
