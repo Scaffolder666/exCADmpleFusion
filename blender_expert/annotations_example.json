@@ -1,0 +1,21 @@
+{
+  "description": "Example authored rationale. These lines are demonstration text, NOT evidence of a real designer's decisions. Optionally attach existing WAV files with an 'audio' field per step.",
+  "steps": [
+    {
+      "index": 1,
+      "why": "The base footprint is wide enough to support the phone while minimizing material."
+    },
+    {
+      "index": 3,
+      "why": "The back support height is adjustable because the viewing position depends on the device."
+    },
+    {
+      "index": 5,
+      "why": "The lip needs to prevent sliding without covering the lower part of the screen."
+    },
+    {
+      "index": 10,
+      "why": "Bevel exposed edges to improve handling and reduce sharp contacts."
+    }
+  ]
+}
