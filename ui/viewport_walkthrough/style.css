@@ -23,6 +23,9 @@ html,body { padding:0; margin:0; background:#fff; color:var(--fg);
 .tool-copy { display:flex; flex:1; flex-direction:column; min-width:0; gap:2px; }
 .tool-copy strong { font-size:12px; }
 .tool-copy span { font-size:10px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+#tryTool { background:white; color:#8c5c11; border:1px solid #dca857;
+  border-radius:5px; padding:5px 9px; font-size:11px; font-weight:700; cursor:pointer; }
+#tryTool[hidden] { display:none!important; }
 .focus-ring { border:2px solid #dea24a; position:absolute; inset:-5px; border-radius:12px; opacity:0; pointer-events:none; }
 .focus.active .focus-ring { opacity:1; animation:pulse 1.2s ease-in-out infinite alternate; }
 @keyframes pulse {to{box-shadow:0 0 0 5px #dfa95420;}}
