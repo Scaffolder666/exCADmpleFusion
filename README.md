@@ -1,3 +1,21 @@
+## NEW — One-Viewport Blender Virtual Expert prototype
+
+**This branch contains a native Blender add-on** for watching a virtual expert
+build a complete phone stand while you independently model in the SAME
+3D Viewport. The expert model is nonselectable, the animated expert cursor
+does not grab your mouse, and reasoning/audio can be attached to key steps.
+
+**Start here:** [Install Blender add-on, build .blend example, and test](blender_expert/README.md).
+
+Main entry: [excadmple_blender.py](blender_expert/excadmple_blender.py).
+Generate an actual .blend lesson with [build_demo_blend.py](blender_expert/build_demo_blend.py).
+
+The expert's mouse and native-operation display are a **nonblocking visual
+reconstruction**, not a second Blender command context. The fallback
+for arbitrary .blend meshes is explicitly marked reconstructed.
+
+---
+
 # exCADmple — Autodesk Fusion add-in · version A (History in Motion style)
 
 **Supporting Design Reasoning Through Shared CAD Models** · project overview on [`main`](https://github.com/Scaffolder666/exCADmpleFusion)
