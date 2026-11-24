@@ -23,6 +23,7 @@ const S = { tools: null, plan: [], shown: null,
   stepPending: false, stepRequest: 0, overviewPending: false, overviewInFlight: false,
   waitingForNarration: false, speechPending: false, speechToken: 0,
   stepClock: 0,           // time spent in this step (geometry AND narration), 1x content time
+  viewportVisible: false, viewportLastAt: 0, viewportKey: "",
 };
 
 function bridge(action, payload = {}) {
@@ -140,6 +141,7 @@ function seekClip(fraction) {
   const time = fraction * total;
   const target = spans.find(span => time < span.start + span.length) || spans[spans.length - 1];
   S.playing = false;
+  S.viewportVisible = true;
   S.epoch++;
   S.pos = target.pos;
   setIndex(target.index, false);
@@ -221,6 +223,27 @@ function setIndex(i, preview = true) {
     if (S.playing || S.manualFrame || S.overviewPending) render();
   });
 }
+// The Play panel is a REMOTE CONTROL only. Instruction, original operation
+// video, spotlight and author reasoning are rendered by a floating Palette
+// over the ONE actual Fusion CAD viewport, never in this side panel.
+function syncViewport() {
+  if (!S.example) return;
+  const now = performance.now();
+  const visible = S.viewportVisible && S.index >= 0;
+  const key = visible
+    ? [S.index, S.playing, Math.floor(S.elapsed / 240), S.direction].join("|")
+    : "hidden";
+  if (key === S.viewportKey && now - S.viewportLastAt < 420) return;
+  S.viewportLastAt = now;
+  S.viewportKey = key;
+  bridge("viewport_sync",{
+    index:Math.max(0,S.index),
+    elapsed:Math.max(0,S.elapsed),
+    playing:!!S.playing && S.direction>0,
+    visible,
+    rate:S.speed,
+  });
+}
 function stopAudio() { audio.pause(); }
 function stopSpeech() {
   S.speechPending = false;
@@ -232,6 +255,9 @@ function speakCue(item, index) {
   stopSpeech();
   const cue = (item.cues || [])[index];
   if (!cue || !cue.label) return;
+  // When a real operation recording is provided it can carry the original
+  // designer's voice. Avoid simultaneous synthetic speech.
+  if(item.media && item.media.video) return;
   const utterance = new SpeechSynthesisUtterance(cue.label);
   utterance.rate = Math.max(0.5, Math.min(2, S.speed));
   const token = ++S.speechToken;
@@ -261,6 +287,7 @@ function resetNativeClock() {
 }
 function play(continuous = true) {
   if (!S.clip.length) return;
+  S.viewportVisible = true;
   if (S.direction > 0 && S.elapsed >= duration() && S.pos >= S.clip.length - 1) { replay(); return; }
   S.playing = true;
   S.waitingForNarration = false;
@@ -316,6 +343,7 @@ function backward() {
   play(false);
 }
 function selectStep(i, autoplay = false) {
+  S.viewportVisible = true;
   S.playing = false;
   S.manualFrame = false;
   S.waitingForNarration = false;
@@ -495,6 +523,7 @@ function railKey() {
 }
 function render(light = false) {
   if (!S.example) return;
+  syncViewport();
   const progress = Math.max(0, Math.min(1, S.elapsed / duration()));   // geometry: drives frames
   const shownProgress = stepProgress();                                 // the whole step: shown on the bar
   const timing = clipTiming();
@@ -599,6 +628,8 @@ function render(light = false) {
 /* ---------- messages from Fusion ---------- */
 function loadExample(data) {
   pause();
+  S.viewportVisible = false;
+  S.viewportKey = "";
   S.example = data;
   S.filtered = false; S.changed = []; S.more = []; S.picked = null;
   S.epoch++;
