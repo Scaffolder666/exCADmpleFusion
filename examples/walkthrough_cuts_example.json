@@ -1,0 +1,39 @@
+{
+  "description": "Example timestamps only. Replace these with timestamps from your own real Fusion recording.",
+  "cuts": [
+    {
+      "step_id": "base",
+      "video_offset_ms": 5200,
+      "video_end_ms": 14800,
+      "video_focus": {"x": 0.50, "y": 0.53, "scale": 1.30},
+      "walkthrough": [
+        {
+          "at_ms": 0,
+          "kind": "tool",
+          "title": "Start Sketch",
+          "description": "Find the native Sketch tool in Fusion.",
+          "video_start_ms": 0,
+          "video_end_ms": 1900,
+          "video_focus": {"x": 0.22, "y": 0.12, "scale": 1.8}
+        },
+        {
+          "at_ms": 2200,
+          "kind": "how",
+          "title": "Draw the base profile",
+          "description": "Watch the original user select points and close the outline.",
+          "video_start_ms": 1900,
+          "video_end_ms": 5900,
+          "video_focus": {"x": 0.52, "y": 0.56, "scale": 1.45}
+        },
+        {
+          "at_ms": 6300,
+          "kind": "geometry",
+          "title": "Inspect the base extrusion",
+          "description": "Compare the selected profile and generated base in the same CAD workspace.",
+          "video_start_ms": 5900,
+          "video_end_ms": 9000
+        }
+      ]
+    }
+  ]
+}
