@@ -83,7 +83,7 @@
       // The original audio/narration remains in the right player. Muted film
       // avoids two overlapping spoken tracks. A later authoring switch can
       // designate the video as sole audio if desired.
-      v.muted=true;
+      v.muted=!!frame.has_narration_audio;
       if(frame.playing && local<end-start-.08) {
         if(v.paused) v.play().catch(()=>{});
       } else if(!v.paused) v.pause();
