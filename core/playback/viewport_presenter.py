@@ -40,7 +40,10 @@ class ViewportPresentation:
             self.PALETTE_ID, "exCADmple · In-viewport demonstration",
             self.url, True, True, True, 390, 355)
         self.palette.dockingState = adsk.core.PaletteDockingStates.PaletteDockStateFloating
-        self.palette.setPosition(520, 190)
+        try:
+            self.palette.setPosition(520, 190)
+        except Exception as error:
+            self.log("Viewport walkthrough initial position: " + str(error))
         self.palette.isVisible = False
         self.ready = False
 
@@ -75,11 +78,9 @@ class ViewportPresentation:
             # and is movable by the designer if a feature can't be projected.
             x, y = (500, 175)
         target = (x, y)
-        should_move = (
-            self.last_position is None or
-            index != self.last_index or phase != self.last_phase or
-            (self.last_position and
-             abs(x-self.last_position[0])+abs(y-self.last_position[1]) > 110))
+        # Let the learner orbit/zoom without a teaching card chasing their camera.
+        should_move = (self.last_position is None or
+                       index != self.last_index or phase != self.last_phase)
         if should_move and self.palette and self.palette.isValid:
             try:
                 self.palette.setPosition(*target)
