@@ -587,6 +587,9 @@ function render(light = false) {
     $("play").setAttribute("aria-label", S.playing ? "Pause" : "Play");
   }
   $("clock").textContent = secs(timing.elapsed) + " / " + secs(timing.total);
+  $("stepIndicator").textContent = S.index >= 0
+    ? "Step " + (S.index+1) + " / " + steps().length + " · teaching is in the CAD viewport"
+    : "Choose a tutorial and press Play";
   const mode = $("mode");
   mode.classList.toggle("filtered", S.filtered);
   mode.hidden = !S.filtered;
