@@ -108,10 +108,10 @@ class PlaybackTests(unittest.TestCase):
         # never a second tutorial. Every operator must be a transport
         # control; every property must be speed or seek.
         import re
-        operator_ids=re.findall(r'\\.operator\\("([^"]+)"',panel)
+        operator_ids=re.findall(r'\.operator\("([^"]+)"',panel)
         self.assertTrue(operator_ids)
         self.assertEqual(set(operator_ids),{"view3d.excad_viewport_playback"})
-        prop_ids=re.findall(r'\\.prop\\(context\\.window_manager,"([^"]+)"',panel)
+        prop_ids=re.findall(r'\.prop\(context\.window_manager,"([^"]+)"',panel)
         self.assertEqual(set(prop_ids),{"excad_viewport_time","excad_viewport_speed"})
         self.assertNotIn("l.label(",panel)
         self.assertNotIn("row.label(",panel)
