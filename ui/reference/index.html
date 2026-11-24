@@ -9,13 +9,13 @@
   <script>document.write('<link rel="stylesheet" href="style.css' + location.search + '">');</script>
 </head>
 <body>
-  <!-- Version A control panel. It runs in the second (reference) Fusion
-       instance; that instance's canvas is the interactive reference viewport. -->
+  <!-- Playback CONTROLS ONLY. All step teaching is over the actual ONE
+       Fusion viewport, never in this panel. -->
   <header class="bar">
-    <div class="brand"><strong>exCADmple</strong><span>Design tutorial</span></div>
+    <div class="brand"><strong>exCADmple</strong><span>Playback</span></div>
     <button id="import" class="quiet" type="button" title="Open a .excadmple or .json tutorial">+ Import</button>
   </header>
-  <h1 id="title" class="title">—</h1>
+  <h1 id="title" class="title" hidden>—</h1>
 
   <div class="transport" role="group" aria-label="Playback">
     <button id="back" title="Step backward (plays the step in reverse)" aria-label="Step backward"><span class="control-icon previous" aria-hidden="true"></span></button>
@@ -35,12 +35,13 @@
     <button id="showMore" class="link" type="button" hidden>Show more</button>
     <button id="showAll" class="link" type="button" hidden>Show all steps</button>
   </div>
-  <ol id="rail" class="rail" aria-label="Design steps"></ol>
+  <div class="controller-status" id="stepIndicator">Step — / —</div>
+  <ol id="rail" class="rail" aria-label="Design steps" hidden></ol>
 
   <footer class="foot">
     <label>Speed <input id="speed" type="range" min="0.5" max="2" step="0.25" value="1"> <output id="speedValue">1×</output></label>
     <div class="options">
-      <label title="Automatically frame the relevant geometry when an operation starts"><input id="autoFocus" type="checkbox"> Auto-focus</label>
+      <label title="Optional: move the camera to the relevant reference geometry. Unchecked keeps your own modeling camera fixed."><input id="autoFocus" type="checkbox"> Auto-frame 3D</label>
     </div>
     <div class="authoring">
       <button id="demo" class="link" type="button">Try example</button>
