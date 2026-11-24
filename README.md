@@ -1,3 +1,22 @@
+## NEW — One-Viewport Virtual Expert prototype (macOS / Fusion)
+
+**This branch implements the research interaction prototype:** one visible
+Fusion Viewport, a read-only reference .f3d, your independently editable model,
+and an on-screen virtual expert cursor with synchronized tool/parameter
+demonstrations, reasoning callouts, audio and tutorial controls.
+
+**Start here:** [One Viewport setup](native_ui_replay/ONE_VIEWPORT_SETUP.md).
+
+The independent, experimental **real OS mouse** replay is also retained at
+[native UI experiment](native_ui_replay/README.md), but it cannot be used while
+the learner is operating Fusion because it takes the real cursor.
+
+The virtual expert overlay **does not activate a second native command dialog**.
+It preserves your real Fusion interaction while reconstructing a plausible
+teacher operation presentation from the reference's feature history.
+
+---
+
 # exCADmple — Autodesk Fusion add-in · version A (History in Motion style)
 
 **Supporting Design Reasoning Through Shared CAD Models** · project overview on [`main`](https://github.com/Scaffolder666/exCADmpleFusion)
