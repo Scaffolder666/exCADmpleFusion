@@ -12,7 +12,7 @@
   <!-- One visible Fusion viewport: the user's editable design and an independent,
        read-only Reference Model. The right-hand panel controls the walkthrough. -->
   <header class="bar">
-    <div class="brand"><strong>exCADmple</strong><span>Design tutorial</span></div>
+    <div class="brand"><strong>exCADmple</strong><span>Operation walkthrough + HiM</span></div>
     <button id="import" class="quiet" type="button" title="Open a .excadmple or .json tutorial">+ Import</button>
   </header>
   <h1 id="title" class="title">—</h1>
@@ -56,7 +56,7 @@
         <video id="walkVideo" playsinline muted preload="metadata" aria-label="Real CAD operation recording"></video>
       </div>
     </div>
-    <div class="walk-video-meta"><p id="walkVideoNote" class="walk-video-note"></p><button id="walkSound" type="button" title="Toggle sound from the original operation recording">Sound off</button></div>
+    <div class="walk-video-meta"><p id="walkVideoNote" class="walk-video-note"></p><button id="walkSound" type="button" title="Toggle sound from the original operation recording" hidden>Sound off</button></div>
     <p id="walkNoVideo" class="walk-video-placeholder">No original operation recording included.</p>
     <div id="walkMoments" class="walk-moments" aria-label="Operation moments"></div>
     <div class="walk-transport">
@@ -70,7 +70,7 @@
   <footer class="foot">
     <label>Speed <input id="speed" type="range" min="0.5" max="2" step="0.25" value="1"> <output id="speedValue">1×</output></label>
     <div class="options">
-      <label title="Automatically frame the relevant geometry when an operation starts"><input id="autoFocus" type="checkbox"> Auto-focus</label>
+      <label title="Optional: move the Fusion camera to frame the relevant reference geometry; leave unchecked to keep your modeling camera fixed"><input id="autoFocus" type="checkbox"> Auto-frame 3D</label>
     </div>
     <div class="authoring">
       <button id="demo" class="link" type="button">Try example</button>
