@@ -623,8 +623,8 @@ def _create_palette():
         _palette.deleteMe()          # the layout may have changed
     if ROLE == REFERENCE:
         # Version A: HiM control panel beside the reference instance's canvas.
-        _palette = _ui.palettes.add2(PALETTE_ID, "exCADmple ", _panel_url("reference"),
-                                     True, True, True, 340, 740)
+        _palette = _ui.palettes.add2(PALETTE_ID, "exCADmple · Playback", _panel_url("reference"),
+                                     True, True, True, 310, 330)
         _palette.dockingState = adsk.core.PaletteDockingStates.PaletteDockStateRight
     else:
         # Version B: a compact tutorial floating over the Fusion canvas.
