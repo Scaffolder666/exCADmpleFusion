@@ -1,12 +1,18 @@
 :root { color-scheme:light; --fg:#1b2936; --muted:#607284; --accent:#ca842e; --teal:#188c90; }
 * { box-sizing:border-box; }
-html,body { padding:0; margin:0; background:#fff; color:var(--fg);
+html,body { padding:0; margin:0; background:transparent; color:var(--fg);
   font:13px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Arial,sans-serif;
   height:100%; overflow:hidden; }
-.content { padding:12px 14px 10px; height:100%; display:flex; flex-direction:column; gap:7px; }
+.content { padding:12px 14px 10px; height:100%; display:flex; flex-direction:column; gap:7px;
+  background:rgba(255,255,255,.97); border:1px solid #d8e0e8; border-radius:12px;
+  box-shadow:0 7px 25px rgba(21,39,60,.16); }
 .content[hidden],.video-shell[hidden],.geometry-mark[hidden],.parameters[hidden],.reason[hidden]{display:none!important;}
 .top,.op,.focus,.foot { display:flex; align-items:center; gap:8px; }
-.top { justify-content:space-between; }
+.top { justify-content:space-between; cursor:move; user-select:none; touch-action:none; }
+.top-controls { display:flex; gap:8px; align-items:center; }
+#followButton { font-size:10px; padding:2px 6px; background:#eff6f7; color:#35636d;
+  border:1px solid #cce3e6; border-radius:5px; cursor:pointer; }
+
 .eyebrow { color:#697e92; font-size:10px; letter-spacing:.7px; font-weight:800; }
 .live-dot { display:inline-block; width:6px; height:6px; border-radius:50%; background:#37a3a6; vertical-align:middle; }
 .count { font-size:10px; color:#778a98; font-variant-numeric:tabular-nums; }
