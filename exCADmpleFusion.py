@@ -40,10 +40,12 @@ from core.tutorial.extract_fusion import extract_with_dialog
 from core.playback.him_reference import ReferenceSession
 from core.session_recorder import SessionRecorder
 from core.playback.tool_guide import ToolGuide
+from core.playback.viewport_presenter import ViewportPresentation
+from core.tutorial.viewport_storyboard import frame as viewport_storyboard_frame
 from core.diagnostics import DiagnosticLog
 
 # Shown in the panel at start so it is clear which code Fusion is running.
-BUILD = "same-viewport 2026-11-10 · cleanup + step cache v16"
+BUILD = "viewport-walkthrough 2026-11-23 · HiM + in-canvas how-to"
 PALETTE_ID = "excadmple_fusion_player"
 TOOL_PALETTE_ID = "excadmple_tool_window"   # version A: "tool in use" window at the left
 COMMAND_ID = "excadmple_fusion_open"
@@ -67,6 +69,8 @@ _ui = None
 _palette = None
 _tool_palette = None
 _tool_payload = {"step": "", "tools": []}
+_walkthrough = None               # FLOATING over the existing 3D viewport
+_walk_steps = []                  # cached lightweight player metadata (no meshes)
 _renderer = None
 _spatial = None
 _package = None
@@ -270,7 +274,9 @@ def _open_reference_session():
 def _load(filename):
     """Open a tutorial (replacing the current one)."""
     _note("tutorial", "open " + str(filename))
-    global _package
+    global _package, _walk_steps
+    if _walkthrough:
+        _walkthrough.hide()
     package = open_package(filename)
     if getattr(package, "needs_populate", False):
         if ROLE != REFERENCE or not _session:
@@ -291,6 +297,7 @@ def _load(filename):
         old, _package = _package, package
         if old:
             old.close()
+        _walk_steps = data["steps"]
         _post("example", data)
         _post_source()
         _set_step(0, fill_tools=False)     # the tool panel starts empty
@@ -310,6 +317,7 @@ def _load(filename):
     old, _package = _package, package
     if old:
         old.close()
+    _walk_steps = data["steps"]
     _post("example", data)
     _open_reference_session()
     _set_step(0, fill_tools=False)         # the tool panel starts empty
@@ -403,6 +411,32 @@ class PaletteHandler(adsk.core.HTMLEventHandler):
                 if _package and _package.step(_step_index)["id"] == body.get("step_id"):
                     _renderer.finish_animation()
                     _renderer.clear_pointer()
+            elif command == "viewport_sync":
+                # This controls only a floating presentation layer *inside*
+                # the existing Fusion viewport; no native modeling commands.
+                if _walkthrough:
+                    visible = body.get("visible")
+                    if not isinstance(visible, bool):
+                        raise ValueError("Viewport visible must be a boolean")
+                    if not visible:
+                        _walkthrough.hide()
+                    else:
+                        index = body.get("index")
+                        elapsed = body.get("elapsed")
+                        playing = body.get("playing")
+                        rate = body.get("rate", 1)
+                        if (isinstance(index, bool) or not isinstance(index, int)
+                                or not 0 <= index < len(_walk_steps)
+                                or isinstance(elapsed, bool) or not isinstance(elapsed, (int, float))
+                                or not isinstance(playing, bool)
+                                or isinstance(rate, bool) or not isinstance(rate, (int, float))):
+                            raise ValueError("Invalid viewport walkthrough sync")
+                        scene = viewport_storyboard_frame(
+                            _walk_steps[index], index, elapsed, playing,
+                            _tool_payload.get("tools") if _tool_payload else None)
+                        scene["rate"] = max(.5, min(2, float(rate)))
+                        scene["visible"] = True
+                        _walkthrough.present(scene, _session)
             elif command == "ref_frame":
                 # Version A: one HiM frame on the designer's model. The panel
                 # asks for the next frame only when this one is computed.
@@ -507,6 +541,21 @@ class PaletteHandler(adsk.core.HTMLEventHandler):
             _log_error()
 
 
+class ViewportWalkthroughHandler(adsk.core.HTMLEventHandler):
+    """Handshake from the small presentation floating ON the CAD viewport."""
+    def notify(self, args):
+        try:
+            if args.action == "response":
+                return
+            if args.action == "ready" and _walkthrough:
+                _walkthrough.acknowledge_ready()
+            elif args.action == "walk_error":
+                _note("viewport walkthrough", str(json.loads(args.data or "{}").get("message", ""))[:2000])
+            args.returnData = json.dumps({"ok": True})
+        except Exception:
+            _log_error()
+
+
 class RecordExecute(adsk.core.CommandEventHandler):
     """Authoring: log tools, features and selections while the designer
     records a tutorial (start it together with the screen recording)."""
@@ -592,6 +641,16 @@ def _create_palette():
     _palette.isVisible = True
 
 
+def _create_viewport_walkthrough():
+    """Educational content lives OVER THE 3D VIEWPORT, never in Play panel."""
+    global _walkthrough
+    _walkthrough = ViewportPresentation(_app, _ui, _panel_url("viewport_walkthrough"), _session_log)
+    _walkthrough.open()
+    handler = ViewportWalkthroughHandler()
+    _walkthrough.palette.incomingFromHTML.add(handler)
+    _handlers.append(handler)
+
+
 class ToolPaletteHandler(adsk.core.HTMLEventHandler):
     """The left "tool in use" window: shows the step's tool, starts it."""
 
@@ -641,6 +700,8 @@ class BeforeSave(adsk.core.DocumentEventHandler):
     def notify(self, args):
         global _saving_document
         try:
+            if _walkthrough:
+                _walkthrough.hide()     # no teaching overlay while saving
             if _session:
                 _session.stop()           # never save an animated parameter
                 _session.hide()           # no reference graphics in the user's saved design
@@ -675,6 +736,8 @@ class AfterSave(adsk.core.DocumentEventHandler):
 class BeforeDeactivate(adsk.core.DocumentEventHandler):
     def notify(self, args):
         try:
+            if _walkthrough:
+                _walkthrough.hide()
             if _session and _session.live:
                 _session.stop()
             if _spatial:
@@ -688,7 +751,7 @@ class BeforeDeactivate(adsk.core.DocumentEventHandler):
 
 # --- add-in lifecycle ---------------------------------------------------------------------------
 def run(_context):
-    global _app, _ui, _renderer, _spatial, _recorder, _diag
+    global _app, _ui, _renderer, _spatial, _recorder, _diag, _walkthrough
     try:
         _app = adsk.core.Application.get()
         _ui = _app.userInterface
@@ -722,10 +785,12 @@ def run(_context):
 
         _create_palette()
         if ROLE == REFERENCE:
+            # The old docked "tool in use" window is deliberately removed:
+            # ALL instruction, video and reasoning lives in the 3D viewport.
             try:
-                _create_tool_palette()
+                _create_viewport_walkthrough()
             except Exception:
-                _log_error()          # the tool window is an aid; never block the tutorial
+                _log_error()          # original HiM playback must still work
         _add_button(COMMAND_ID, "exCADmple Tutorial", "Show the tutorial player", ShowPaletteExecute)
         if ROLE == REFERENCE:
             selection = ActiveGeometrySelection()
@@ -740,10 +805,13 @@ def run(_context):
 
 
 def stop(_context):
-    global _palette, _package, _session
+    global _palette, _package, _session, _walkthrough
     try:
         if _recorder:
             _recorder.cancel()
+        if _walkthrough:
+            _walkthrough.close()
+            _walkthrough = None
         if _session:
             _session.close()
             _session = None
