@@ -430,7 +430,12 @@ class PaletteHandler(adsk.core.HTMLEventHandler):
                     if _session and _session.live:
                         if isinstance(body.get("auto_focus"), bool):
                             _session.set_auto_focus(body["auto_focus"])
-                        shown = _session.frame(index, value, settle=body.get("settle") is True)
+                        # Virtual expert mode: the reference changes at the
+                        # command's CONFIRM phase, rather than replaying the
+                        # HiM feature's continuous geometry growth. The real
+                        # model and feature history are still used.
+                        display_value = (.001 if value < .75 else .999) if _expert else value
+                        shown = _session.frame(index, display_value, settle=True)
                         if shown and shown != _last_shown:
                             _last_shown = shown
                             _post("animation", shown)
