@@ -118,7 +118,12 @@ def _clean_reference(scene):
 def _position(obj, step):
     dims = step.get("dims", [2,2,2])
     pos = step.get("pos", [0,0,0])
-    obj.scale = [max(.001, float(x)/2.0) for x in dims]
+    if obj.get("excadmple_raw_mesh"):
+        # Selected .blend object meshes carry their own topology, dimensions,
+        # rotation and scale baked into the copied vertices.
+        obj.scale = (1, 1, 1)
+    else:
+        obj.scale = [max(.001, float(x)/2.0) for x in dims]
     # Master is offset to the right of the learner, in the SAME viewport.
     obj.location = [float(pos[0]) + 7.5, float(pos[1]), float(pos[2])]
     obj.hide_set(False)
@@ -203,7 +208,14 @@ def build_from_selected(scene, selected):
     selected = [o for o in selected if o.type == "MESH" and not o.name.startswith(EXPERT_PREFIX)]
     if not selected:
         raise ValueError("Select one or more existing mesh objects first.")
-    snapshot = [(o.name, *_read_expert_object_geometry(o), o.data.copy()) for o in selected]
+    snapshot = []
+    for o in selected:
+        pos, dims = _read_expert_object_geometry(o)
+        mesh = o.data.copy()
+        # Bake the original object's rotation/scale into its read-only copy;
+        # keep its world translation separate for the teacher placement.
+        mesh.transform(o.matrix_world.to_3x3().to_4x4())
+        snapshot.append((o.name, pos, dims, mesh))
     _clean_reference(scene)
     coll = _collection(scene)
     steps = []
@@ -213,6 +225,7 @@ def build_from_selected(scene, selected):
         coll.objects.link(ob)
         ob.hide_set(True)
         ob.hide_select = True
+        ob["excadmple_raw_mesh"] = True
         ob.color = (.21,.69,.74,1)
         steps.append(dict(title="Place " + name, tool="Object / Add Mesh",
                           obj=key, action="add", dims=dims, pos=[0,0,0],
