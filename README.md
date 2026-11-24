@@ -1,3 +1,33 @@
+# exCADmple — In-Viewport Operation Walkthrough for Fusion HiM
+
+**New experimental implementation, branched directly from the original `fusion-him`.**
+
+The **right-hand panel is playback controls only**. Every tutorial moment
+appears **over the single existing Fusion CAD viewport**: source geometry,
+Sketch/Feature operation animation, a draggable video spotlight for recorded
+CAD UI actions, active-tool icon, parameter context and author-sourced
+reasoning. The user's Fusion Design stays editable and the reference stays
+out of the user's Timeline.
+
+**[Open the new setup and exact interaction specification](docs/VIEWPORT_WALKTHROUGH.md).**
+
+- You can test the new viewport placement immediately with the bundled
+  illustrative example (without original mouse footage).
+- To see genuine *how to draw / select / drag / set parameters*, attach a
+  recording using `tools/walkthrough/attach_clips.py`. The video is displayed
+  ON the CAD viewport next to the corresponding reference geometry.
+- When a real tool is identified, click **Try** on the floating tool
+  highlight to pause the demonstration and start that native Fusion command
+  in your own design.
+- The original `fusion-him` branch was NOT changed; the previous rejected
+  right-panel walkthrough implementation is NOT used in this branch.
+
+**Prototype status:** committed and JavaScript syntax checked. Real Fusion
+Desktop playback and GUI placement are not yet verified. See
+[acceptance tests and precise known limitations](docs/VIEWPORT_WALKTHROUGH.md).
+
+---
+
 # exCADmple — Autodesk Fusion add-in · version A (History in Motion style)
 
 **Supporting Design Reasoning Through Shared CAD Models** · project overview on [`main`](https://github.com/Scaffolder666/exCADmpleFusion)
