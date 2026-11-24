@@ -13,12 +13,18 @@ STATE_DIR = Path.home() / "Library" / "Application Support" / "exCADmple"
 STATE_FILE = STATE_DIR / "expert_state.json"
 
 
-def _reason(step):
-    for cue in step.get("cues") or []:
-        msg = str(cue.get("label", "")).strip()
-        if msg:
-            return msg[:230]
-    return ""
+def _reason(step, progress):
+    if step.get("reasoning_source") in ("simulated", "hypothetical"):
+        return ""  # Never present a generated hypothesis as the author's intent.
+    elapsed = max(0, float(progress)) * float(step.get("duration_ms") or 8000)
+    candidates = [
+        c for c in step.get("cues") or []
+        if float(c.get("at_ms", 0)) <= elapsed
+        and str(c.get("label", "")).strip()
+    ]
+    if not candidates:
+        return ""
+    return str(candidates[-1].get("label", "")).strip()[:230]
 
 
 def _parameters(step):
@@ -50,6 +56,7 @@ class VirtualExpert:
         self.index = 0
         self.last = 0
         self.enabled = True
+        self.current_progress = 0
 
     def publish(self, progress=0, playing=False, force=False):
         if not self.enabled or self.step is None:
@@ -58,6 +65,7 @@ class VirtualExpert:
         if not force and now - self.last < .07:
             return
         self.last = now
+        self.current_progress = max(0, min(1, float(progress)))
         step = self.step
         tools = [str(t) for t in step.get("tools", []) if t]
         obj = {
@@ -70,7 +78,7 @@ class VirtualExpert:
             "tool": tools[0] if tools else "CAD operation",
             "tools": tools,
             "parameters": _parameters(step),
-            "reason": _reason(step),
+            "reason": _reason(step, progress),
             "phase": semantic_phase(progress),
             "progress": max(0, min(1, float(progress))),
             "model": str(step.get("id", "")),
@@ -83,6 +91,7 @@ class VirtualExpert:
     def set_step(self, index, step):
         self.index = int(index)
         self.step = step
+        self.current_progress = 0
         self.publish(0, False, force=True)
 
     def frame(self, index, step, progress):
@@ -91,7 +100,7 @@ class VirtualExpert:
         self.publish(progress, playing=True)
 
     def pause(self):
-        self.publish(0, playing=False, force=True)
+        self.publish(self.current_progress, playing=False, force=True)
 
     def close(self):
         self.step = None
