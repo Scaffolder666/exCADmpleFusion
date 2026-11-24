@@ -1,4 +1,22 @@
-# exCADmple — Autodesk Fusion add-in · version A (History in Motion style)
+# exCADmple — Fusion HiM with operation walkthrough
+
+**New in this branch:** HiM now supports a step-by-step **Operation Walkthrough**
+to accompany the existing reference geometry animation in the **same Fusion
+viewport**. During Play, the right-hand player can show Tool → How (optional
+actual author-recorded video cut) → Geometry → Why, plus targeted video zoom,
+action seeking, and an explicit **Try in my design** button for native Fusion
+tools. Your model remains editable, and its Timeline only contains your work.
+
+**[Instructions: Operation Walkthrough and recording cuts](docs/OPERATION_WALKTHROUGH.md).**
+
+Try it with the existing phone-stand example right away. No recording is
+shipped: without genuine footage the How phase explicitly says it is a
+reconstruction. To add genuine operation footage from one long recording,
+use [the non-destructive timestamp attachment script](tools/walkthrough/attach_clips.py).
+
+---
+
+# Original exCADmple — Autodesk Fusion add-in · version A (History in Motion style)
 
 **Supporting Design Reasoning Through Shared CAD Models** · project overview on [`main`](https://github.com/Scaffolder666/exCADmpleFusion)
 
