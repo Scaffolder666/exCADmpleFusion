@@ -496,6 +496,13 @@ function railKey() {
 function render(light = false) {
   if (!S.example) return;
   const progress = Math.max(0, Math.min(1, S.elapsed / duration()));   // geometry: drives frames
+  // An independent walkthrough overlays WHAT tool, HOW it was used (clip),
+  // WHERE the referenced feature lives, and WHY if sourced. It only reads
+  // player state: never activates a command or changes learner geometry.
+  window.OperationWalkthrough.sync({
+    item:step(), index:S.index, elapsed:S.elapsed,
+    playing:S.playing, tools:S.tools, rate:S.speed,
+  });
   const shownProgress = stepProgress();                                 // the whole step: shown on the bar
   const timing = clipTiming();
   const overall = timing.total ? timing.elapsed / timing.total : 0;
@@ -599,6 +606,7 @@ function render(light = false) {
 /* ---------- messages from Fusion ---------- */
 function loadExample(data) {
   pause();
+  window.OperationWalkthrough.reset();
   S.example = data;
   S.filtered = false; S.changed = []; S.more = []; S.picked = null;
   S.epoch++;
@@ -660,6 +668,28 @@ window.fusionJavaScriptHandler = {
 };
 
 /* ---------- controls ---------- */
+// Within a CAD step the user can jump to a specific HOW moment, replay it,
+ // or start the actual Fusion tool on THEIR OWN model. Reference stays read-only.
+window.OperationWalkthrough.init({
+  getItem:()=>step(),
+  getTools:()=>S.tools,
+  getElapsed:()=>S.elapsed,
+  seek:(time)=>{
+    if(!step()) return;
+    if(S.playing) pause();
+    S.epoch++; S.elapsed=Math.max(0,Math.min(duration(),Number(time)||0));
+    S.stepClock=S.elapsed; S.fresh=false; S.manualFrame=true;
+    S.frameClock=null; S.nextFrameAt=0; S.waitingForNarration=false;
+    stopAudio(); stopSpeech(); render();
+  },
+  useTool:(label)=>{
+    if(S.playing) pause();
+    // Existing ToolGuide executes the real native tool only when the learner
+    // explicitly requests "Try in my design". NEVER during automatic play.
+    bridge("use_tool",{label});
+  },
+  togglePause:()=>S.playing?pause():play(true),
+});
 $("scrub").addEventListener("input", (event) => {
   if (!S.example || !S.clip.length) return;
   seekClip(Number(event.currentTarget.value) / 100);
