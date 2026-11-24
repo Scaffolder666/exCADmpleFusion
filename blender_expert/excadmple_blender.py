@@ -392,12 +392,27 @@ def _tick():
     return .06
 
 
+def _frame_shared_workspace(context):
+    # One viewport: center the camera on BOTH the learner (origin) and
+    # the read-only expert (x +7.5) when a lesson is first created.
+    try:
+        for area in context.window.screen.areas:
+            if area.type == "VIEW_3D":
+                view = area.spaces.active.region_3d
+                view.view_location = (3.7, 0, 1.5)
+                view.view_distance = 17.0
+                area.tag_redraw()
+    except Exception:
+        pass
+
+
 class EXCAD_OT_generate(bpy.types.Operator):
     bl_idname="excadmple.generate"
     bl_label="Build .blend phone stand example"
     bl_description="Create a 12-step embedded reference tutorial without clearing your design"
     def execute(self,context):
         build_example(context.scene)
+        _frame_shared_workspace(context)
         return {"FINISHED"}
 
 
@@ -406,7 +421,9 @@ class EXCAD_OT_from_selected(bpy.types.Operator):
     bl_label="Reconstruct from selected objects"
     bl_description="Create a plausible tutorial from objects already in this .blend"
     def execute(self,context):
-        try: build_from_selected(context.scene,list(context.selected_objects))
+        try:
+            build_from_selected(context.scene,list(context.selected_objects))
+            _frame_shared_workspace(context)
         except Exception as exc:
             self.report({"ERROR"},str(exc))
             return {"CANCELLED"}
