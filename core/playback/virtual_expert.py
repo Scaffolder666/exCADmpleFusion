@@ -57,6 +57,7 @@ class VirtualExpert:
         self.last = 0
         self.enabled = True
         self.current_progress = 0
+        self.screen_anchor = None
 
     def publish(self, progress=0, playing=False, force=False):
         if not self.enabled or self.step is None:
@@ -82,6 +83,7 @@ class VirtualExpert:
             "phase": semantic_phase(progress),
             "progress": max(0, min(1, float(progress))),
             "model": str(step.get("id", "")),
+            "screen_anchor": self.screen_anchor,
         }
         self.output.parent.mkdir(parents=True, exist_ok=True)
         temp = self.output.with_suffix(".tmp")
@@ -92,11 +94,13 @@ class VirtualExpert:
         self.index = int(index)
         self.step = step
         self.current_progress = 0
+        self.screen_anchor = None
         self.publish(0, False, force=True)
 
-    def frame(self, index, step, progress):
+    def frame(self, index, step, progress, screen_anchor=None):
         if self.index != index or self.step is None:
             self.set_step(index, step)
+        self.screen_anchor = screen_anchor
         self.publish(progress, playing=True)
 
     def pause(self):
