@@ -119,3 +119,44 @@ body { display:flex; flex-direction:column; }
 .tool-guide .tool-path { flex:1; font-weight:600; color:inherit; }
 .tool-guide.missing .tool-path { font-weight:400; }
 .tool-guide .tool-use { font-size:11px; padding:2px 10px; border-radius:6px; border:1px solid currentColor; background:transparent; color:#c2570c; cursor:pointer; }
+
+/* Operation Walkthrough — real CAD tool introduction, how-to footage and
+   feature-local reasoning. Lives in HiM's existing right-side player: no
+   second CAD viewport, no input capture from the learner's design. */
+.walkthrough { border-bottom:1px solid var(--line); background:#fff; padding:12px;
+  display:grid; gap:7px; max-height:min(52vh,470px); overflow-y:auto; }
+.walkthrough[hidden], .walk-video-wrap[hidden], .walk-video-placeholder[hidden] { display:none!important; }
+.walk-head { display:flex; justify-content:space-between; align-items:center; gap:8px; }
+.walk-eyebrow { letter-spacing:.7px; font-size:10px; font-weight:800; color:#64748b; }
+.walk-kind { color:#a44d04; font-weight:700; background:#fff0d8; border:1px solid #f4d19b;
+  border-radius:6px; padding:2px 7px; font-size:10px; }
+.walkthrough h2 { margin:0; font-size:14px; line-height:1.4; }
+.walk-description { margin:0; font-size:12px; line-height:1.5; }
+.walk-origin { margin:0; font-size:10px; color:#64748b; }
+.walk-tool-row { display:flex; align-items:center; justify-content:space-between; gap:10px;
+  background:#f4f7fa; border:1px solid #dfe4eb; padding:8px; border-radius:8px; }
+.walk-tool-copy { display:grid; gap:2px; min-width:0; }
+.walk-tool-copy strong { font-size:12px; }
+.walk-tool-copy strong.spotlight { color:#9a580f; background:#fff1d9; outline:2px solid #e2a545;
+  outline-offset:3px; border-radius:2px; }
+.walk-tool-copy span { font-size:10px; color:#677588; line-height:1.4; }
+.walk-tool-row button { color:#124e72; background:white; border:1px solid #aac7d9;
+  border-radius:5px; padding:5px 8px; font-weight:650; white-space:nowrap; font-size:11px; }
+.walk-tool-row button:disabled { color:#8b939d; border-color:#d9dee4; }
+.walk-geometry { font-size:11px; border-left:3px solid #3e9da4; padding:4px 8px;
+  background:#eef8f8; color:#26636c; }
+.walk-video-window { overflow:hidden; border-radius:7px; border:1px solid #d6dde7;
+  aspect-ratio:16/9; background:#202937; display:grid; place-items:center; }
+.walk-video-window video { width:100%; height:100%; object-fit:contain; pointer-events:auto; }
+.walk-video-note { margin:0; font-size:10px; color:#657287; }
+.walk-video-placeholder { margin:0; padding:8px; font-size:11px; background:#f7f8fa;
+  border:1px dashed #d6dce3; color:#677588; border-radius:6px; }
+.walk-moments { display:flex; flex-wrap:wrap; gap:5px; }
+.walk-moment { border:1px solid #d1d9e4; background:#fff; color:#66788b; border-radius:6px;
+  padding:4px 6px; font-size:10px; }
+.walk-moment.active { background:#fff0d8; border:1px solid #e0aa5c;
+  color:#805014; font-weight:750; }
+.walk-transport { display:flex; justify-content:space-between; gap:4px; }
+.walk-transport button { background:white; border:1px solid #d1d9e4; border-radius:6px;
+  padding:5px 6px; color:#2d4f70; font-size:10px; }
+.walk-transport button:hover, .walk-moment:hover { background:#ebf2fa; }
