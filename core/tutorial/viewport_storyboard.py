@@ -201,6 +201,9 @@ def frame(step, index, elapsed, playing, tool_descriptions=None):
         "moment_start_ms":moment["at_ms"],
         "video_focus":moment.get("video_focus") or media.get("video_focus") or {},
         "has_operation_footage":bool(video),
+        "show_video":bool(video) and (
+            moment["phase"]=="how" or
+            (moment["source"]=="authored" and _finite(moment.get("video_start_ms")))),
         "has_narration_audio":bool(media.get("audio")),
         "camera_moves_only_when_opted_in":True,
     }
