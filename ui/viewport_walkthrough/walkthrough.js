@@ -44,6 +44,8 @@
       const path=frame.tool_path||[];
       $("toolPath").textContent=path.length?path.join(" › "):"Native Fusion tool";
       $("toolFocus").classList.toggle("active",phase==="tool");
+      $("tryTool").hidden=phase!=="tool"||!frame.tool_found;
+      $("tryTool").dataset.tool=frame.tool||"";
       const glyph=$("toolGlyph");glyph.replaceChildren();
       // From native Fusion's CommandDefinition icon. Never scrape UI images.
       if(frame.tool_icon && /^file:|^data:image\//.test(frame.tool_icon)){
@@ -90,6 +92,14 @@
     } else if(!v.paused) v.pause();
     s.playing=!!frame.playing;
   }
+  // Only an explicit learner click may start a real CAD command.
+  $("tryTool").addEventListener("click",()=>{
+    const label=$("tryTool").dataset.tool;
+    if(!label) return;
+    try {window.adsk.fusionSendData("try_tool",JSON.stringify({label}));}catch(_){}
+  });
+  document.addEventListener("visibilitychange",()=>{if(document.hidden) v.pause();});
+  window.addEventListener("pagehide",()=>v.pause());
   window.fusionJavaScriptHandler = {
     handle(action, raw) {
       try {
