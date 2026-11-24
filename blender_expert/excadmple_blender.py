@@ -18,7 +18,12 @@ import bpy
 import json
 import math
 import time
+from pathlib import Path
 import blf
+try:
+    import aud
+except ImportError:
+    aud = None
 import gpu
 from mathutils import Vector
 from bpy_extras.view3d_utils import location_3d_to_region_2d
@@ -73,6 +78,7 @@ RUNTIME = {
     "playing": False, "step": 0, "phase": 0, "started": 0.0,
     "handler": None, "lesson": [], "models": {}, "source": "",
     "status": "Load or create a lesson", "last_reason": "",
+    "audio_device": None, "audio_handle": None,
 }
 PHASE_SECONDS = (1.05, .95, 1.2, .6)
 SHADER = None
@@ -338,6 +344,33 @@ def _redraw():
         pass
 
 
+def _stop_audio():
+    handle = RUNTIME.get("audio_handle")
+    if handle:
+        try:
+            handle.stop()
+        except Exception:
+            pass
+    RUNTIME["audio_handle"] = None
+
+
+def _start_audio(step):
+    _stop_audio()
+    source = str(step.get("audio") or "").strip()
+    if not source or aud is None:
+        return
+    path = Path(bpy.path.abspath(source)).expanduser()
+    if not path.is_file():
+        RUNTIME["status"] = "Missing audio: " + path.name
+        return
+    try:
+        if RUNTIME["audio_device"] is None:
+            RUNTIME["audio_device"] = aud.Device()
+        RUNTIME["audio_handle"] = RUNTIME["audio_device"].play(aud.Sound(str(path)))
+    except Exception as error:
+        RUNTIME["status"] = "Audio unavailable: " + str(error)[:48]
+
+
 def _tick():
     if RUNTIME["playing"] and RUNTIME["lesson"]:
         seconds=PHASE_SECONDS[RUNTIME["phase"]]
@@ -346,10 +379,12 @@ def _tick():
                 _rebuild(RUNTIME["step"],3)
                 if RUNTIME["step"]+1>=len(RUNTIME["lesson"]):
                     RUNTIME["playing"]=False
+                    _stop_audio()
                     RUNTIME["status"]="Finished. Keep modeling in your own workspace."
                 else:
                     RUNTIME["step"]+=1
                     RUNTIME["phase"]=0
+                    _start_audio(RUNTIME["lesson"][RUNTIME["step"]])
             else:
                 RUNTIME["phase"]+=1
             RUNTIME["started"]=time.monotonic()
@@ -378,6 +413,45 @@ class EXCAD_OT_from_selected(bpy.types.Operator):
         return {"FINISHED"}
 
 
+class EXCAD_OT_annotations(bpy.types.Operator):
+    """Load authored reasons / actual narration for existing lesson steps."""
+    bl_idname = "excadmple.annotations"
+    bl_label = "Attach reasons and audio (JSON)"
+    filepath: bpy.props.StringProperty(name="Annotations JSON", subtype="FILE_PATH")
+
+    def invoke(self, context, event):
+        context.window_manager.fileselect_add(self)
+        return {"RUNNING_MODAL"}
+
+    def execute(self, context):
+        try:
+            data = json.loads(Path(self.filepath).read_text(encoding="utf-8"))
+            items = data.get("steps", [])
+            if not isinstance(items, list) or not context.scene.get(LESSON_KEY):
+                raise ValueError("Load a lesson first and supply JSON {'steps': [...]}.")
+            lesson = json.loads(context.scene[LESSON_KEY])
+            for item in items:
+                i = int(item["index"])
+                if i < 0 or i >= len(lesson):
+                    raise IndexError("Step index out of range: %s" % i)
+                if "why" in item:
+                    lesson[i]["say"] = str(item["why"])
+                if "audio" in item:
+                    audio_path = Path(str(item["audio"])).expanduser()
+                    if not audio_path.is_absolute():
+                        audio_path = Path(self.filepath).resolve().parent / audio_path
+                    if not audio_path.is_file():
+                        raise ValueError("Audio file not found: " + str(audio_path))
+                    lesson[i]["audio"] = str(audio_path.resolve())
+            context.scene[LESSON_KEY] = json.dumps(lesson)
+            _load(context.scene)
+            RUNTIME["status"] = "Imported authored reasons and audio"
+        except Exception as exc:
+            self.report({"ERROR"}, str(exc))
+            return {"CANCELLED"}
+        return {"FINISHED"}
+
+
 class EXCAD_OT_player(bpy.types.Operator):
     bl_idname="excadmple.player"
     bl_label="Expert playback"
@@ -392,12 +466,17 @@ class EXCAD_OT_player(bpy.types.Operator):
             elif not RUNTIME["lesson"]:
                 _load(context.scene)
             if act=="PLAY":
+                was_playing = RUNTIME["playing"]
                 RUNTIME["playing"]=True
                 RUNTIME["started"]=time.monotonic()
+                if not was_playing:
+                    _start_audio(RUNTIME["lesson"][RUNTIME["step"]])
             elif act=="PAUSE":
                 RUNTIME["playing"]=False
+                _stop_audio()
             elif act in ("NEXT","PREV","RESTART"):
                 RUNTIME["playing"]=False
+                _stop_audio()
                 RUNTIME["step"] = (0 if act=="RESTART" else
                      max(0,min(len(RUNTIME["lesson"])-1,RUNTIME["step"]+(1 if act=="NEXT" else -1))))
                 RUNTIME["phase"]=0
@@ -431,6 +510,7 @@ class EXCAD_PT_panel(bpy.types.Panel):
         layout.separator()
         layout.operator("excadmple.generate",icon="MESH_CUBE")
         layout.operator("excadmple.from_selected",icon="OUTLINER_OB_MESH")
+        layout.operator("excadmple.annotations",icon="FILE_SOUND")
         layout.separator()
         layout.label(text="Step %d / %d"%(RUNTIME["step"]+1,len(RUNTIME["lesson"])))
         layout.label(text=RUNTIME["status"][:60])
@@ -438,12 +518,13 @@ class EXCAD_PT_panel(bpy.types.Panel):
         layout.label(text="Your mouse and tools remain yours.")
 
 
-CLASSES=(EXCAD_OT_generate,EXCAD_OT_from_selected,EXCAD_OT_player,EXCAD_PT_panel)
+CLASSES=(EXCAD_OT_generate,EXCAD_OT_from_selected,EXCAD_OT_annotations,EXCAD_OT_player,EXCAD_PT_panel)
 
 
 @persistent
 def _load_after_file_open(_dummy):
     RUNTIME["playing"] = False
+    _stop_audio()
     RUNTIME["lesson"] = []
     RUNTIME["models"] = {}
     try:
@@ -472,6 +553,7 @@ def register():
 
 def unregister():
     RUNTIME["playing"]=False
+    _stop_audio()
     if RUNTIME["handler"] is not None:
         bpy.types.SpaceView3D.draw_handler_remove(RUNTIME["handler"],"WINDOW")
         RUNTIME["handler"]=None
