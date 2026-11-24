@@ -7,3 +7,6 @@ local-validation/
 
 # Diagnostic logs written by the add-in (logs/latest.log): send, don't commit.
 logs/
+
+# Local Mac microphone helper build
+exCADmpleRecorder/*.app/

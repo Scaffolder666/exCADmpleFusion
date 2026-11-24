@@ -1,11 +1,13 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>exCADmple · 语音录制</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>exCADmple Voice Recorder</title>
   <style>
     :root { color-scheme: light dark; font: 14px system-ui, sans-serif; }
-    body { margin: 14px; }
+    body { margin: 14px; background: Canvas; color: CanvasText; }
+    [hidden] { display: none !important; }
     button, select, input { font: inherit; padding: 5px 8px; }
     .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin: 10px 0; }
     h2 { font-size: 15px; margin-bottom: 6px; }
@@ -18,37 +20,60 @@
     li.active { background: #3c91d444; }
     small { opacity: .8; }
     #offset { width: 68px; }
+    .voice-message { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 6px; }
+    .voice-bar { min-width: 96px; text-align: left; border: 1px solid #429764;
+      border-radius: 10px; background: #bce9c6; color: #183923; cursor: pointer; }
+    .voice-bar:hover { background: #a8dfb5; }
+    .recording { color: #b32433; font-variant-numeric: tabular-nums; }
+    #draft-bar { display: inline-flex; gap: 10px; align-items: center; padding: 8px 12px;
+      margin: 3px 0; cursor: default; font-variant-numeric: tabular-nums; }
   </style>
-  <script src="panel.js" defer></script>
 </head>
 <body>
   <div class="actions">
-    <button id="record">录制语音与建模</button>
-    <button id="history">仅记录建模</button>
-    <button id="open">打开会话</button>
+    <button id="record" disabled>Start Recording</button>
+    <button id="send" hidden>Send Voice Message</button>
+    <button id="discard" hidden>Cancel Message</button>
+    <button id="end" hidden>End Session</button>
+    <button id="history" disabled>Track Modeling Only</button>
+    <button id="open" disabled>Open Session</button>
+    <button id="import-voice" disabled>Import Voice Message</button>
   </div>
-  <p id="status" role="status">正在连接 Fusion…</p>
+  <div id="draft-bar" class="voice-bar" hidden>
+    <strong id="draft-label">Starting microphone</strong><span id="draft-time"></span>
+    <button id="preview-draft" hidden>Preview</button>
+  </div>
+  <p id="status" role="status">Connecting to Fusion…</p>
+  <button id="reconnect" hidden>Retry Connection</button>
+  <div id="match" class="actions" hidden>
+    <label>Modeling step <select id="step"></select></label>
+  </div>
   <section id="review" hidden>
     <h2 id="design"></h2>
     <small id="folder"></small>
     <div class="actions" id="attach">
-      <label>WAV 开始偏移（秒） <input id="offset" type="number" step="0.1" value="0"></label>
-      <button id="wav">导入 WAV</button>
+      <label>WAV start offset (seconds) <input id="offset" type="number" step="0.1" value="0"></label>
+      <button id="wav">Import WAV</button>
     </div>
     <div class="actions" id="transcription">
-      <label>转写语言
+      <label>Transcription language
         <select id="language">
-          <option value="">自动识别</option>
-          <option value="zh">中文</option>
+          <option value="">Auto-detect</option>
+          <option value="zh">Chinese</option>
           <option value="en">English</option>
         </select>
       </label>
-      <button id="transcribe">转写</button>
+      <button id="transcribe">Transcribe</button>
     </div>
     <audio id="audio" controls></audio>
-    <h2>建模操作</h2>
+    <section id="loose-voices" hidden>
+      <h2>Unlinked Voice Messages</h2>
+      <ol id="voice-list"></ol>
+    </section>
+    <h2>Modeling Steps</h2>
     <ol id="steps"></ol>
     <p id="unassigned"></p>
   </section>
+  <!-- PANEL_SCRIPT -->
 </body>
 </html>

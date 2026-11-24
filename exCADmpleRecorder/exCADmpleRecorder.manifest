@@ -6,7 +6,7 @@
   "description": {
     "": "Record and replay think-aloud narration alongside Fusion modeling history."
   },
-  "version": "0.1.0",
+  "version": "0.3.4",
   "runOnStartup": false,
   "supportedOS": "windows|mac",
   "editEnabled": true
