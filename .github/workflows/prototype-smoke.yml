@@ -1,0 +1,26 @@
+name: Blender virtual expert — static Python checks
+on:
+  push:
+    branches: [prototype-blender-native-replay]
+  workflow_dispatch:
+jobs:
+  python-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile Blender add-on, .blend generator and smoke tests
+        run: python -m compileall -q blender_expert
+      - name: Inspect lesson generator in source
+        run: |
+          python - <<'PY'
+          import ast
+          from pathlib import Path
+          source=Path("blender_expert/excadmple_blender.py").read_text()
+          tree=ast.parse(source)
+          functions={n.name for n in tree.body if isinstance(n,ast.FunctionDef)}
+          assert {'build_example','build_from_selected','_tick','_draw','register','unregister'}.issubset(functions)
+          print("Static Blender add-on checks passed.")
+          PY
